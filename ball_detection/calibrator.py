@@ -5,7 +5,7 @@ import pickle
 import os
 
 class Calibrator(object):
-    def __init__(self, source, shape_inner_corner, size_grid, visualization=True):
+    def __init__(self, source, shape_inner_corner, size_grid, save=True):
         """
         --parameters--
         img_dir: the directory that save images for calibration, str
@@ -13,9 +13,10 @@ class Calibrator(object):
         size_grid: the real size of a grid in calibrator, float
         visualization: whether visualization, bool
         """
+        self.source = source
         self.shape_inner_corner = shape_inner_corner
         self.size_grid = size_grid
-        self.visualization = visualization
+        self.save = save
         self.mat_intri = None # intrinsic matrix
         self.coff_dis = None # cofficients of distortion
         self.points_world = None # the points in world space
@@ -39,6 +40,17 @@ class Calibrator(object):
         elif type(source) == int:
             self.load_Camera(source)
 
+        # calibrate
+        self.calibrate()
+
+        # save the intrinsic matrix
+        if self.save:
+            self.save_intri()
+
+    def save_intri(self, path):
+        with open(os.path.join(path, self.source + ".pickle" if type(self.source) ==  str else "camera_{}.pickle"), 'wb') as f:
+            pickle.dump(self.mat_intri, f)
+
     def load_Camera(self, source):
         cap = cv2.VideoCapture(source)
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -61,7 +73,6 @@ class Calibrator(object):
                         cv2.drawChessboardCorners(img, (w, h), cp_img, ret)
                         cv2.imshow('FoundCorners', img)
                         cv2.waitKey(500)
-                break
 
     def load_Images(self, img_dir):
         # images
@@ -93,7 +104,7 @@ class Calibrator(object):
                     cv2.waitKey(500)
         self.imgSize = gray_img.shape[::-1]
 
-    def calibrate_camera(self):
+    def calibrate(self):
         # calibrate the camera
         ret, mat_intri, coff_dis, v_rot, v_trans = cv2.calibrateCamera(self.points_world, self.points_pixel, self.imgSize, None, None)
         print ("ret: {}".format(ret))
