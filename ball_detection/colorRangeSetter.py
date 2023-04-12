@@ -64,4 +64,4 @@ class ColorRange:
 
 if __name__ == "__main__":
     cr = ColorRange()
-    cr.set("ball_sample.jpg", COLOR_MODES["HSV"])
+    cr.set(0, COLOR_MODES["HSV"])
