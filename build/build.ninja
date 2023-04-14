@@ -41,6 +41,38 @@ include CMakeFiles/rules.ninja
 
 cmake_ninja_workdir = /home/yeet/Documents/programing/cpp/PPPlayer/build/
 # =============================================================================
+# Object build statements for EXECUTABLE target dataFileOperate
+
+
+#############################################
+# Order-only phony target for dataFileOperate
+
+build cmake_object_order_depends_target_dataFileOperate: phony || CMakeFiles/dataFileOperate.dir
+
+build CMakeFiles/dataFileOperate.dir/ball_simulate/dataFileOperator.cpp.o: CXX_COMPILER__dataFileOperate_Debug /home/yeet/Documents/programing/cpp/PPPlayer/ball_simulate/dataFileOperator.cpp || cmake_object_order_depends_target_dataFileOperate
+  DEP_FILE = CMakeFiles/dataFileOperate.dir/ball_simulate/dataFileOperator.cpp.o.d
+  FLAGS = -g
+  OBJECT_DIR = CMakeFiles/dataFileOperate.dir
+  OBJECT_FILE_DIR = CMakeFiles/dataFileOperate.dir/ball_simulate
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target dataFileOperate
+
+
+#############################################
+# Link the executable dataFileOperate
+
+build dataFileOperate: CXX_EXECUTABLE_LINKER__dataFileOperate_Debug CMakeFiles/dataFileOperate.dir/ball_simulate/dataFileOperator.cpp.o
+  FLAGS = -g
+  LINK_FLAGS = -rdynamic
+  OBJECT_DIR = CMakeFiles/dataFileOperate.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = dataFileOperate
+  TARGET_PDB = dataFileOperate.dbg
+
+# =============================================================================
 # Object build statements for SHARED_LIBRARY target dataFileOperator
 
 
@@ -110,7 +142,7 @@ build dataFileOperator: phony libdataFileOperator.so
 #############################################
 # Folder: /home/yeet/Documents/programing/cpp/PPPlayer/build
 
-build all: phony libdataFileOperator.so
+build all: phony dataFileOperate libdataFileOperator.so
 
 # =============================================================================
 # Unknown Build Time Dependencies.

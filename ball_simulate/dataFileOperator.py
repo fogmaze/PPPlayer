@@ -1,25 +1,51 @@
 from ctypes import *
 import torch
+import platform
 
-ll = cdll.LoadLibrary
-lib = ll("build/libdataFileOperator.so")
+# check os
+if platform.system() == "Windows":
+    lib = cdll.LoadLibrary("build/dataFileOperator.dll")
+elif platform.system() == "Linux":
+    lib = cdll.LoadLibrary("build/libdataFileOperator.so")
+else:
+    raise Exception("Unsupport os!")
 
-lib.getFileDataLength.argtypes = [c_char_p]
+class DataStruct(Structure):
+    _fields = [
+        ("data", c_int)
+    ]
+
+lib.main.argtypes = []
+lib.main.restype = c_int
+lib.loadFromFile.argtypes = [c_char_p]
+lib.loadFromFile.restype = c_void_p
+lib.releaseData.argtypes = [c_void_p]
+lib.releaseData.restype = None
+lib.loadIsSuccess.argtypes = [c_void_p]
+lib.loadIsSuccess.restype = c_bool
+lib.getFileDataLength.argtypes = [c_void_p]
 lib.getFileDataLength.restype = c_int
+lib.getFileData.argtypes = [c_void_p, c_int]
+lib.getFileData.restype = DataStruct
 
-def get_data_size(path):
-    return lib.getFileDataLength(path.encode('utf-8'))
-
-class Data(torch.utils.data.Dataset):
-    def __init__(self, path):
-        self.path = path
+class BallDataSet(torch.utils.data.Dataset):
+    def __init__(self, fileName):
+        self.data = lib.loadFromFile(fileName.encode('utf-8'))
+        if lib.loadIsSuccess(self.data):
+            self.length = lib.getFileDataLength(self.data)
+        else:
+            raise Exception("Load data failed!")
 
     def __len__(self):
-        return 0
+        return self.length
     
     def __getitem__(self, index):
-        return None
+        return lib.getFileData(self.data, index)
 
+    def __del__(self):
+        lib.releaseData(self.data)
+        print("release data")
 
 if __name__ == "__main__":
-    print(get_data_size("data/1.bin"))
+    ballDataSet = BallDataSet("test.bin")
+    pass
