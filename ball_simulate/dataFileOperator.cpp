@@ -42,9 +42,9 @@ int getFileDataLength(void* data) {
 }
  
 extern "C"
-Data getFileData(void* data, int index) {
+void* getFileData(void* data, int index) {
     FileDataHeader* header = (FileDataHeader*)data;
-    return header->data[index];
+    return &(header->data[index]);
 }
 
 extern "C"

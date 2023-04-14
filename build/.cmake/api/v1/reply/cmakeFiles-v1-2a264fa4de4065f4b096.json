@@ -120,9 +120,6 @@
 			"isCMake" : true,
 			"isExternal" : true,
 			"path" : "/usr/share/cmake-3.22/Modules/CMakeCommonLanguageInclude.cmake"
-		},
-		{
-			"path" : "ball_simulate/CMakeLists.txt"
 		}
 	],
 	"kind" : "cmakeFiles",

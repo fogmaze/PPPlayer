@@ -11,7 +11,7 @@ else:
     raise Exception("Unsupport os!")
 
 class DataStruct(Structure):
-    _fields = [
+    _fields_ = [
         ("data", c_int)
     ]
 
@@ -26,7 +26,7 @@ lib.loadIsSuccess.restype = c_bool
 lib.getFileDataLength.argtypes = [c_void_p]
 lib.getFileDataLength.restype = c_int
 lib.getFileData.argtypes = [c_void_p, c_int]
-lib.getFileData.restype = DataStruct
+lib.getFileData.restype = c_void_p
 
 class BallDataSet(torch.utils.data.Dataset):
     def __init__(self, fileName):
@@ -40,7 +40,7 @@ class BallDataSet(torch.utils.data.Dataset):
         return self.length
     
     def __getitem__(self, index):
-        return lib.getFileData(self.data, index)
+        return DataStruct.from_address(lib.getFileData(self.data, index))
 
     def __del__(self):
         lib.releaseData(self.data)
@@ -48,4 +48,7 @@ class BallDataSet(torch.utils.data.Dataset):
 
 if __name__ == "__main__":
     ballDataSet = BallDataSet("test.bin")
+    print(len(ballDataSet))
+    a = ballDataSet[3]
+    print(a.data)
     pass

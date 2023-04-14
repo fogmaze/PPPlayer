@@ -6,20 +6,9 @@
 			[
 				{
 					"build" : ".",
-					"childIndexes" : 
-					[
-						1
-					],
 					"jsonFile" : "directory-.-Debug-f5ebdc15457944623624.json",
 					"projectIndex" : 0,
-					"source" : "."
-				},
-				{
-					"build" : "ball_simulate",
-					"jsonFile" : "directory-ball_simulate-Debug-e62a0003ab69c01f6c79.json",
-					"parentIndex" : 0,
-					"projectIndex" : 0,
-					"source" : "ball_simulate",
+					"source" : ".",
 					"targetIndexes" : 
 					[
 						0,
@@ -33,8 +22,7 @@
 				{
 					"directoryIndexes" : 
 					[
-						0,
-						1
+						0
 					],
 					"name" : "Project",
 					"targetIndexes" : 
@@ -47,16 +35,16 @@
 			"targets" : 
 			[
 				{
-					"directoryIndex" : 1,
-					"id" : "dataFileOperate::@6f51e5ac51bf866876bb",
-					"jsonFile" : "target-dataFileOperate-Debug-0be3d0a1e4a8a8877a61.json",
+					"directoryIndex" : 0,
+					"id" : "dataFileOperate::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-dataFileOperate-Debug-68b5d1b90c683be2d342.json",
 					"name" : "dataFileOperate",
 					"projectIndex" : 0
 				},
 				{
-					"directoryIndex" : 1,
-					"id" : "dataFileOperator::@6f51e5ac51bf866876bb",
-					"jsonFile" : "target-dataFileOperator-Debug-bafccb43539ea9673abe.json",
+					"directoryIndex" : 0,
+					"id" : "dataFileOperator::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-dataFileOperator-Debug-c572bb5271307a707197.json",
 					"name" : "dataFileOperator",
 					"projectIndex" : 0
 				}

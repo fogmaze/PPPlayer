@@ -1,6 +1,4 @@
+/home/yeet/Documents/programing/cpp/PPPlayer/build/CMakeFiles/dataFileOperate.dir
+/home/yeet/Documents/programing/cpp/PPPlayer/build/CMakeFiles/dataFileOperator.dir
 /home/yeet/Documents/programing/cpp/PPPlayer/build/CMakeFiles/edit_cache.dir
 /home/yeet/Documents/programing/cpp/PPPlayer/build/CMakeFiles/rebuild_cache.dir
-/home/yeet/Documents/programing/cpp/PPPlayer/build/ball_simulate/CMakeFiles/dataFileOperate.dir
-/home/yeet/Documents/programing/cpp/PPPlayer/build/ball_simulate/CMakeFiles/dataFileOperator.dir
-/home/yeet/Documents/programing/cpp/PPPlayer/build/ball_simulate/CMakeFiles/edit_cache.dir
-/home/yeet/Documents/programing/cpp/PPPlayer/build/ball_simulate/CMakeFiles/rebuild_cache.dir

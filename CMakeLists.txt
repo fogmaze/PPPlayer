@@ -1,2 +1,3 @@
 
-add_subdirectory(ball_simulate)
+add_executable(dataFileOperate ball_simulate/dataFileOperator.cpp)
+add_library(dataFileOperator SHARED ball_simulate/dataFileOperator.cpp)
