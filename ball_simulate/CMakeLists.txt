@@ -1,0 +1,2 @@
+add_executable(dataFileOperate dataFileOperator.cpp)
+add_library(dataFileOperator SHARED dataFileOperator.cpp)

@@ -2,7 +2,7 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "dataFileOperate"
+			"path" : "ball_simulate/libdataFileOperator.so"
 		}
 	],
 	"backtrace" : 1,
@@ -10,11 +10,11 @@
 	{
 		"commands" : 
 		[
-			"add_executable"
+			"add_library"
 		],
 		"files" : 
 		[
-			"CMakeLists.txt"
+			"ball_simulate/CMakeLists.txt"
 		],
 		"nodes" : 
 		[
@@ -35,7 +35,13 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "-g"
+					"fragment" : "-g -fPIC"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"define" : "dataFileOperator_EXPORTS"
 				}
 			],
 			"language" : "CXX",
@@ -45,28 +51,24 @@
 			]
 		}
 	],
-	"id" : "dataFileOperate::@6890427a1f51a3e7e1df",
+	"id" : "dataFileOperator::@6f51e5ac51bf866876bb",
 	"link" : 
 	{
 		"commandFragments" : 
 		[
 			{
-				"fragment" : "-g",
-				"role" : "flags"
-			},
-			{
-				"fragment" : "-rdynamic",
+				"fragment" : "",
 				"role" : "flags"
 			}
 		],
 		"language" : "CXX"
 	},
-	"name" : "dataFileOperate",
-	"nameOnDisk" : "dataFileOperate",
+	"name" : "dataFileOperator",
+	"nameOnDisk" : "libdataFileOperator.so",
 	"paths" : 
 	{
-		"build" : ".",
-		"source" : "."
+		"build" : "ball_simulate",
+		"source" : "ball_simulate"
 	},
 	"sourceGroups" : 
 	[
@@ -87,5 +89,5 @@
 			"sourceGroupIndex" : 0
 		}
 	],
-	"type" : "EXECUTABLE"
+	"type" : "SHARED_LIBRARY"
 }

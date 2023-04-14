@@ -1,12 +1,12 @@
 [
 {
   "directory": "/home/yeet/Documents/programing/cpp/PPPlayer/build",
-  "command": "/usr/bin/c++ -g -o CMakeFiles/dataFileOperate.dir/ball_simulate/dataFileOperator.cpp.o -c /home/yeet/Documents/programing/cpp/PPPlayer/ball_simulate/dataFileOperator.cpp",
+  "command": "/usr/bin/c++ -g -o ball_simulate/CMakeFiles/dataFileOperate.dir/dataFileOperator.o -c /home/yeet/Documents/programing/cpp/PPPlayer/ball_simulate/dataFileOperator.cpp",
   "file": "/home/yeet/Documents/programing/cpp/PPPlayer/ball_simulate/dataFileOperator.cpp"
 },
 {
   "directory": "/home/yeet/Documents/programing/cpp/PPPlayer/build",
-  "command": "/usr/bin/c++ -DdataFileOperator_EXPORTS -g -fPIC -o CMakeFiles/dataFileOperator.dir/ball_simulate/dataFileOperator.cpp.o -c /home/yeet/Documents/programing/cpp/PPPlayer/ball_simulate/dataFileOperator.cpp",
+  "command": "/usr/bin/c++ -DdataFileOperator_EXPORTS -g -fPIC -o ball_simulate/CMakeFiles/dataFileOperator.dir/dataFileOperator.o -c /home/yeet/Documents/programing/cpp/PPPlayer/ball_simulate/dataFileOperator.cpp",
   "file": "/home/yeet/Documents/programing/cpp/PPPlayer/ball_simulate/dataFileOperator.cpp"
 }
 ]

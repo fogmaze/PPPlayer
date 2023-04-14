@@ -71,7 +71,8 @@ void createData_test(char* fileName) {
 
 extern "C"
 int main() {
-    createData_test("test.bin");
+    char const * file_name = "test.bin";
+    createData_test((char*)file_name);
     FileDataHeader* header = (FileDataHeader*)loadFromFile("test.bin");
     for (int i = 0; i < header->data_length; i++) {
         cout << header->data[i].data << endl;
