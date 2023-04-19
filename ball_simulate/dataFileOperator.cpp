@@ -1,11 +1,15 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
+#define INPUT_LEN 20
 
 using namespace std;
 
 typedef struct {
-    int data;
+    double camera_x,camera_y,camera_z;
+    double line_deg_xy[INPUT_LEN],line_deg_xz[INPUT_LEN];
+    
+
 } Data;
 
 typedef struct {
@@ -70,6 +74,24 @@ void createData_test(char* fileName) {
 }
 
 extern "C"
+void* createHeader(int data_length) {
+    FileDataHeader* header = new FileDataHeader;
+    header->data_length = data_length;
+    header->data = new Data[data_length];
+    return (void*)header;
+}
+
+extern "C"
+bool putData(void* header, int i) {
+    if (i >= getFileDataLength(header)) {
+        return false;
+    }
+    FileDataHeader* file_header = (FileDataHeader*)header;
+    file_header->data[i].data = index;
+    return true
+}
+
+extern "C"
 int main() {
     char const * file_name = "test.bin";
     createData_test((char*)file_name);
@@ -80,3 +102,4 @@ int main() {
     releaseData(header);
     return 0;
 }
+

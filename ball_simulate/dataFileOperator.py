@@ -28,6 +28,7 @@ lib.getFileDataLength.restype = c_int
 lib.getFileData.argtypes = [c_void_p, c_int]
 lib.getFileData.restype = c_void_p
 
+
 class BallDataSet(torch.utils.data.Dataset):
     def __init__(self, fileName):
         self.data = lib.loadFromFile(fileName.encode('utf-8'))
