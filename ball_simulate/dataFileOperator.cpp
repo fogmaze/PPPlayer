@@ -2,17 +2,30 @@
 #include <iostream>
 #include <fstream>
 #define INPUT_LEN 20
+#define TEST_LEN 200
 
 using namespace std;
 
-typedef struct {
-    double camera_x,camera_y,camera_z;
-    double line_deg_xy[INPUT_LEN],line_deg_xz[INPUT_LEN];
-    
+typedef struct Point_ {
+    double x,y;
+} Point;
 
+typedef struct Input_{
+    double camera_x;
+    double camera_y;
+    double camera_z;
+    double line_deg_xy[INPUT_LEN];
+    double line_deg_xz[INPUT_LEN];
+    double timestamps[INPUT_LEN];
+} Input; 
+
+typedef struct Data_ {
+    Input inputs[2];
+    Point curvePoints[TEST_LEN];
+    double curveTimestamps[TEST_LEN];
 } Data;
 
-typedef struct {
+typedef struct FileDataHeader_ {
     int data_length;
     Data* data;
 } FileDataHeader;
@@ -64,7 +77,6 @@ void createData_test(char* fileName) {
     header.data_length = 10;
     header.data = new Data[header.data_length];
     for (int i = 0; i < header.data_length; i++) {
-        header.data[i].data = i;
     }
     fstream fh;
     fh.open(fileName, ios::out | ios::binary);
@@ -87,8 +99,7 @@ bool putData(void* header, int i) {
         return false;
     }
     FileDataHeader* file_header = (FileDataHeader*)header;
-    file_header->data[i].data = index;
-    return true
+    return true;
 }
 
 extern "C"
@@ -97,9 +108,10 @@ int main() {
     createData_test((char*)file_name);
     FileDataHeader* header = (FileDataHeader*)loadFromFile("test.bin");
     for (int i = 0; i < header->data_length; i++) {
-        cout << header->data[i].data << endl;
     }
     releaseData(header);
     return 0;
 }
+
+
 

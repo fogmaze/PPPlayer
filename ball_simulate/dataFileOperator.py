@@ -1,6 +1,7 @@
 from ctypes import *
 import torch
 import platform
+import core.Constants as c
 
 # check os
 if platform.system() == "Windows":
@@ -10,9 +11,27 @@ elif platform.system() == "Linux":
 else:
     raise Exception("Unsupport os!")
 
+class Data_Point(Structure):
+    _fields_ = [
+        ("x",c_double),
+        ("y",c_double)
+    ]
+
+class Data_Input(Structure):
+    _fields_ = [
+        ("camera_x", c_double),
+        ("camera_y", c_double),
+        ("camera_z", c_double),
+        ("line_deg_xy", c_double, c.SIMULATE_INPUT_LEN),
+        ("line_deg_xz", c_double, c.SIMULATE_INPUT_LEN),
+        ("timestamps", c_double, c.SIMULATE_INPUT_LEN),
+    ]
+
 class DataStruct(Structure):
     _fields_ = [
-        ("data", c_int)
+        ("inputs", Data_Input, 2),
+        ("curvePoints", Data_Point, c.SIMULATE_TEST_LEN),
+        ("curveTimestamps", c_double, c.SIMULATE_TEST_LEN)
     ]
 
 lib.main.argtypes = []
