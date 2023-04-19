@@ -3,9 +3,13 @@ import numpy as np
 import pickle
 
 class ColorRange :
-    
-    def __init__(self, ) :
+    default:int
+    range:int
 
+    def __init__(self, default, range) :
+        self.default = default
+        self.range = range
+        
 def empty(a) :
     pass
 
