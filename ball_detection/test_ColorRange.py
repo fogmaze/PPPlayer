@@ -53,7 +53,7 @@ class ColorRange:
             sowImage()
             cv2.waitKey(0)
         else:
-            cap = cv2.VideoCapture(source)
+            cap = cv2.VideoCapture(1)
             while True:
                 ret, img = cap.read()
                 img = cv2.cvtColor(img, self.mode.transformTo)
