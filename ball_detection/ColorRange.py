@@ -40,7 +40,6 @@ class ColorRange :
 
     def run(self, cam1, cam2) :
         cv2.namedWindow("cam")
-        cv2.resizeWindow("cam", 640, 640)
 
         cv2.createTrackbar("Hue Min", "cam", self.lower[0], 179, empty)
         cv2.createTrackbar("Hue Max", "cam", self.upper[0], 179, empty)
@@ -59,10 +58,12 @@ class ColorRange :
                 hsv2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2HSV)
                 mask1 = cv2.inRange(hsv1, self.lower, self.upper)
                 mask2 = cv2.inRange(hsv2, self.lower, self.upper)
-                cv2.imshow("Mask1", mask1, mask2)
-                cv2.imshow("Mask2", mask2)
-                cv2.imshow("cam1", frame1)
-                cv2.imshow("cam2", frame2)
+
+                combined1 = cv2.hconcat([frame1, frame2])
+                combined2 = cv2.hconcat([mask1, mask2])
+                combined3 = cv2.vconcat([combined1, combined2])
+                
+                cv2.imshow("cam", combined3)
             else :
                 break
 

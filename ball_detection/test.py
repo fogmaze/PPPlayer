@@ -33,7 +33,7 @@ while True :
     upper = np.array([h_max, s_max, v_max])
 
     mask = cv2.inRange(hsv, lower, upper)
-    cv2.imshow("img", combined3)
+    cv2.imshow("img", combined3 )
     cv2.imshow("mask", mask)
 
     if cv2.waitKey(1) == ord(' ') :
