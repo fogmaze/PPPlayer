@@ -3,11 +3,19 @@ import os
 import sys
 sys.path.append(os.getcwd())
 import core.Equation3d as equ
+from core.Constants import *
 import math
 import random
 import time
 
 G = 9.8
+FPS = 30
+
+SHUTTER_RANDOM_ERROR_STD = 0.005
+SHUTTER_SYSTEMATIC_ERROR_STD = 0.01
+
+CURVE_SHOWING_GAP = 0.05
+
 
 BALL_AREA_HALF_LENGTH = 3
 BALL_AREA_HALF_WIDTH = 2
@@ -92,11 +100,20 @@ def simulate():
 
     # 模拟自由落体过程
     p.setGravity(0, 0, -G)
-    while True:
+    for i in range(1):
         cam_pos = randomCameraPos()
         ball_pos = randomBallPos()
-        p.stepSimulation()
-        time.sleep(1/240)
+        #set ball pos
+        p.resetBasePositionAndOrientation(sphere, ball_pos.to_list(), startOrientation)
+        cam1_data = []
+        cam2_data = []
+        ans_data = []
+        camera_systematic_error = random.normalvariate(0, SHUTTER_SYSTEMATIC_ERROR_STD)
+        for j in range(SIMULATE_INPUT_LEN):
+            cam1_data.append(CameraWork(abs(j/FPS + random.normalvariate(0,SHUTTER_RANDOM_ERROR_STD)), cam_pos, j))
+            cam2_data.append(CameraWork(abs(j/FPS + random.normalvariate(0,SHUTTER_RANDOM_ERROR_STD) + camera_systematic_error), cam_pos, j))
+        for j in range(SIMULATE_TEST_LEN):
+            ans_data.append(BallWork(j*CURVE_SHOWING_GAP, j))
 
 
 if __name__ == "__main__":

@@ -26,6 +26,8 @@ class Point3d :
         return Point(self.x, self.z)
     def  yz(self) :
         return Point(self.y, self.z)
+    def to_list(self):
+        return [self.x,self.y,self.z]
     def to_str(self) :
         return "x:" + str(self.x) + ' y:' + str(self.y) + ' z:' + str(self.z) 
 
