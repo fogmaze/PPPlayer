@@ -1,14 +1,13 @@
 import pybullet
-import ball_simulate as sim
+import test
 import core.Equation3d as equ
+import math
 
 G = 9.8
 
 class Work:
     timestamp:float
-    def getBallPosition(self):
-        pass
-    def action(self):
+    def action(self,ball_pos):
         pass
 
 class CameraWork(Work):
@@ -17,6 +16,10 @@ class CameraWork(Work):
         self.curve = curve
         self.camera_pos = camera_pos
         self.index = index
-    def action(self):
         
-        
+    def action(self, ball_pos):
+        lineCamBall = equ.LineEquation3d(self.camera_pos, ball_pos)
+        self.deg_xy = math.atan(lineCamBall.line_xy)
+
+if __name__ == "__main__":
+    print(math.atan(1))
