@@ -2,6 +2,8 @@ from ctypes import *
 import torch
 import platform
 import sys
+import os
+sys.path.append(os.getcwd())
 import core.Constants as c
 
 # check os
@@ -23,8 +25,8 @@ class Data_Input(Structure):
         ("camera_x", c_double),
         ("camera_y", c_double),
         ("camera_z", c_double),
-        ("line_deg_xy", c_double, c.SIMULATE_INPUT_LEN),
-        ("line_deg_xz", c_double, c.SIMULATE_INPUT_LEN),
+        ("line_rad_xy", c_double, c.SIMULATE_INPUT_LEN),
+        ("line_rad_xz", c_double, c.SIMULATE_INPUT_LEN),
         ("timestamps", c_double, c.SIMULATE_INPUT_LEN),
     ]
 

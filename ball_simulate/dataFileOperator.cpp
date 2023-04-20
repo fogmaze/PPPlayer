@@ -14,8 +14,8 @@ typedef struct Input_{
     double camera_x;
     double camera_y;
     double camera_z;
-    double line_deg_xy[INPUT_LEN];
-    double line_deg_xz[INPUT_LEN];
+    double line_rad_xy[INPUT_LEN];
+    double line_rad_xz[INPUT_LEN];
     double timestamps[INPUT_LEN];
 } Input; 
 
