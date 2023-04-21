@@ -59,6 +59,8 @@ class LineEquation2d :
         return (self.c * y - self.b) / self.a
     def getY(self, x) :
         return (self.a * x + self.b) / self.c
+    def getDeg(self):
+        return math.atan(self.a)
     def cos(self):
         return (1)/math.sqrt(((self.getY(1)-self.b)**2 + 1))
         
