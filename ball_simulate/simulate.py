@@ -105,15 +105,20 @@ def simulate():
         ball_pos = randomBallPos()
         #set ball pos
         p.resetBasePositionAndOrientation(sphere, ball_pos.to_list(), startOrientation)
+        works = []
         cam1_data = []
         cam2_data = []
         ans_data = []
         camera_systematic_error = random.normalvariate(0, SHUTTER_SYSTEMATIC_ERROR_STD)
         for j in range(SIMULATE_INPUT_LEN):
-            cam1_data.append(CameraWork(abs(j/FPS + random.normalvariate(0,SHUTTER_RANDOM_ERROR_STD)), cam_pos, j))
-            cam2_data.append(CameraWork(abs(j/FPS + random.normalvariate(0,SHUTTER_RANDOM_ERROR_STD) + camera_systematic_error), cam_pos, j))
+            works.append(CameraWork(abs(j/FPS + random.normalvariate(0,SHUTTER_RANDOM_ERROR_STD)), cam_pos, (0,j)))
+            works.append(CameraWork(abs(j/FPS + random.normalvariate(0,SHUTTER_RANDOM_ERROR_STD) + camera_systematic_error), cam_pos, (0, j)))
         for j in range(SIMULATE_TEST_LEN):
-            ans_data.append(BallWork(j*CURVE_SHOWING_GAP, j))
+            ans_data.append(BallWork(j*CURVE_SHOWING_GAP, (2, j)))
+        works = sorted(works, key=lambda x: x.timestamp)
+        while len(works) > 0:
+            #step to next work
+            p.set
 
 
 if __name__ == "__main__":
