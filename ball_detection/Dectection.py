@@ -14,7 +14,7 @@ def direction(frame, x, y, h, w) :
 cam1 = cv2.VideoCapture(1)
 cam2 = cv2.VideoCapture(2)
 
-range = ColorRange()
+range = load("color_range")
 upper = range.upper
 lower = range.lower
 
@@ -62,6 +62,8 @@ while True :
     key = cv2.waitKey(5)
     if key == ord(" ") :
         break
+    if key == ord("r") :
+
 
 
 
