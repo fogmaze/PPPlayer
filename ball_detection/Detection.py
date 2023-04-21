@@ -6,11 +6,10 @@ from ColorRange import *
 
 
 def direction(frame, x, y, h, w) :
-    leftU = (x - w / 2, y + h / 2) 
-    rightD = (x + w / 2, y - h / 2)
-
-    cv2.rectangle(frame, leftU, rightD, (0, 255, 0), 2)
-    cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
+    xCenter = x + w // 2
+    yCenter = y + h // 2
+    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    cv2.circle(frame, (xCenter, yCenter), 2, (0, 255, 0), -1)
 
 
 cam1 = cv2.VideoCapture(0)
@@ -26,12 +25,8 @@ while True :
     ret2, frame_now2 = cam2.read()
 
 
-    frame_compare1 = ("ball_sample.jpg")
-    frame_compare2 = ("ball_sample.jpg")
-
-
-    hsv1 = cv2.cvtColor(frame_compare1, cv2.COLOR_BGR2HSV)
-    hsv2 = cv2.cvtColor(frame_compare2, cv2.COLOR_BGR2HSV)
+    frame_compare1 = cv2.imread("ball_sample.jpg")
+    frame_compare2 = cv2.imread("ball_sample.jpg")
     if cnt == 0 :
         frame_last1 = frame_now1
         frame_last2 = frame_now2
@@ -39,7 +34,10 @@ while True :
     else :
         frame_compare1 = cv2.bitwise_xor(frame_now1, frame_last1)
         frame_compare2 = cv2.bitwise_xor(frame_now2, frame_last2)
-        
+
+
+    hsv1 = cv2.cvtColor(frame_compare1, cv2.COLOR_BGR2HSV)
+    hsv2 = cv2.cvtColor(frame_compare2, cv2.COLOR_BGR2HSV)
     mask1 = cv2.inRange(hsv1, lower, upper)
     mask2 = cv2.inRange(hsv2, lower, upper)
 
