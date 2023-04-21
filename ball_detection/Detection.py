@@ -19,18 +19,17 @@ range = load("color_range")
 upper = range.upper
 lower = range.lower
 
-cnt = 0
+WhetherTHeFirstFrame = 0
 while True :
     ret1, frame_now1 = cam1.read()
     ret2, frame_now2 = cam2.read()
 
-
     frame_compare1 = cv2.imread("ball_sample.jpg")
     frame_compare2 = cv2.imread("ball_sample.jpg")
-    if cnt == 0 :
+    if WhetherTHeFirstFrame == 0 :
         frame_last1 = frame_now1
         frame_last2 = frame_now2
-        cnt += 1
+        WhetherTHeFirstFrame += 1
     else :
         frame_compare1 = cv2.bitwise_xor(frame_now1, frame_last1)
         frame_compare2 = cv2.bitwise_xor(frame_now2, frame_last2)
@@ -54,7 +53,7 @@ while True :
         area = cv2.contourArea(contour)
         if area > 200 :
             x, y, w, h = cv2.boundingRect(contour)
-            direction(frame_now1, x, y, h, w)
+            direction(frame_now2, x, y, h, w)
 
     cv2.imshow("Camera 1", frame_now1)
     cv2.imshow("Camera 2", frame_now2)
