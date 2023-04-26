@@ -13,7 +13,7 @@ from matplotlib.axes import Axes
 import numpy as np
 
 
-stepTime = 1/240
+stepTime = 1./1200.
 G = 9.8
 FPS = 30
 
@@ -27,8 +27,8 @@ BALL_AREA_HALF_LENGTH = 3
 BALL_AREA_HALF_WIDTH = 2
 BALL_AREA_HEIGHT = 1
 
-CAMERA_AREA_HALF_LENGTH = 7
-CAMERA_AREA_HALF_WIDTH = 5
+CAMERA_AREA_HALF_LENGTH = 7/2
+CAMERA_AREA_HALF_WIDTH = 5/2
 CAMERA_AREA_HEIGHT = 1.5
 
 class Work:
@@ -78,7 +78,7 @@ def configRoom(ax:Axes):
     lim = CAMERA_AREA_HALF_LENGTH
     ax.set_xlim(-lim,lim)
     ax.set_ylim(-lim,lim)
-    ax.set_zlim(0,CAMERA_AREA_HEIGHT)
+    ax.set_zlim(0,lim)
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlabel('z')
@@ -100,19 +100,21 @@ def cleenRoom(axe:plt.Axes):
     configRoom(ax=axe)
 
 def plotData(ax,inp:Tuple[List[CameraWork]],ans:List[BallWork]):
-    for input_data in inp:
-        for work in input_data:
-            drawLine3d(ax,work.lineCamBall)
+    #for input_data in inp:
+        #for work in input_data:
+            #drawLine3d(ax,work.lineCamBall)
     # plot ball points
     for pos in ans:
         ax.scatter(pos.ball_pos.x,pos.ball_pos.y,pos.ball_pos.z)
 
 
-def simulate(GUI = True):
+def simulate(GUI = False):
     if GUI:
         p.connect(p.GUI)
     else:
         p.connect(p.DIRECT)
+
+    p.setPhysicsEngineParameter(restitutionVelocityThreshold=0)
 
     planeId = p.createCollisionShape(p.GEOM_PLANE)
     plane = p.createMultiBody(0, planeId)
@@ -123,7 +125,7 @@ def simulate(GUI = True):
     startOrientation = p.getQuaternionFromEuler([0,0,0])
     sphere = p.createMultiBody(27, sphereId, basePosition=startPos, baseOrientation=startOrientation)
 
-    linearVelocity = [random.uniform(-2, 2), random.uniform(-2, 2), random.uniform(0, 5)]
+    linearVelocity = [0,0, random.uniform(0, 5)]
     angularVelocity = [0, 0, 0]
     p.resetBaseVelocity(sphere, linearVelocity, angularVelocity)
 
@@ -131,9 +133,15 @@ def simulate(GUI = True):
     angularDamping = 0.1
     p.changeDynamics(sphere, -1, linearDamping=linearDamping, angularDamping=angularDamping)
 
-    restitution = 0.9 # 彈性係數
+
+    restitution = 1 # 彈性係數
     p.changeDynamics(sphere, -1, restitution=restitution)
     p.changeDynamics(plane, -1, restitution=restitution)
+    p.changeDynamics(plane, -1, lateralFriction=0)
+    p.changeDynamics(sphere, -1, lateralFriction=0)
+    p.changeDynamics(sphere, -1, spinningFriction=0)
+    p.changeDynamics(sphere, -1, rollingFriction=0)
+    p.setRealTimeSimulation(0)
     p.setTimeStep(stepTime)
 
 
@@ -144,10 +152,10 @@ def simulate(GUI = True):
         print(ball_pos.to_str())
 
         #set ball pos
-        p.resetBasePositionAndOrientation(sphere, ball_pos.to_list(), startOrientation)
-        linearVelocity = [random.uniform(-2, 2), random.uniform(-2, 2), random.uniform(0, 5)]
+        p.resetBasePositionAndOrientation(sphere, [0,0,0.4], startOrientation)
+        linearVelocity = [1,1, 4]
         angularVelocity = [0, 0, 0]
-        #p.resetBaseVelocity(sphere, linearVelocity, angularVelocity)
+        p.resetBaseVelocity(sphere, linearVelocity, angularVelocity)
 
 
         works:List[Work] = []
@@ -164,8 +172,8 @@ def simulate(GUI = True):
         nowTimeStamp = 0
         nowWorkIndex = 0
         while len(works) > nowWorkIndex:
-            #if works[nowWorkIndex].timestamp > nowTimeStamp:
-            if True:
+            if works[nowWorkIndex].timestamp > nowTimeStamp:
+            #if True:
                 p.stepSimulation()
                 nowTimeStamp += stepTime
                 if GUI:
@@ -195,4 +203,4 @@ def simulate(GUI = True):
         plt.show()
 
 if __name__ == "__main__":
-    simulate(GUI=True)
+    simulate()
