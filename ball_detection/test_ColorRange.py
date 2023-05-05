@@ -1,67 +1,83 @@
 import cv2
 import numpy as np
 import pickle
+import os
 
-class ColorMode:
-    flag:str
-    transformTo:int
-    transformFrom:int
-    maxValues:tuple
-    names:tuple
-    def __init__(self, flag, transformTo, transformFrom, maxValues, names):
-        self.flag = flag
-        self.transformTo = transformTo
-        self.transformFrom = transformFrom
-        self.maxValues = maxValues
-        self.names = names
+def empty(a) :
+    pass
 
-COLOR_MODES = {
-    "RGB": ColorMode("RGB", cv2.COLOR_BGR2RGB, cv2.COLOR_RGB2BGR, (255, 255, 255), ("R", "G", "B")),
-    "HSV": ColorMode("HSV", cv2.COLOR_BGR2HSV, cv2.COLOR_HSV2BGR, (179, 255, 255), ("H", "S", "V")),
-    "LAB": ColorMode("LAB", cv2.COLOR_BGR2LAB, cv2.COLOR_LAB2BGR, (255, 255, 255), ("L", "A", "B")),
-    "GRAY": ColorMode("GRAY", cv2.COLOR_BGR2GRAY, cv2.COLOR_GRAY2BGR, (255), ("GRAY"))
-}
+def save(path, object) :
+    with open(path, "wb") as f :
+        pickle.dump(object, f)
 
-class ColorRange:
-    mode:ColorMode
-    lower:np.ndarray
+def load(path) :
+    if not os.path.exists(path) :
+        return ColorRange()
+    with open(path, "rb") as f :
+        return pickle.load(f)
+
+        
+class ColorRange :
     upper:np.ndarray
-    def save(self, path):
-        with open(path, 'wb') as f:
-            pickle.dump(self, f)
+    lower:np.ndarray
 
-    def load(self, path):
-        with open(path, 'rb') as f:
-            return pickle.load(f)
+    def __init__(self) :
+        self.upper = np.array([179, 255, 255])
+        self.lower = np.array([0, 0, 0])
+
+
+    def getParameters(self, h_min, h_max, s_min, s_max, v_min, v_max) :
+        h_min = cv2.getTrackbarPos("Hue Min", "ColorRangeSetting")
+        h_max = cv2.getTrackbarPos("Hue Max", "ColorRangeSetting")
+        s_min = cv2.getTrackbarPos("Sat Min", "ColorRangeSetting")
+        s_max = cv2.getTrackbarPos("Sat Max", "ColorRangeSetting")
+        v_min = cv2.getTrackbarPos("Val Min", "ColorRangeSetting")
+        v_max = cv2.getTrackbarPos("Val Max", "ColorRangeSetting")
+
+        self.upper = np.array([h_max, s_max, v_max])
+        self.lower = np.array([h_min, s_min, v_min])
+
+
+    def run(self, cam1) :
+        cv2.namedWindow("ColorRangeSetting")
+
+        cv2.createTrackbar("Hue Min", "ColorRangeSetting", self.lower[0], 179, empty)
+        cv2.createTrackbar("Hue Max", "ColorRangeSetting", self.upper[0], 179, empty)
+        cv2.createTrackbar("Sat Min", "ColorRangeSetting", self.lower[1], 255, empty)
+        cv2.createTrackbar("Sat Max", "ColorRangeSetting", self.upper[1], 255, empty)
+        cv2.createTrackbar("Val Min", "ColorRangeSetting", self.lower[2], 255, empty)
+        cv2.createTrackbar("Val Max", "ColorRangeSetting", self.upper[2], 255, empty)
+
+        while True :
+            ret1, frame1 = cam1.read()
+
+            if ret1 :
+                self.getParameters(self.lower[0], self.upper[0], self.lower[1], self.upper[1], self.lower[2], self.upper[2])
+
+                hsv1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
+                mask1 = cv2.inRange(hsv1, self.lower, self.upper)
+
+                cv2.putText(frame1, "Camera 1", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 128, 255), 2)
+                cv2.putText(mask1, "Mask Camera 1", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 239, 97), 2)
+            
+                
+                cv2.imshow("ColorRangeSetting", frame1)
+                cv2.imshow("ColorRangeMask", mask1)
+            else :
+                break
+
+            key = cv2.waitKey(50)
+            if key == ord(" ") :
+                break
+            
+        cv2.destroyAllWindows()
+
+
+
+if __name__ == "__main__" :
+    cam1 = cv2.VideoCapture('test.mp4')
+
+    cr = load("test_color_range")
     
-    def set(self, source, mode=COLOR_MODES["RGB"]):
-        cv2.namedWindow("set range")
-        self.mode = mode
-        self.lower = np.zeros(len(self.mode.maxValues), np.uint8)
-        self.upper = np.zeros(len(self.mode.maxValues), np.uint8)
-        for i in range(len(self.mode.maxValues)):
-            cv2.createTrackbar(self.mode.names[i] + " lower", "set range", 0, self.mode.maxValues[i], lambda x: self.lower.put(i, x))
-            cv2.createTrackbar(self.mode.names[i] + " upper", "set range", 0, self.mode.maxValues[i], lambda x: self.upper.put(i, x))
-
-        if isinstance(source, str):
-            img = cv2.imread(source)
-            def sowImage():
-                img_ = cv2.cvtColor(img, self.mode.transformTo)
-                thresholded = cv2.inRange(img_, self.lower, self.upper)
-                cv2.imshow('set range', img_)
-            cv2.createButton("upd", lambda x: sowImage())
-            sowImage()
-            cv2.waitKey(0)
-        else:
-            cap = cv2.VideoCapture(1)
-            while True:
-                ret, img = cap.read()
-                img = cv2.cvtColor(img, self.mode.transformTo)
-                thresholded = cv2.inRange(img, self.lower, self.upper)
-                cv2.imshow('set range', img)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-
-if __name__ == "__main__":
-    cr = ColorRange()
-    cr.set(0, COLOR_MODES["HSV"])
+    cr.run(cam1)
+    save("test_color_range", cr)

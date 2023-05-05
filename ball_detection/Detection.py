@@ -10,6 +10,7 @@ def direction(frame, x, y, h, w) :
     yCenter = y + h // 2
     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
     cv2.circle(frame, (xCenter, yCenter), 2, (0, 255, 0), -1)
+    print(xCenter, yCenter, sep = " ")
 
 
 cam1 = cv2.VideoCapture(0)
