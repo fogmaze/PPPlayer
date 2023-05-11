@@ -10,7 +10,7 @@ def direction(frame, x, y, h, w) :
     yCenter = y + h // 2
     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
     cv2.circle(frame, (xCenter, yCenter), 2, (0, 255, 0), -1)
-    print(xCenter, yCenter, sep = " ")
+    cv2.putText(frame, "{}, {}".format(xCenter, yCenter), (200, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
 
 cam1 = cv2.VideoCapture('test.mp4')
@@ -42,7 +42,7 @@ while True :
             x, y, w, h = cv2.boundingRect(contour)
             direction(frame_now1, x, y, h, w)
 
-    cv2.imshow("Camera 1", frame_now1)
+    cv2.imshow("Camera", frame_now1)
 
     
     key = cv2.waitKey(50)
