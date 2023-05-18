@@ -94,11 +94,26 @@ void* createHeader(int data_length) {
 }
 
 extern "C"
-bool putData(void* header, int i) {
+bool putData(void* header, int i, Data data) {
     if (i >= getFileDataLength(header)) {
         return false;
     }
     FileDataHeader* file_header = (FileDataHeader*)header;
+    file_header->data[i] = data;
+    return true;
+}
+
+extern "C"
+bool saveToFile(void* header, const char* file_name) {
+    fstream fh;
+    fh.open(file_name, ios::out | ios::binary);
+    if (!fh.is_open()) {
+        return false;
+    }
+    FileDataHeader* file_header = (FileDataHeader*)header;
+    fh.write(((char*)file_header), sizeof(FileDataHeader));
+    fh.write(((char*)file_header->data), sizeof(Data) * file_header->data_length);
+    fh.close();
     return true;
 }
 
