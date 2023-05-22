@@ -38,7 +38,7 @@ class ColorRange :
         self.lower = np.array([h_min, s_min, v_min])
 
 
-    def run(self, cam1, cam2) :
+    def runColorRange(self, cam1, cam2) :
         cv2.namedWindow("ColorRangeSetting")
 
         cv2.createTrackbar("Hue Min", "ColorRangeSetting", self.lower[0], 179, empty)
@@ -88,5 +88,5 @@ if __name__ == "__main__" :
 
     cr = load("color_range")
     
-    cr.run(cam1, cam2)
+    cr.runColorRange(cam1, cam2)
     save("color_range", cr)
