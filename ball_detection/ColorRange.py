@@ -70,11 +70,11 @@ class ColorRange :
                 combined2 = cv2.hconcat([mask1, mask2])
                 
                 cv2.imshow("ColorRangeSetting", combined2)
-                cv2.imshow("ColorRangeMask", combined1)
+                #cv2.imshow("ColorRangeMask", combined1)
             else :
                 break
 
-            key = cv2.waitKey(5)
+            key = cv2.waitKey(20)
             if key == ord(" ") :
                 break
             
@@ -83,8 +83,8 @@ class ColorRange :
 
 
 if __name__ == "__main__" :
-    cam1 = cv2.VideoCapture(0)
-    cam2 = cv2.VideoCapture(1)
+    cam1 = cv2.VideoCapture("ball_detection/test.mp4")
+    cam2 = cv2.VideoCapture("ball_detection/test.mp4")
 
     cr = load("color_range")
     

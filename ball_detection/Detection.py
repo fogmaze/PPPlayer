@@ -2,71 +2,92 @@ import cv2
 import numpy as np
 import pickle
 import os
+import math
 from ColorRange import *
 
 
-def direction(frame, x, y, h, w) :
-    xCenter = x + w // 2
-    yCenter = y + h // 2
-    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-    cv2.circle(frame, (xCenter, yCenter), 2, (0, 255, 0), -1)
-    print(xCenter, yCenter, sep = " ")
-
 
 class Detection :
-    def __init__(self, range, upper, lower) :
-        self.range = load("color_range")
-        self.upper = range.upper
-        self.lower = range.lower
+    range = load("color_range")
+    upper = range.upper
+    lower = range.lower
+
+    def drawDirection(self, frame, x, y, h, w) :
+        xCenter = x + w // 2
+        yCenter = y + h // 2
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        cv2.circle(frame, (xCenter, yCenter), 2, (0, 255, 0), -1)
+        cv2.putText(frame, ("x : {} y : {}".format(xCenter, yCenter)), (10, 30), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
+
+    def compareFrames(self, frame, compare) :
+        move = cv2.bitwise_xor(frame, compare)
+        color = cv2.inRange(move, np.array([28, 28, 20]), np.array([255, 255, 255]))
+        return cv2.bitwise_and(frame, cv2.cvtColor(color, cv2.COLOR_GRAY2BGR))
     
-    WhetherTHeFirstFrame = 0
+    def maskFrames(self, frame) :
+        return cv2.inRange(cv2.cvtColor(frame, cv2.COLOR_BGR2HSV), self.lower, self.upper)
 
-    def runDetection(self, cam1, cam2) :
-        while True :
-            ret1, frame_now1 = cam1.read()
-            ret2, frame_now2 = cam2.read()
+    def detectContours(self, frame) :
+        return cv2.findContours(frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[0]
 
-            frame_compare1 = cv2.imread("ball_sample.jpg")
-            frame_compare2 = cv2.imread("ball_sample.jpg")
-            if WhetherTHeFirstFrame == 0 :
-                frame_last1 = frame_now1
-                frame_last2 = frame_now2
-                WhetherTHeFirstFrame += 1
-            else :
-                frame_compare1 = cv2.bitwise_xor(frame_now1, frame_last1)
-                frame_compare2 = cv2.bitwise_xor(frame_now2, frame_last2)
+    # value hasn't been measured
+    def ballFeature(self,area, h, w) :
+        r = math.sqrt(h*h + w*w) / 2
+        a = math.pi * r * r
+        circle = area / a
+        if not 0 < r < 100 :
+            return False
+        if not 0 < a < 100 :
+            return False
+        if not 0 < circle < 100 :
+            return False
+        
+        return True
+ 
+    def runDetevtion(self, cam1, cam2) :
+        whetherTheFirstFrame = True
+
+        while(True) :
+            ret1, frame1 = cam1.read()
+            ret2, frame2 = cam2.read()
+
+            if ret1 and ret2 :
+                if whetherTheFirstFrame :
+                    compare1 = frame1
+                    compare2 = frame2
+                    whetherTheFirstFrame = False
+                    continue
+
+                for contour in self.detectContours(self.maskFrames(self.compareFrames(frame1, compare1))) :
+                    area = cv2.contourArea(contour)
+                    print(area)
+                    if 10 < area < 50 :
+                        x, y, w, h = cv2.boundingRect(contour)
+                        self.drawDirection(frame1, x, y, h, w)
+                for contour in self.detectContours(self.maskFrames(self.compareFrames(frame2, compare2))) :
+                    area = cv2.contourArea(contour)
+                    if area > 0 :
+                        x, y, w, h = cv2.boundingRect(contour)
+                        self.drawDirection(frame2, x, y, h, w)
+
+                cv2.imshow("Camera 1", frame1)
+                cv2.imshow("Camera 2", frame2)
 
 
-            hsv1 = cv2.cvtColor(frame_compare1, cv2.COLOR_BGR2HSV)
-            hsv2 = cv2.cvtColor(frame_compare2, cv2.COLOR_BGR2HSV)
-            mask1 = cv2.inRange(hsv1, lower, upper)
-            mask2 = cv2.inRange(hsv2, lower, upper)
-
-            contours1, _ = cv2.findContours(mask1, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-            contours2, _ = cv2.findContours(mask2, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-
-            for contour in contours1 :
-                area = cv2.contourArea(contour)
-                if area > 200 :
-                    x, y, w, h = cv2.boundingRect(contour)
-                    direction(frame_now1, x, y, h, w)
-
-            for contour in contours2 :
-                area = cv2.contourArea(contour)
-                if area > 200 :
-                    x, y, w, h = cv2.boundingRect(contour)
-                    direction(frame_now2, x, y, h, w)
-
-            cv2.imshow("Camera 1", frame_now1)
-            cv2.imshow("Camera 2", frame_now2)
+                if cv2.waitKey(100) == ord(' ') :
+                    break
 
         
-            key = cv2.waitKey(5)
-            if key == ord(" ") :
-                break
+
+if __name__ == "__main__" :
+    cam1 = cv2.VideoCapture("ball_detection/test.mp4")
+    cam2 = cv2.VideoCapture("ball_detection/test.mp4")
+
+    detector = Detection()
+    detector.runDetevtion(cam1, cam2)
 
 
 
-cam1.release()
-cam2.release()
-cv2.destroyAllWindows
+    cv2.destroyAllWindows()
+    cam1.release()
+    cam2.release()
