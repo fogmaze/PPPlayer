@@ -1,4 +1,5 @@
 import pybullet as p
+import tqdm
 import os
 import sys
 sys.path.append(os.getcwd())
@@ -150,7 +151,7 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
     p.setGravity(0, 0, -G)
 
     dataset = dfo.BallDataSet(outputFileName, dataLength)
-    for i in range(int(dataLength/SINGLE_SIMULATE_SAMPLE_LEN)):
+    for i in tqdm.tqdm(range(int(dataLength/SINGLE_SIMULATE_SAMPLE_LEN))) :
         cam_pos = randomCameraPos()
         ball_pos = randomBallPos()
 
@@ -234,6 +235,31 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
             dataset.putData(i*SINGLE_SIMULATE_SAMPLE_LEN+j, dataStruct)
         dataset.saveToFile()
 
+def calculateMeanStd(filename:str) :
+    dataset = dfo.BallDataSet(filename)
+    mean = np.zeros((2,3,3))
+    std = np.zeros((2,3,3))
+    for i in tqdm.tqdm(range(len(dataset))):
+        data = dataset[i]
+        for j in range(2):
+            for k in range(3):
+                mean[j][k][0] += data.inputs[j].line_rad_xy[k]
+                mean[j][k][1] += data.inputs[j].line_rad_xz[k]
+                mean[j][k][2] += data.inputs[j].timestamps[k]
+                std[j][k][0] += data.inputs[j].line_rad_xy[k]**2
+                std[j][k][1] += data.inputs[j].line_rad_xz[k]**2
+                std[j][k][2] += data.inputs[j].timestamps[k]**2
+    for j in range(2):
+        for k in range(3):
+            mean[j][k][0] /= len(dataset)
+            mean[j][k][1] /= len(dataset)
+            mean[j][k][2] /= len(dataset)
+            std[j][k][0] = math.sqrt(std[j][k][0]/len(dataset) - mean[j][k][0]**2)
+            std[j][k][1] = math.sqrt(std[j][k][1]/len(dataset) - mean[j][k][1]**2)
+            std[j][k][2] = math.sqrt(std[j][k][2]/len(dataset) - mean[j][k][2]**2)
+    return mean, std
 
 if __name__ == "__main__":
-    simulate()
+    print(calculateMeanStd("train.bin"))
+    #simulate(dataLength=100000)
+    pass
