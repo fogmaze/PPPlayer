@@ -11,9 +11,10 @@ import time
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import numpy as np
+import ball_simulate.dataFileOperator as dfo
 
 
-stepTime = 1./1200.
+stepTime = 1./900.
 G = 9.8
 FPS = 30
 
@@ -108,7 +109,8 @@ def plotData(ax,inp:Tuple[List[CameraWork]],ans:List[BallWork]):
         ax.scatter(pos.ball_pos.x,pos.ball_pos.y,pos.ball_pos.z)
 
 
-def simulate(GUI = False):
+def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
+    SINGLE_SIMULATE_SAMPLE_LEN = 5
     if GUI:
         p.connect(p.GUI)
     else:
@@ -146,22 +148,23 @@ def simulate(GUI = False):
 
 
     p.setGravity(0, 0, -G)
-    for i in range(1):
+
+    dataset = dfo.BallDataSet(outputFileName, dataLength)
+    for i in range(int(dataLength/SINGLE_SIMULATE_SAMPLE_LEN)):
         cam_pos = randomCameraPos()
         ball_pos = randomBallPos()
-        print(ball_pos.to_str())
 
         #set ball pos
         p.resetBasePositionAndOrientation(sphere, [0,0,0.4], startOrientation)
-        linearVelocity = [1,1, 4]
+        linearVelocity = [random.uniform(-5,5), random.uniform(-5,5), random.uniform(0, 3)]
         angularVelocity = [0, 0, 0]
         p.resetBaseVelocity(sphere, linearVelocity, angularVelocity)
 
 
         works:List[Work] = []
-        cam1_data = []
-        cam2_data = []
-        ans_data = []
+        cam1_data:List[CameraWork] = []
+        cam2_data:List[CameraWork] = []
+        ans_data:List[BallWork] = []
         camera_systematic_error = random.normalvariate(0, SHUTTER_SYSTEMATIC_ERROR_STD)
         for j in range(SIMULATE_INPUT_LEN):
             works.append(CameraWork(abs(j/FPS + random.normalvariate(0,SHUTTER_RANDOM_ERROR_STD)), cam_pos, (0,j)))
@@ -193,14 +196,44 @@ def simulate(GUI = False):
                 cam2_data.append(works[nowWorkIndex])
             elif works[nowWorkIndex].index[0] == 2:
                 ans_data.append(works[nowWorkIndex])
-            print(nowWorkIndex)
 
             nowWorkIndex += 1
         
-        ax = createRoom()
-        configRoom(ax)
-        plotData(ax,(cam1_data,cam2_data),ans_data)
-        plt.show()
+        if GUI:
+            ax = createRoom()
+            configRoom(ax)
+            plotData(ax,(cam1_data,cam2_data),ans_data)
+            plt.show()
+
+        # save data
+        for j in range(SINGLE_SIMULATE_SAMPLE_LEN) :
+            dataStruct = dfo.DataStruct()
+            cam1_end = random.randint(3, len(cam1_data))
+            cam2_end = min(random.randint(cam1_end-2, cam1_end+2), len(cam2_data))
+            dataStruct.inputs[0].camera_x = cam1_data[0].camera_pos.x
+            dataStruct.inputs[0].camera_y = cam1_data[0].camera_pos.y
+            dataStruct.inputs[0].camera_z = cam1_data[0].camera_pos.z
+            dataStruct.inputs[1].camera_x = cam2_data[0].camera_pos.x
+            dataStruct.inputs[1].camera_y = cam2_data[0].camera_pos.y
+            dataStruct.inputs[1].camera_z = cam2_data[0].camera_pos.z
+
+            for k in range(cam1_end):
+                dataStruct.inputs[0].line_rad_xy[k] = cam1_data[k].rad_xy
+                dataStruct.inputs[0].line_rad_xz[k] = cam1_data[k].rad_xz
+                dataStruct.inputs[0].timestamps[k] = cam1_data[k].timestamp
+            
+            for k in range(cam2_end):
+                dataStruct.inputs[1].line_rad_xy[k] = cam2_data[k].rad_xy
+                dataStruct.inputs[1].line_rad_xz[k] = cam2_data[k].rad_xz
+                dataStruct.inputs[1].timestamps[k] = cam2_data[k].timestamp
+            
+            for k in range(len(ans_data)):
+                dataStruct.curvePoints[k].x = ans_data[k].ball_pos.x
+                dataStruct.curvePoints[k].y = ans_data[k].ball_pos.y
+                dataStruct.curveTimestamps[k] = ans_data[k].timestamp
+            dataset.putData(i*SINGLE_SIMULATE_SAMPLE_LEN+j, dataStruct)
+        dataset.saveToFile()
+
 
 if __name__ == "__main__":
     simulate()

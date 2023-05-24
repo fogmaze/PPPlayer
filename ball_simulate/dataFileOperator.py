@@ -58,11 +58,13 @@ lib.saveToFile.restype = c_bool
 
 
 class BallDataSet(torch.utils.data.Dataset):
-    def __init__(self, fileName):
+    def __init__(self, fileName, dataLength = None):
         if not os.path.exists(fileName):
             #cerate file
             print("create file")
-            self.data = lib.createHeader(c.SIMULATE_TEST_LEN)
+            if dataLength == None:
+                raise Exception("dataLength can't be None!")
+            self.data = lib.createHeader(dataLength)
         else:
             self.data = lib.loadFromFile(fileName.encode('utf-8'))
         self.filename = fileName
@@ -87,7 +89,48 @@ class BallDataSet(torch.utils.data.Dataset):
     def saveToFile(self):
         return lib.saveToFile(self.data, self.filename.encode('utf-8'))
 
+def testPutData():
+    d = BallDataSet("t.bin", dataLength=2)
+    for i in range(2) :
+        a = DataStruct()
+        a.inputs[0].camera_x = i
+        a.inputs[0].camera_y = 2
+        a.inputs[0].camera_z = 3
+        a.inputs[0].line_rad_xy[0] = 4
+        a.inputs[0].line_rad_xy[1] = 5
+        a.inputs[0].line_rad_xy[2] = 6
+        a.inputs[0].line_rad_xz[0] = 7
+        a.inputs[0].line_rad_xz[1] = 8
+        a.inputs[0].line_rad_xz[2] = 9
+        a.inputs[0].timestamps[0] = 10
+        a.inputs[1].camera_x = 11
+        a.inputs[1].camera_y = 12
+        a.inputs[1].camera_z = 13
+        a.inputs[1].line_rad_xy[0] = 14
+        a.inputs[1].line_rad_xy[1] = 15
+        a.inputs[1].line_rad_xy[2] = 16
+        a.inputs[1].line_rad_xz[0] = 17
+        a.inputs[1].line_rad_xz[1] = 18
+        a.inputs[1].line_rad_xz[2] = 19
+        a.inputs[1].timestamps[0] = 20
+        a.curvePoints[0].x = 21
+        a.curvePoints[0].y = 22
+        a.curvePoints[1].x = 23
+        a.curvePoints[1].y = 24
+        a.curveTimestamps[0] = 25
+        d.putData(i, a)
+        print(i)
+    d.saveToFile()
+
+def testLoadData():
+    a = BallDataSet("t.bin")
+    print("load success")
+    print(len(a))
+    print(a[0].inputs[0].camera_x)
+    print(a[0].inputs[0].camera_z)
+    print(a[1].inputs[0].camera_x)
+    print(a[1].curveTimestamps[0])
+    print(a[1].curveTimestamps[1])
 if __name__ == "__main__":
-    d = BallDataSet("t.bin")
-    
+    testLoadData()
     pass
