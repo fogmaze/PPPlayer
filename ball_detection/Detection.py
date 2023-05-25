@@ -57,7 +57,8 @@ class Detection :
                     compare2 = frame2
                     whetherTheFirstFrame = False
                     continue
-
+                
+                # area hasn't been measured
                 for contour in self.detectContours(self.maskFrames(self.compareFrames(frame1, compare1))) :
                     area = cv2.contourArea(contour)
                     print(area)
