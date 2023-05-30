@@ -7,7 +7,7 @@
 using namespace std;
 
 typedef struct Point_ {
-    double x,y;
+    double x,y,z;
 } Point;
 
 typedef struct Input_{

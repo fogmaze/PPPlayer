@@ -237,26 +237,54 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
 
 def calculateMeanStd(filename:str) :
     dataset = dfo.BallDataSet(filename)
-    mean = np.zeros((2,3,3))
-    std = np.zeros((2,3,3))
+    mean = np.zeros((10))
+    std = np.zeros((10))
     for i in tqdm.tqdm(range(len(dataset))):
         data = dataset[i]
         for j in range(2):
-            for k in range(3):
-                mean[j][k][0] += data.inputs[j].line_rad_xy[k]
-                mean[j][k][1] += data.inputs[j].line_rad_xz[k]
-                mean[j][k][2] += data.inputs[j].timestamps[k]
-                std[j][k][0] += data.inputs[j].line_rad_xy[k]**2
-                std[j][k][1] += data.inputs[j].line_rad_xz[k]**2
-                std[j][k][2] += data.inputs[j].timestamps[k]**2
-    for j in range(2):
-        for k in range(3):
-            mean[j][k][0] /= len(dataset)
-            mean[j][k][1] /= len(dataset)
-            mean[j][k][2] /= len(dataset)
-            std[j][k][0] = math.sqrt(std[j][k][0]/len(dataset) - mean[j][k][0]**2)
-            std[j][k][1] = math.sqrt(std[j][k][1]/len(dataset) - mean[j][k][1]**2)
-            std[j][k][2] = math.sqrt(std[j][k][2]/len(dataset) - mean[j][k][2]**2)
+            mean[0] += data.inputs[j].camera_x
+            mean[1] += data.inputs[j].camera_y
+            mean[2] += data.inputs[j].camera_z
+            std[0] += data.inputs[j].camera_x**2
+            std[1] += data.inputs[j].camera_y**2
+            std[2] += data.inputs[j].camera_z**2
+            for k in range(SIMULATE_INPUT_LEN):
+                mean[3] += data.inputs[j].line_rad_xy[k]
+                mean[4] += data.inputs[j].line_rad_xz[k]
+                mean[5] += data.inputs[j].timestamps[k]
+                std[3] += data.inputs[j].line_rad_xy[k]**2
+                std[4] += data.inputs[j].line_rad_xz[k]**2
+                std[5] += data.inputs[j].timestamps[k]**2
+        for k in range(SIMULATE_TEST_LEN):
+            mean[6] += data.curvePoints[k].x
+            mean[7] += data.curvePoints[k].y
+            mean[8] += data.curvePoints[k].z
+            mean[9] += data.curveTimestamps[k]
+            std[6] += data.curvePoints[k].x**2
+            std[7] += data.curvePoints[k].y**2
+            std[8] += data.curvePoints[k].z**2
+            std[9] += data.curveTimestamps[k]**2
+
+    mean[0] /= len(dataset) * 2
+    mean[1] /= len(dataset) * 2
+    mean[2] /= len(dataset) * 2
+    mean[3] /= len(dataset) * SIMULATE_INPUT_LEN * 2
+    mean[4] /= len(dataset) * SIMULATE_INPUT_LEN * 2
+    mean[5] /= len(dataset) * SIMULATE_INPUT_LEN * 2
+    mean[6] /= len(dataset) * SIMULATE_TEST_LEN
+    mean[7] /= len(dataset) * SIMULATE_TEST_LEN
+    mean[8] /= len(dataset) * SIMULATE_TEST_LEN
+    mean[9] /= len(dataset) * SIMULATE_TEST_LEN
+    std[0] = math.sqrt(std[0]/len(dataset) - mean[0]**2)
+    std[1] = math.sqrt(std[1]/len(dataset) - mean[1]**2)
+    std[2] = math.sqrt(std[2]/len(dataset) - mean[2]**2)
+    std[3] = math.sqrt(std[3]/len(dataset) / SIMULATE_INPUT_LEN / 2 - mean[3]**2)
+    std[4] = math.sqrt(std[4]/len(dataset) / SIMULATE_INPUT_LEN / 2 - mean[4]**2)
+    std[5] = math.sqrt(std[5]/len(dataset) / SIMULATE_INPUT_LEN / 2 - mean[5]**2)
+    std[6] = math.sqrt(std[6]/len(dataset) / SIMULATE_TEST_LEN - mean[6]**2)
+    std[7] = math.sqrt(std[7]/len(dataset) / SIMULATE_TEST_LEN - mean[7]**2)
+    std[8] = math.sqrt(std[8]/len(dataset) / SIMULATE_TEST_LEN - mean[8]**2)
+    std[9] = math.sqrt(std[9]/len(dataset) / SIMULATE_TEST_LEN - mean[9]**2)
     return mean, std
 
 if __name__ == "__main__":
