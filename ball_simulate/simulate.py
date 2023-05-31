@@ -231,9 +231,10 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
             for k in range(len(ans_data)):
                 dataStruct.curvePoints[k].x = ans_data[k].ball_pos.x
                 dataStruct.curvePoints[k].y = ans_data[k].ball_pos.y
+                dataStruct.curvePoints[k].z = ans_data[k].ball_pos.z
                 dataStruct.curveTimestamps[k] = ans_data[k].timestamp
             dataset.putData(i*SINGLE_SIMULATE_SAMPLE_LEN+j, dataStruct)
-        dataset.saveToFile()
+    dataset.saveToFile()
 
 def calculateMeanStd(filename:str) :
     dataset = dfo.BallDataSet(filename)
@@ -288,6 +289,6 @@ def calculateMeanStd(filename:str) :
     return mean, std
 
 if __name__ == "__main__":
-    print(calculateMeanStd("train.bin"))
-    #simulate(dataLength=100000)
+    #print(calculateMeanStd("train.bin"))
+    simulate(dataLength=5000000, outputFileName="train.bin")
     pass

@@ -17,7 +17,8 @@ else:
 class Data_Point(Structure):
     _fields_ = [
         ("x",c_double),
-        ("y",c_double)
+        ("y",c_double),
+        ("z",c_double)
     ]
 
 class Data_Input(Structure):
@@ -64,6 +65,9 @@ class BallDataSet(torch.utils.data.Dataset):
             print("create file")
             if dataLength == None:
                 raise Exception("dataLength can't be None!")
+            self.data = lib.createHeader(dataLength)
+        elif dataLength != None:
+            print("create file")
             self.data = lib.createHeader(dataLength)
         else:
             self.data = lib.loadFromFile(fileName.encode('utf-8'))
@@ -132,5 +136,5 @@ def testLoadData():
     print(a[1].curveTimestamps[0])
     print(a[1].curveTimestamps[1])
 if __name__ == "__main__":
-    testLoadData()
+    lib.main()
     pass

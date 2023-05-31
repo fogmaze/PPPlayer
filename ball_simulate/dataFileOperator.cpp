@@ -119,12 +119,7 @@ bool saveToFile(void* header, const char* file_name) {
 
 extern "C"
 int main() {
-    char const * file_name = "test.bin";
-    createData_test((char*)file_name);
-    FileDataHeader* header = (FileDataHeader*)loadFromFile("test.bin");
-    for (int i = 0; i < header->data_length; i++) {
-    }
-    releaseData(header);
+    cout << sizeof(int) << endl;
     return 0;
 }
 
