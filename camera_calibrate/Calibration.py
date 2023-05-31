@@ -4,7 +4,14 @@ import pickle
 import glob
 import os
 
-#def save
+def save(path, object) :
+    with open(path, "wb") as f :
+        pickle.dump(object, f)
+
+def load(path1, path2) :
+    with open(path1, "rb") as f1 , open(path2, "rb") as f2:
+        return pickle.load(f1), pickle.load(f2)
+    
 
 class Calibrator():
     def __init__ (self) :
@@ -26,9 +33,9 @@ class Calibrator():
     
     def runCalibrate(self) :
         #print("calibrating...") 
-        ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(self.points3D, self.points2D, self.size, None, None)
+        ret, self.mtx, dist, rvecs, tvecs = cv2.calibrateCamera(self.points3D, self.points2D, self.size, None, None)
         #print("ret: {}".format(ret))
-        print("intrinsic matrix: \n {}".format(mtx))
+        print("intrinsic matrix: \n {}".format(self.mtx))
         # in the form of (k_1, k_2, p_1, p_2, k_3)
         #print("distortion cofficients: \n {}".format(dist))
         #print("rotation vectors: \n {}".format(rvecs))
@@ -39,15 +46,21 @@ class Calibrator():
         cam = cv2.VideoCapture(source)
         while True :
             ret, frame = cam.read()
-            print(frame.shape)
             countFrame += 1
             if not countFrame % 30  :
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 self.runFindCorners(frame, gray)
             cv2.imshow('frame', frame)
-            if cv2.waitKey(1) & 0xFF == ord('c') :
+            key = cv2.waitKey(10) & 0xFF
+            if key == ord('1') :
                 cv2.destroyAllWindows()
                 self.runCalibrate()
+                save("calibration1", self.mtx)
+                break
+            elif key == ord('2') :
+                cv2.destroyAllWindows()
+                self.runCalibrate()
+                save("calibration2", self.mtx)
                 break
 
 
