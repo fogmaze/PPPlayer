@@ -290,5 +290,5 @@ def calculateMeanStd(filename:str) :
 
 if __name__ == "__main__":
     #print(calculateMeanStd("train.bin"))
-    simulate(dataLength=5000000, outputFileName="train.bin")
+    simulate(dataLength=4000000, outputFileName="train.bin")
     pass
