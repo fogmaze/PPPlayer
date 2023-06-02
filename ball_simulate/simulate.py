@@ -137,7 +137,7 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
     p.changeDynamics(sphere, -1, linearDamping=linearDamping, angularDamping=angularDamping)
 
 
-    restitution = 1 # 彈性係數
+    restitution = 1
     p.changeDynamics(sphere, -1, restitution=restitution)
     p.changeDynamics(plane, -1, restitution=restitution)
     p.changeDynamics(plane, -1, lateralFriction=0)
@@ -146,7 +146,6 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
     p.changeDynamics(sphere, -1, rollingFriction=0)
     p.setRealTimeSimulation(0)
     p.setTimeStep(stepTime)
-
 
     p.setGravity(0, 0, -G)
 
