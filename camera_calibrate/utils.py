@@ -51,11 +51,12 @@ def getBallPixelSize(distance, cameraMatrix) :
     BALL_REAL_SIZE = 3.8
     return BALL_REAL_SIZE * cameraMatrix[0][0] / distance
 
-print(getBallPixelSize(100), getBallPixelSize(450))
+#print(getBallPixelSize(100), getBallPixelSize(450))
 
 if __name__ == "__main__" :
     #takePicture()
-    cameraMatrix = pickle.load(open('calibration1.pickle', 'rb'))
+    cameraMatrix = pickle.load(open('calibration1', 'rb'))
+    calculateCameraPosition(cameraMatrix, cv2.imread('test.jpg'))
     #print(cameraMatrix)
     #getCameraPosition_realTime(cameraMatrix)
     pass
