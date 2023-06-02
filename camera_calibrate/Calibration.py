@@ -17,7 +17,7 @@ class Calibrator():
     def __init__ (self) :
         self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         self.object_points = np.zeros((6*9,3), np.float32)
-        self.object_points[:,:2] = np.mgrid[0:9,0:6].T.reshape(-1,2) * 2.3
+        self.object_points[:,:2] = np.mgrid[0:9,0:6].T.reshape(-1,2) * 3.6
         self.points2D = []
         self.points3D = []
 
