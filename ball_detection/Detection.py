@@ -34,10 +34,12 @@ class Detection :
     def ballFeature(self,area, h, w) :
         r = math.sqrt(h*h + w*w) / 2
         a = math.pi * r * r
+        rmin = 3.7178529388965496/2.0
+        rmax = 18.589264694482747/2.0
         circle = area / a
-        if not 0 < r < 100 :
+        if not rmin < r < rmax:
             return False
-        if not 0 < a < 100 :
+        if not math.pi * rmin * rmin < area < math.pi * rmax * rmax:
             return False
         if not 0 < circle < 100 :
             return False
@@ -62,14 +64,16 @@ class Detection :
                 for contour in self.detectContours(self.maskFrames(self.compareFrames(frame1, compare1))) :
                     area = cv2.contourArea(contour)
                     print(area)
-                    if 10 < area < 50 :
+                    if area > 0:
                         x, y, w, h = cv2.boundingRect(contour)
-                        self.drawDirection(frame1, x, y, h, w)
+                        if self.ballFeature(area, h, w) :
+                            self.drawDirection(frame1, x, y, h, w)
                 for contour in self.detectContours(self.maskFrames(self.compareFrames(frame2, compare2))) :
                     area = cv2.contourArea(contour)
                     if area > 0 :
                         x, y, w, h = cv2.boundingRect(contour)
-                        self.drawDirection(frame2, x, y, h, w)
+                        if self.ballFeature(area, h, w) :
+                            self.drawDirection(frame2, x, y, h, w)
 
                 cv2.imshow("Camera 1", frame1)
                 cv2.imshow("Camera 2", frame2)
@@ -81,8 +85,23 @@ class Detection :
         
 
 if __name__ == "__main__" :
-    cam1 = cv2.VideoCapture("ball_detection/test.mp4")
-    cam2 = cv2.VideoCapture("ball_detection/test.mp4")
+    cam1 = cv2.VideoCapture('output.mp4')
+    cam2 = cv2.VideoCapture(0)
+
+   # output_file = 'output.mp4'
+    #fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # 使用MP4编解码器
+    #frame_rate = 30.0  # 帧率为30fps
+    #frame_size = (640, 480)  # 帧尺寸为640x480
+
+    #video_writer = cv2.VideoWriter(output_file, fourcc, frame_rate, frame_size)
+
+    #while True :
+        #ret, frame = cam1.read()
+        #if ret :
+            #video_writer.write(frame)
+            #cv2.imshow("Camera 1", frame)
+            #if cv2.waitKey(20) == ord(' ') :
+                #break
 
     detector = Detection()
     detector.runDetevtion(cam1, cam2)
