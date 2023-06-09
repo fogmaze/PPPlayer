@@ -3,14 +3,25 @@ import numpy as np
 import pickle
 import os
 import math
+import threading
 from ColorRange import *
 
 
 
 class Detection :
+    #colorrange
     range = load("color_range")
     upper = range.upper
     lower = range.lower
+
+    #save test frames
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    frame_rate = 30.0
+    frame_size = (640, 480)
+
+    def writeVideo(self, path, frame) :
+        video_writer = cv2.VideoWriter(path, self.fourcc, self.frame_rate, self.frame_size)
+        video_writer.write(frame)
 
     def drawDirection(self, frame, x, y, h, w) :
         xCenter = x + w // 2
@@ -30,7 +41,6 @@ class Detection :
     def detectContours(self, frame) :
         return cv2.findContours(frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[0]
 
-    # value hasn't been measured
     def ballFeature(self,area, h, w) :
         r = math.sqrt(h*h + w*w) / 2
         a = math.pi * r * r
@@ -46,38 +56,34 @@ class Detection :
         
         return True
  
-    def runDetevtion(self, cam1, cam2) :
+    def runDetevtion(self, source, path_bad, path_all) :
+        cam = cv2.VideoCapture(source)
         whetherTheFirstFrame = True
 
         while(True) :
-            ret1, frame1 = cam1.read()
-            ret2, frame2 = cam2.read()
+            numberOfBall = 0
+            ret, frame = cam.read()
 
-            if ret1 and ret2 :
+            if ret :
                 if whetherTheFirstFrame :
-                    compare1 = frame1
-                    compare2 = frame2
+                    compare = frame
                     whetherTheFirstFrame = False
                     continue
                 
-                # area hasn't been measured
-                for contour in self.detectContours(self.maskFrames(self.compareFrames(frame1, compare1))) :
+                for contour in self.detectContours(self.maskFrames(self.compareFrames(frame, compare))) :
                     area = cv2.contourArea(contour)
-                    print(area)
-                    if area > 0:
-                        x, y, w, h = cv2.boundingRect(contour)
-                        if self.ballFeature(area, h, w) :
-                            self.drawDirection(frame1, x, y, h, w)
-                for contour in self.detectContours(self.maskFrames(self.compareFrames(frame2, compare2))) :
-                    area = cv2.contourArea(contour)
-                    if area > 0 :
-                        x, y, w, h = cv2.boundingRect(contour)
-                        if self.ballFeature(area, h, w) :
-                            self.drawDirection(frame2, x, y, h, w)
+                    x, y, w, h = cv2.boundingRect(contour)
+                    if self.ballFeature(area, h, w) :
+                        self.drawDirection(frame, x, y, h, w)
+                        numberOfBall += 1
 
-                cv2.imshow("Camera 1", frame1)
-                cv2.imshow("Camera 2", frame2)
+                if not numberOfBall == 1 :
+                    self.writeVideo("ball_detection_TestVideos/" + path_bad, frame)
 
+                self.writeVideo("ball_detection_TestVideos/" + path_all, frame)
+                
+                window = "Camera " + str(source) 
+                cv2.imshow(window, frame)
 
                 if cv2.waitKey(100) == ord(' ') :
                     break
@@ -85,29 +91,18 @@ class Detection :
         
 
 if __name__ == "__main__" :
-    cam1 = cv2.VideoCapture('output.mp4')
-    cam2 = cv2.VideoCapture(0)
-
-   # output_file = 'output.mp4'
-    #fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # 使用MP4编解码器
-    #frame_rate = 30.0  # 帧率为30fps
-    #frame_size = (640, 480)  # 帧尺寸为640x480
-
-    #video_writer = cv2.VideoWriter(output_file, fourcc, frame_rate, frame_size)
-
-    #while True :
-        #ret, frame = cam1.read()
-        #if ret :
-            #video_writer.write(frame)
-            #cv2.imshow("Camera 1", frame)
-            #if cv2.waitKey(20) == ord(' ') :
-                #break
-
     detector = Detection()
-    detector.runDetevtion(cam1, cam2)
+    camera1 = detector.runDetevtion(0, "date_bad.mp4", "date_all.mp4") #set path to save test videos
+    camera2 = detector.runDetevtion(1, "date_bad.mp4", "date_all.mp4") #set path to save test videos
+
+
+    #run together
+    camera1_thread = threading.Thread(target=camera1)
+    camera2_thread = threading.Thread(target=camera2)
+
+    camera1_thread.start()
+    camera2_thread.start()
 
 
 
     cv2.destroyAllWindows()
-    cam1.release()
-    cam2.release()
