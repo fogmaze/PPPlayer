@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
+#include <torch/torch.h>
+#include <torch/script.h>
+
 #define INPUT_LEN 20
 #define TEST_LEN 200
 

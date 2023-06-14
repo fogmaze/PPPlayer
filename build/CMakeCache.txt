@@ -408,6 +408,9 @@ MKLDNN_DIR:PATH=MKLDNN_DIR-NOTFOUND
 //The directory containing a CMake configuration file for MKL.
 MKL_DIR:PATH=MKL_DIR-NOTFOUND
 
+//Path to a program.
+PYTHON_EXECUTABLE:FILEPATH=/usr/bin/python3.10
+
 //Value Computed by CMake
 Project_BINARY_DIR:STATIC=/home/yeet/Documents/programing/cpp/PPPlayer/build
 
@@ -748,8 +751,12 @@ CUDA_parse_cubin:INTERNAL=/home/yeet/Documents/programing/cpp/PPPlayer/cpp_packa
 CUDA_run_nvcc:INTERNAL=/home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindCUDA/run_nvcc.cmake
 //Details about finding CUDA
 FIND_PACKAGE_MESSAGE_DETAILS_CUDA:INTERNAL=[/usr/local/cuda][/usr/local/cuda/bin/nvcc][/usr/local/cuda/include][/usr/local/cuda/lib64/libcudart.so][v12.1()]
+//Details about finding PythonInterp
+FIND_PACKAGE_MESSAGE_DETAILS_PythonInterp:INTERNAL=[/usr/bin/python3.10][v3.10.6()]
 //Details about finding Torch
 FIND_PACKAGE_MESSAGE_DETAILS_Torch:INTERNAL=[/home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/lib/libtorch.so][/home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/include;/home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/include/torch/csrc/api/include][v()]
+//ADVANCED property for variable: PYTHON_EXECUTABLE
+PYTHON_EXECUTABLE-ADVANCED:INTERNAL=1
 //Result of TRY_COMPILE
 compile_result:INTERNAL=TRUE
 //Result of TRY_RUN

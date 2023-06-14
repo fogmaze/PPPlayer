@@ -1,3 +1,4 @@
+find_package(PythonInterp REQUIRED)
 cmake_minimum_required(VERSION 3.0.0)
 project(ball_simulate VERSION 0.1.0)
 
