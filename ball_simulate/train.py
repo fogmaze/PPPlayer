@@ -1,3 +1,4 @@
+import ball_simulate.dataFileOperator as dfo
 from argparse import ArgumentParser
 import os
 import logging
@@ -13,47 +14,22 @@ import core
 import pickle
 import tqdm
 
-class ISEFWINNER(nn.Module):
+
+class ISEFWINNER_BASE(nn.Module):
     #input:  [time_interval, line_xy.a, line_xy.b, line_xz.a,  line_xz.b] * 2
     #output: [speed_xy,      start.x,   start.y    end.x,      end.y,      highest]
-    def __init__(self,device = "cuda:0"):
-        self.device = device
-        self.input_size = 5
-        self.output_size = 6
-        self.mlp1_l1_out = 50
-        self.mlp1_l2_out = 40
-        self.mlp1_l3_out = 40
-        self.mlp1_l4_out = 15
-        self.lstm_out = 40
-        self.lstm_num_layers = 4
-        self.mlp2_l1_out = 45
-        self.mlp2_l2_out = 30
-        self.mlp2_l3_out = 20
-        batch_size = 1
-        super().__init__()
-        self.mlp1 = nn.Sequential(
-            nn.Linear(self.input_size,self.mlp1_l1_out),
-            nn.ReLU(),
-            nn.Linear(self.mlp1_l1_out,self.mlp1_l2_out),
-            nn.Tanh(),
-            nn.Linear(self.mlp1_l2_out,self.mlp1_l3_out),
-            nn.Tanh(),
-            nn.Linear(self.mlp1_l3_out,self.mlp1_l4_out),
-        )
-        self.lstm = nn.LSTM(input_size = self.mlp1_l4_out,hidden_size= self.lstm_out,num_layers = self.lstm_num_layers)
-
-        self.llstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
-        self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
-        
-        self.mlp2 = nn.Sequential(
-            nn.Linear(self.lstm_out * 2,self.mlp2_l1_out),
-            nn.ReLU(),
-            nn.Linear(self.mlp2_l1_out,self.mlp2_l2_out),
-            nn.Tanh(),
-            nn.Linear(self.mlp2_l2_out,self.mlp2_l3_out),
-            nn.Tanh(),
-            nn.Linear(self.mlp2_l3_out, self.output_size)
-        )
+    device = "cuda:0"
+    input_size:int = 6
+    output_size:int = 3
+    mlp1_out:int
+    mlp2_out:int
+    lstm_out:int
+    lstm_num_layers:int
+    mlp1:nn.Sequential
+    lstm:nn.LSTM
+    llstm_hidden_cell:tuple
+    rlstm_hidden_cell:tuple
+    mlp2:nn.Sequential
 
     @torch.jit.export
     def reset_hidden_cell(self, batch_size:int):
@@ -61,28 +37,20 @@ class ISEFWINNER(nn.Module):
         self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device))
 
     #input shape:(batch_size, seq_len, input_size)
-    def forward(self, X1:torch.Tensor, X1_len:torch.Tensor, X2:torch.Tensor ,X2_len:torch.Tensor, T:torch.Tensor):
+    def forward(self, X1:torch.Tensor, X2:torch.Tensor ,T:torch.Tensor):
         x1_batch_size = len(X1)
         x2_batch_size = len(X2)
 
-        X1 = self.mlp1(X1.view(-1,self.input_size)).view(x1_batch_size, -1, self.mlp1_l4_out)
-        X2 = self.mlp2(X2.view(-1,self.input_size)).view(x2_batch_size, -1, self.mlp1_l4_out)
+        X1 = self.mlp1(X1.view(-1,self.input_size)).view(x1_batch_size, -1, self.mlp1_out)
+        X2 = self.mlp2(X2.view(-1,self.input_size)).view(x2_batch_size, -1, self.mlp1_out)
         #shape: (batch_size, seq_len, input_size)
 
         X1 = X1.transpose(0,1)
         X2 = X2.transpose(0,1)
         #shape: (seq_len, batch_size, input_size)
 
-        #X1 = nn.utils.rnn.pack_padded_sequence(X1,X1_len,enforce_sorted=False)
-        #X2 = nn.utils.rnn.pack_padded_sequence(X2,X2_len,enforce_sorted=False)
-        #shape: (seq_len, batch_size, input_size)
-        
         X1_seq, self.llstm_hidden_cell = self.lstm(X1, self.llstm_hidden_cell)
         X2_seq, self.rlstm_hidden_cell = self.lstm(X2, self.rlstm_hidden_cell)
-        #shape: (seq_len, batch_size, input_size)
-
-        #X1_seq,r = nn.utils.rnn.pad_packed_sequence(X1)
-        #X2_seq,l = nn.utils.rnn.pad_packed_sequence(X2)
         #shape: (seq_len, batch_size, input_size)
 
         #shape of T: (seq_len, batch_size, 1)
@@ -90,6 +58,51 @@ class ISEFWINNER(nn.Module):
         for i in range(T.shape[0]) :
             res[i] = self.mlp2(torch.cat((self.llstm_hidden_cell[0][self.lstm_num_layers-1], self.rlstm_hidden_cell[0][self.lstm_num_layers-1], T[i]),1))
         return res
+
+class ISEFWINNER_SMALL(ISEFWINNER_BASE):
+    def __init__(self,device = "cuda:0"):
+        self.device = device
+
+        mlp1_l1_out = 50
+        mlp1_l2_out = 40
+        mlp1_l3_out = 40
+        mlp1_l4_out = 15
+
+        mlp2_l1_out = 45
+        mlp2_l2_out = 30
+        mlp2_l3_out = 20
+
+        self.mlp1_out = mlp1_l4_out
+        self.mlp2_out = mlp2_l3_out
+        self.lstm_out = 40
+        self.lstm_num_layers = 4
+
+        batch_size = 1
+        super().__init__()
+        self.mlp1 = nn.Sequential(
+            nn.Linear(self.input_size,mlp1_l1_out),
+            nn.ReLU(),
+            nn.Linear(mlp1_l1_out,mlp1_l2_out),
+            nn.Tanh(),
+            nn.Linear(mlp1_l2_out,mlp1_l3_out),
+            nn.Tanh(),
+            nn.Linear(mlp1_l3_out,mlp1_l4_out),
+        )
+        self.lstm = nn.LSTM(input_size = mlp1_l4_out,hidden_size= self.lstm_out,num_layers = self.lstm_num_layers)
+
+        self.llstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
+        self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
+        
+        self.mlp2 = nn.Sequential(
+            nn.Linear(self.lstm_out * 2,mlp2_l1_out),
+            nn.ReLU(),
+            nn.Linear(mlp2_l1_out,mlp2_l2_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l2_out,mlp2_l3_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l3_out, self.output_size)
+        )
+
 
 
 def findLatestSave(name = None):
@@ -104,7 +117,7 @@ def findLatestSave(name = None):
         return os.path.join('model_saves/',all_save_dirs[0],last_saves[0])
 
 
-def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, device = "cuda:0",load_model = True,data_dir='data/'):
+def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, dataset = "",model_name = "small", weight = None, device = "cuda:0"):
     torch.multiprocessing.set_start_method('spawn')
     train_logger = logging.getLogger('training')
     train_logger.setLevel(logging.DEBUG)
@@ -120,14 +133,15 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, devic
 
     train_logger.info('start training')
     
-    model_save_dir = time.strftime("model_saves/" + "/%Y-%m-%d_%H-%M-%S/",time.localtime())
-    model = Watcher()
+    model_save_dir = time.strftime("./ball_simulate/model_saves/" + "/" + model_name + "%Y-%m-%d_%H-%M-%S/",time.localtime())
+    if (MODEL_MAP.get(model_name) == None):
+        raise Exception("model name not found")
+    model = MODEL_MAP[model_name](device=device)
 
-    if load_model:
+    if weight:
         try:
-            latest_saveName = findLatestSave()
-            train_logger.info('loading: ' +latest_saveName) 
-            model.load_state_dict(torch.load(latest_saveName))
+            train_logger.info('loading: ' + weight) 
+            model.load_state_dict(torch.load(weight))
         except:
             train_logger.error('cannot load model ')
 
@@ -136,9 +150,9 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, devic
     optimizer = torch.optim.Adam(model.parameters(), lr = LR)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
-    ball_datas = BallSet_disk(os.path.join(data_dir,"train"))
+    ball_datas = dfo.BallDataSet(dataset+".train.bin")
     dataloader_train = DataLoader(dataset=ball_datas,batch_size=batch_size,shuffle=True,num_workers=2)
-    ball_datas_valid = BallSet_disk(os.path.join(data_dir,"valid"))
+    ball_datas_valid = dfo.BallDataSet(dataset+".valid.bin")
     dataloader_valid = DataLoader(dataset=ball_datas_valid,batch_size=batch_size,num_workers=2)
 
     train_loss = 0
@@ -178,8 +192,6 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, devic
             real_validationloss = validloss_sum / len(dataloader_valid.dataset) * batch_size
 
             print("==========================[epoch:" + str(e) + "]==============================")
-            #print("learning rate: " + str(optimizer.param_groups[0]['lr']))
-            #print("training loss:" + str(real_trainingloss) + "\tvalidation loss:" + str(real_validationloss))
             train_logger.info("epoch:{}\tlr:{:e}\ttraining loss:{:0.10f}\tvalidation loss:{:0.10f}".format(e,(optimizer.param_groups[0]['lr']),real_trainingloss,real_validationloss))
 
             if min_validloss > real_validationloss or e == 0:
@@ -195,32 +207,24 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, devic
             if c_exit == "y":
                 break
 
-def exportLatestModel():
-    model = Watcher(device='cpu')
-    saveName = findLatestSave()
-    print("exporting: " + saveName)
-    model.load_state_dict(torch.load(saveName))
+
+def exportLatestModel(model_name:str, weight:str):
+    model = MODEL_MAP[model_name](device='cpu')
+    print("exporting: " + weight)
+    model.load_state_dict(torch.load(weight))
     model.eval()
     model_script = torch.jit.script(model)
     model_script.save('model_final.pth')
 
 
-def setDataDir():
-    train = BallSet_disk("data/train")
-    test = BallSet_disk("data/test")
-    valid = BallSet_disk("data/valid")
-    train.createAndSaveTrainData(2000000)
-    valid.createAndSaveTrainData(50000)
-
-def validModel():
-    model = Watcher(device='cuda:0')
-    saveName = findLatestSave()
-    print("validating: " + saveName)
+def validModel(model_name, weight):
+    model = MODEL_MAP[model_name](device='cuda:0')
+    print("validating: " + weight)
     model.cuda()
-    model.load_state_dict(torch.load(saveName))
+    model.load_state_dict(torch.load(weight))
     model.eval()
     criterion = nn.MSELoss().cuda()
-    ball_datas = BallSet_disk("data/valid",device='cuda:0')
+    ball_datas = dfo.BallDataSet("ball_simulate/medium.valid.bin",device='cuda:0')
     loader = DataLoader(ball_datas,1)
     loss_sum = 0
     for X1,x1_len,X2,x2_len,labels in tqdm.tqdm(loader):
@@ -230,15 +234,15 @@ def validModel():
         loss_sum += loss.item()
     print("loss: " + str(loss_sum / len(ball_datas)))
 
-def testModel(data_dir='data',batch_size=1,num_data = 50):
-    model = Watcher(device='cpu')
 
-    latest_saveName = findLatestSave()
-    model.load_state_dict(torch.load(latest_saveName))
+def testModel(model_name, weight, batch_size=1, num_data = 50):
+    model = MODEL_MAP[model_name](device='cpu')
+
+    model.load_state_dict(torch.load(weight))
     model.eval()
 
     criterion = nn.MSELoss()
-    ball_datas = BallSet_disk(os.path.join(data_dir,"valid"),device='cpu')
+    ball_datas = dfo.BallDataSet("ball_simulate/medium.valid.bin")
     loader = DataLoader(ball_datas,batch_size)
     i = 0
     for X1,x1_len,X2,x2_len,labels in tqdm.tqdm(loader):
@@ -250,27 +254,30 @@ def testModel(data_dir='data',batch_size=1,num_data = 50):
             break
         i += 1
     
+MODEL_MAP = {
+    "small":ISEFWINNER_SMALL
+}
+
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
-    argparser.add_argument('-lr',default=0.001,type=float)
-    argparser.add_argument('-b',default=16,type=int)
-    argparser.add_argument('-e',default=35,type=int)
-    argparser.add_argument('-d',default='data',type=str)
-    argparser.add_argument('-s',default=7,type=int)
-    argparser.add_argument('--load-model',dest='load',action='store_true',default=False)
-    argparser.add_argument('--set-data',dest='set_data',action='store_true',default=False)
-    argparser.add_argument('--export-model',dest='export',action='store_true',default=False)
-    argparser.add_argument('--test',dest='test',action='store_true',default=False)
+    argparser.add_argument('-lr', default=0.001, type=float)
+    argparser.add_argument('-b', default=16, type=int)
+    argparser.add_argument('-e', default=35, type=int)
+    argparser.add_argument('-m', default="small", type=str)
+    argparser.add_argument('-d', default="./ball_simulate/medium", type=str)
+    argparser.add_argument('-s', default=7, type=int)
+    argparser.add_argument('-w', default=None, type=str)
+    argparser.add_argument('--load-model', dest='load', action='store_true', default=False)
+    argparser.add_argument('--set-data', dest='set_data', action='store_true', default=False)
+    argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
+    argparser.add_argument('--test', dest='test', action='store_true', default=False)
     args = argparser.parse_args()
-    if args.set_data:
-        setDataDir()
-        exit(0)
     if args.export:
         exportLatestModel()
         exit(0)
     if args.test:
         testModel()
         exit(0)
-    train(load_model=args.load,scheduler_step_size=args.s,LR=args.lr,batch_size=args.b,epochs=args.e,data_dir=args.d)
+    train(load_model=args.load, scheduler_step_size=args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w)
     pass

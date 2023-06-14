@@ -1,3 +1,4 @@
+import torch
 from ctypes import *
 import torch
 import platform
@@ -81,7 +82,11 @@ class BallDataSet(torch.utils.data.Dataset):
         return self.length
     
     def __getitem__(self, index):
-        return DataStruct.from_address(lib.getFileData(self.data, index))
+        d_ori = DataStruct.from_address(lib.getFileData(self.data, index))
+        d_list_r = []
+        d_list_l = []
+        d_list_ans = []
+        return 
 
     def __del__(self):
         lib.releaseData(self.data)
