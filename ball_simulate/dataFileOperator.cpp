@@ -122,8 +122,8 @@ bool saveToFile(void* header, const char* file_name) {
 
 extern "C"
 int main() {
-    cout << sizeof(int) << endl;
-    return 0;
+    torch::Tensor tensor = torch::rand({2, 3});
+    cout << tensor.sizes() << endl;
 }
 
 

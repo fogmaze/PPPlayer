@@ -76,6 +76,41 @@ build libdataFileOperator.so: CXX_SHARED_LIBRARY_LINKER__dataFileOperator_Debug 
   TARGET_FILE = libdataFileOperator.so
   TARGET_PDB = dataFileOperator.so.dbg
 
+# =============================================================================
+# Object build statements for EXECUTABLE target dataFileOperatorTest
+
+
+#############################################
+# Order-only phony target for dataFileOperatorTest
+
+build cmake_object_order_depends_target_dataFileOperatorTest: phony || CMakeFiles/dataFileOperatorTest.dir
+
+build CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o: CXX_COMPILER__dataFileOperatorTest_Debug /home/yeet/Documents/programing/cpp/PPPlayer/ball_simulate/dataFileOperator.cpp || cmake_object_order_depends_target_dataFileOperatorTest
+  DEFINES = -DUSE_C10D_GLOO -DUSE_C10D_NCCL -DUSE_DISTRIBUTED -DUSE_RPC -DUSE_TENSORPIPE
+  DEP_FILE = CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o.d
+  FLAGS = -D_GLIBCXX_USE_CXX11_ABI=0 -g -D_GLIBCXX_USE_CXX11_ABI=0
+  INCLUDES = -isystem /home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/include -isystem /home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/include/torch/csrc/api/include -isystem /usr/local/cuda/include
+  OBJECT_DIR = CMakeFiles/dataFileOperatorTest.dir
+  OBJECT_FILE_DIR = CMakeFiles/dataFileOperatorTest.dir/ball_simulate
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target dataFileOperatorTest
+
+
+#############################################
+# Link the executable dataFileOperatorTest
+
+build dataFileOperatorTest: CXX_EXECUTABLE_LINKER__dataFileOperatorTest_Debug CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o | ../cpp_packages/libtorch/lib/libtorch.so ../cpp_packages/libtorch/lib/libc10.so ../cpp_packages/libtorch/lib/libkineto.a /usr/lib/x86_64-linux-gnu/libcuda.so /usr/local/cuda/lib64/libnvrtc.so /usr/local/cuda/lib64/libnvToolsExt.so /usr/local/cuda/lib64/libcudart.so ../cpp_packages/libtorch/lib/libc10_cuda.so ../cpp_packages/libtorch/lib/libc10_cuda.so ../cpp_packages/libtorch/lib/libc10.so /usr/local/cuda/lib64/libcufft.so /usr/local/cuda/lib64/libcurand.so /usr/local/cuda/lib64/libcublas.so /usr/local/cuda/lib64/libcublasLt.so /usr/local/cuda/lib64/libnvToolsExt.so /usr/local/cuda/lib64/libcudart.so
+  FLAGS = -D_GLIBCXX_USE_CXX11_ABI=0 -g
+  LINK_FLAGS = -rdynamic
+  LINK_LIBRARIES = -Wl,-rpath,/home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/lib:/usr/local/cuda/lib64  ../cpp_packages/libtorch/lib/libtorch.so  ../cpp_packages/libtorch/lib/libc10.so  ../cpp_packages/libtorch/lib/libkineto.a  -lcuda  /usr/local/cuda/lib64/libnvrtc.so  /usr/local/cuda/lib64/libnvToolsExt.so  /usr/local/cuda/lib64/libcudart.so  ../cpp_packages/libtorch/lib/libc10_cuda.so  -Wl,--no-as-needed,"/home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/lib/libtorch_cpu.so" -Wl,--as-needed  -Wl,--no-as-needed,"/home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/lib/libtorch_cuda.so" -Wl,--as-needed  ../cpp_packages/libtorch/lib/libc10_cuda.so  ../cpp_packages/libtorch/lib/libc10.so  /usr/local/cuda/lib64/libcufft.so  /usr/local/cuda/lib64/libcurand.so  /usr/local/cuda/lib64/libcublas.so  /usr/local/cuda/lib64/libcublasLt.so  -Wl,--no-as-needed,"/home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/lib/libtorch.so" -Wl,--as-needed  /usr/local/cuda/lib64/libnvToolsExt.so  /usr/local/cuda/lib64/libcudart.so
+  OBJECT_DIR = CMakeFiles/dataFileOperatorTest.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = dataFileOperatorTest
+  TARGET_PDB = dataFileOperatorTest.dbg
+
 
 #############################################
 # Utility command for edit_cache
@@ -112,7 +147,7 @@ build dataFileOperator: phony libdataFileOperator.so
 #############################################
 # Folder: /home/yeet/Documents/programing/cpp/PPPlayer/build
 
-build all: phony libdataFileOperator.so
+build all: phony libdataFileOperator.so dataFileOperatorTest
 
 # =============================================================================
 # Unknown Build Time Dependencies.

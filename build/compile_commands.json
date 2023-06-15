@@ -3,5 +3,10 @@
   "directory": "/home/yeet/Documents/programing/cpp/PPPlayer/build",
   "command": "/usr/bin/c++ -DUSE_C10D_GLOO -DUSE_C10D_NCCL -DUSE_DISTRIBUTED -DUSE_RPC -DUSE_TENSORPIPE -DdataFileOperator_EXPORTS -isystem /home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/include -isystem /home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/include/torch/csrc/api/include -isystem /usr/local/cuda/include  -D_GLIBCXX_USE_CXX11_ABI=0 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -o CMakeFiles/dataFileOperator.dir/ball_simulate/dataFileOperator.cpp.o -c /home/yeet/Documents/programing/cpp/PPPlayer/ball_simulate/dataFileOperator.cpp",
   "file": "/home/yeet/Documents/programing/cpp/PPPlayer/ball_simulate/dataFileOperator.cpp"
+},
+{
+  "directory": "/home/yeet/Documents/programing/cpp/PPPlayer/build",
+  "command": "/usr/bin/c++ -DUSE_C10D_GLOO -DUSE_C10D_NCCL -DUSE_DISTRIBUTED -DUSE_RPC -DUSE_TENSORPIPE -isystem /home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/include -isystem /home/yeet/Documents/programing/cpp/PPPlayer/cpp_packages/libtorch/include/torch/csrc/api/include -isystem /usr/local/cuda/include  -D_GLIBCXX_USE_CXX11_ABI=0 -g -D_GLIBCXX_USE_CXX11_ABI=0 -o CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o -c /home/yeet/Documents/programing/cpp/PPPlayer/ball_simulate/dataFileOperator.cpp",
+  "file": "/home/yeet/Documents/programing/cpp/PPPlayer/ball_simulate/dataFileOperator.cpp"
 }
 ]
