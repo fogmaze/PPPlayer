@@ -5,6 +5,7 @@ import os
 import math
 import threading
 from ColorRange import *
+import multiprocessing as mp
 
 
 
@@ -92,17 +93,12 @@ class Detection :
 
 if __name__ == "__main__" :
     detector = Detection()
-    camera1 = detector.runDetevtion(0, "date_bad.mp4", "date_all.mp4") #set path to save test videos
-    camera2 = detector.runDetevtion(1, "date_bad.mp4", "date_all.mp4") #set path to save test videos
 
-
-    #run together
-    camera1_thread = threading.Thread(target=camera1)
-    camera2_thread = threading.Thread(target=camera2)
-
-    camera1_thread.start()
-    camera2_thread.start()
-
-
+    camera1 = mp.Process(target=detector.runDetevtion, args=(0, "bad_1.mp4", "all_1.mp4"))
+    camera2 = mp.Process(target=detector.runDetevtion, args=(1, "bad_2.mp4", "all_2.mp4"))
+    
+    camera1.start()
+    camera2.start()
+    
 
     cv2.destroyAllWindows()
