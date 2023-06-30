@@ -135,103 +135,13 @@
 			"isCMake" : true,
 			"isExternal" : true,
 			"path" : "/usr/share/cmake-3.22/Modules/CMakeCommonLanguageInclude.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Torch/TorchConfigVersion.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Torch/TorchConfig.cmake"
-		},
-		{
-			"isCMake" : true,
-			"isExternal" : true,
-			"path" : "/usr/share/cmake-3.22/Modules/FindPackageHandleStandardArgs.cmake"
-		},
-		{
-			"isCMake" : true,
-			"isExternal" : true,
-			"path" : "/usr/share/cmake-3.22/Modules/FindPackageMessage.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/Caffe2ConfigVersion.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/Caffe2Config.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/public/utils.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/public/cuda.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/FindCUDA.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/CMakeInitializeConfigs.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindCUDA.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindPackageHandleStandardArgs.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindPackageMessage.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindCUDA/select_compute_arch.cmake"
-		},
-		{
-			"isGenerated" : true,
-			"path" : "build/CMakeFiles/3.22.1/CMakeCUDACompiler.cmake"
-		},
-		{
-			"isCMake" : true,
-			"isExternal" : true,
-			"path" : "/usr/share/cmake-3.22/Modules/CMakeCUDAInformation.cmake"
-		},
-		{
-			"isCMake" : true,
-			"isExternal" : true,
-			"path" : "/usr/share/cmake-3.22/Modules/Compiler/NVIDIA-CUDA.cmake"
-		},
-		{
-			"isCMake" : true,
-			"isExternal" : true,
-			"path" : "/usr/share/cmake-3.22/Modules/Compiler/CMakeCommonCompilerMacros.cmake"
-		},
-		{
-			"isCMake" : true,
-			"isExternal" : true,
-			"path" : "/usr/share/cmake-3.22/Modules/CMakeCommonLanguageInclude.cmake"
-		},
-		{
-			"isGenerated" : true,
-			"path" : "build/detect_cuda_version.cc"
-		},
-		{
-			"isGenerated" : true,
-			"path" : "build/detect_cuda_compute_capabilities.cu"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/public/mkl.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/public/mkldnn.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/Caffe2Targets.cmake"
-		},
-		{
-			"path" : "cpp_packages/libtorch/share/cmake/Caffe2/Caffe2Targets-release.cmake"
 		}
 	],
 	"kind" : "cmakeFiles",
 	"paths" : 
 	{
-		"build" : "/home/yeet/Documents/programing/cpp/PPPlayer/build",
-		"source" : "/home/yeet/Documents/programing/cpp/PPPlayer"
+		"build" : "/home/yeet/Documents/programing/python/PPPlayer/build",
+		"source" : "/home/yeet/Documents/programing/python/PPPlayer"
 	},
 	"version" : 
 	{

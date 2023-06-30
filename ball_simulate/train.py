@@ -1,6 +1,9 @@
-import ball_simulate.dataFileOperator as dfo
-from argparse import ArgumentParser
+import sys
 import os
+sys.path.append(os.getcwd())
+import ball_simulate.dataFileOperator as dfo
+import ball_simulate.simulate as sim
+from argparse import ArgumentParser
 import logging
 import parse
 import shutil
@@ -16,10 +19,10 @@ import tqdm
 
 
 class ISEFWINNER_BASE(nn.Module):
-    #input:  [time_interval, line_xy.a, line_xy.b, line_xz.a,  line_xz.b] * 2
+    #input:  [cam_x, cam_y, cam_z, rad_xy, rad_xz] * 2 , [time]
     #output: [speed_xy,      start.x,   start.y    end.x,      end.y,      highest]
     device = "cuda:0"
-    input_size:int = 6
+    input_size:int = 5
     output_size:int = 3
     mlp1_out:int
     mlp2_out:int
@@ -33,8 +36,8 @@ class ISEFWINNER_BASE(nn.Module):
 
     @torch.jit.export
     def reset_hidden_cell(self, batch_size:int):
-        self.llstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device))
-        self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device))
+        self.llstm_hidden_cell = (torch.zeros(self.lstm_num_layers, batch_size, self.lstm_out, device=self.device), torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device))
+        self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers, batch_size, self.lstm_out, device=self.device), torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device))
 
     #input shape:(batch_size, seq_len, input_size)
     def forward(self, X1:torch.Tensor, X2:torch.Tensor ,T:torch.Tensor):
@@ -42,11 +45,11 @@ class ISEFWINNER_BASE(nn.Module):
         x2_batch_size = len(X2)
 
         X1 = self.mlp1(X1.view(-1,self.input_size)).view(x1_batch_size, -1, self.mlp1_out)
-        X2 = self.mlp2(X2.view(-1,self.input_size)).view(x2_batch_size, -1, self.mlp1_out)
+        X2 = self.mlp1(X2.view(-1,self.input_size)).view(x2_batch_size, -1, self.mlp1_out)
         #shape: (batch_size, seq_len, input_size)
 
-        X1 = X1.transpose(0,1)
-        X2 = X2.transpose(0,1)
+        X1 = X1.transpose(0, 1)
+        X2 = X2.transpose(0, 1)
         #shape: (seq_len, batch_size, input_size)
 
         X1_seq, self.llstm_hidden_cell = self.lstm(X1, self.llstm_hidden_cell)
@@ -54,9 +57,14 @@ class ISEFWINNER_BASE(nn.Module):
         #shape: (seq_len, batch_size, input_size)
 
         #shape of T: (seq_len, batch_size, 1)
-        res = torch.zeros(len(T),self.output_size,device=self.device)
+        T = T.transpose(0, 1).view(-1, x1_batch_size, 1)
+        res = None
         for i in range(T.shape[0]) :
-            res[i] = self.mlp2(torch.cat((self.llstm_hidden_cell[0][self.lstm_num_layers-1], self.rlstm_hidden_cell[0][self.lstm_num_layers-1], T[i]),1))
+            inp = torch.cat((self.llstm_hidden_cell[0][self.lstm_num_layers-1], self.rlstm_hidden_cell[0][self.lstm_num_layers-1], T[i]),1)
+            if res == None:
+                res = self.mlp2(inp).view(x1_batch_size, 1, self.output_size)
+            else:
+                res = torch.cat((res, self.mlp2(inp).view(x1_batch_size, 1, self.output_size)), 1)
         return res
 
 class ISEFWINNER_SMALL(ISEFWINNER_BASE):
@@ -94,11 +102,11 @@ class ISEFWINNER_SMALL(ISEFWINNER_BASE):
         self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
         
         self.mlp2 = nn.Sequential(
-            nn.Linear(self.lstm_out * 2,mlp2_l1_out),
+            nn.Linear(self.lstm_out * 2 + 1, mlp2_l1_out),
             nn.ReLU(),
-            nn.Linear(mlp2_l1_out,mlp2_l2_out),
+            nn.Linear(mlp2_l1_out, mlp2_l2_out),
             nn.Tanh(),
-            nn.Linear(mlp2_l2_out,mlp2_l3_out),
+            nn.Linear(mlp2_l2_out, mlp2_l3_out),
             nn.Tanh(),
             nn.Linear(mlp2_l3_out, self.output_size)
         )
@@ -122,7 +130,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
     train_logger = logging.getLogger('training')
     train_logger.setLevel(logging.DEBUG)
     console_handler = logging.StreamHandler()
-    file_handler = logging.FileHandler('training.log')
+    file_handler = logging.FileHandler('./ball_simulate/training.log')
     format_log = logging.Formatter('%(asctime)s - %(message)s')
     console_handler.setLevel(logging.DEBUG)
     file_handler.setLevel(logging.DEBUG)
@@ -131,9 +139,9 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
     train_logger.addHandler(file_handler)
     train_logger.addHandler(console_handler)
 
-    train_logger.info('start training')
+    train_logger.info('start training with args: epochs:{}, batch_size:{}, scheduler_step_size:{}, LR:{}, dataset:{}, model_name:{}, weight:{}, device:{}'.format(epochs,batch_size,scheduler_step_size,LR,dataset,model_name,weight,device))
     
-    model_save_dir = time.strftime("./ball_simulate/model_saves/" + "/" + model_name + "%Y-%m-%d_%H-%M-%S/",time.localtime())
+    model_save_dir = time.strftime("./ball_simulate/model_saves/" + model_name + "%Y-%m-%d_%H-%M-%S/",time.localtime())
     if (MODEL_MAP.get(model_name) == None):
         raise Exception("model name not found")
     model = MODEL_MAP[model_name](device=device)
@@ -151,9 +159,9 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
     ball_datas = dfo.BallDataSet(dataset+".train.bin")
-    dataloader_train = DataLoader(dataset=ball_datas,batch_size=batch_size,shuffle=True,num_workers=2)
+    dataloader_train = DataLoader(dataset=ball_datas,batch_size=batch_size,shuffle=True)
     ball_datas_valid = dfo.BallDataSet(dataset+".valid.bin")
-    dataloader_valid = DataLoader(dataset=ball_datas_valid,batch_size=batch_size,num_workers=2)
+    dataloader_valid = DataLoader(dataset=ball_datas_valid,batch_size=batch_size)
 
     train_loss = 0
     valid_loss = 0
@@ -169,11 +177,11 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
             validloss_sum = 0
             
             #data_sample = splitTrainData_batch([createTrainData() for _ in range(batch_size)],normalized=True)
-            for X1,x1_len,X2,x2_len,labels in tqdm.tqdm(dataloader_train):
-                model.reset_hidden_cell(batch_size=X1.shape[0])
+            for r, l, t, ans in tqdm.tqdm(dataloader_train):
+                model.reset_hidden_cell(batch_size=r.shape[0])
                 optimizer.zero_grad()
-                out = model(X1,x1_len,X2,x2_len)
-                train_loss = criterion(out, labels.view(out.shape[0],-1))
+                out = model(r,l,t)
+                train_loss = criterion(out, ans)
                 train_loss.backward()
                 trainloss_sum += train_loss.item()
                 optimizer.step()
@@ -182,10 +190,10 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
             torch.cuda.empty_cache()
             
             model.eval()
-            for X1,x1_len,X2,x2_len,labels in tqdm.tqdm(dataloader_valid):
-                model.reset_hidden_cell(batch_size=X1.shape[0])
-                out = model(X1,x1_len,X2,x2_len)
-                valid_loss = criterion(out, labels.view(out.shape[0],-1))
+            for r, l, t, ans in tqdm.tqdm(dataloader_valid):
+                model.reset_hidden_cell(batch_size=ans.shape[0])
+                out = model(r,l,t)
+                valid_loss = criterion(out, ans)
                 validloss_sum += valid_loss.item()
             
             real_trainingloss = trainloss_sum / len(dataloader_train.dataset) * batch_size
@@ -265,10 +273,9 @@ if __name__ == "__main__":
     argparser.add_argument('-b', default=16, type=int)
     argparser.add_argument('-e', default=35, type=int)
     argparser.add_argument('-m', default="small", type=str)
-    argparser.add_argument('-d', default="./ball_simulate/medium", type=str)
+    argparser.add_argument('-d', default="./ball_simulate/dataset/medium", type=str)
     argparser.add_argument('-s', default=7, type=int)
     argparser.add_argument('-w', default=None, type=str)
-    argparser.add_argument('--load-model', dest='load', action='store_true', default=False)
     argparser.add_argument('--set-data', dest='set_data', action='store_true', default=False)
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
     argparser.add_argument('--test', dest='test', action='store_true', default=False)
@@ -279,5 +286,9 @@ if __name__ == "__main__":
     if args.test:
         testModel()
         exit(0)
-    train(load_model=args.load, scheduler_step_size=args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w)
+    if args.set_data:
+        sim.simulate(GUI=False, dataLength=100000, outputFileName="ball_simulate/dataset/medium.train.bin")
+        sim.simulate(GUI=False, dataLength=10000, outputFileName="ball_simulate/dataset/medium.valid.bin")
+        exit(0)
+    train(scheduler_step_size=args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w)
     pass

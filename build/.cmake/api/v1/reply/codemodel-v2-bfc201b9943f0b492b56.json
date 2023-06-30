@@ -41,14 +41,14 @@
 				{
 					"directoryIndex" : 0,
 					"id" : "dataFileOperator::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-dataFileOperator-Debug-0eeeb3f9f52be8b5c29e.json",
+					"jsonFile" : "target-dataFileOperator-Debug-668e85daea702c4288ad.json",
 					"name" : "dataFileOperator",
 					"projectIndex" : 0
 				},
 				{
 					"directoryIndex" : 0,
 					"id" : "dataFileOperatorTest::@6890427a1f51a3e7e1df",
-					"jsonFile" : "target-dataFileOperatorTest-Debug-4552ce8a7e4f74e0719b.json",
+					"jsonFile" : "target-dataFileOperatorTest-Debug-f91e292b1f05715e006e.json",
 					"name" : "dataFileOperatorTest",
 					"projectIndex" : 0
 				}
@@ -58,8 +58,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "/home/yeet/Documents/programing/cpp/PPPlayer/build",
-		"source" : "/home/yeet/Documents/programing/cpp/PPPlayer"
+		"build" : "/home/yeet/Documents/programing/python/PPPlayer/build",
+		"source" : "/home/yeet/Documents/programing/python/PPPlayer"
 	},
 	"version" : 
 	{

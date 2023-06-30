@@ -1,4 +1,4 @@
-/home/yeet/Documents/programing/cpp/PPPlayer/build/CMakeFiles/dataFileOperator.dir
-/home/yeet/Documents/programing/cpp/PPPlayer/build/CMakeFiles/dataFileOperatorTest.dir
-/home/yeet/Documents/programing/cpp/PPPlayer/build/CMakeFiles/edit_cache.dir
-/home/yeet/Documents/programing/cpp/PPPlayer/build/CMakeFiles/rebuild_cache.dir
+/home/yeet/Documents/programing/python/PPPlayer/build/CMakeFiles/dataFileOperator.dir
+/home/yeet/Documents/programing/python/PPPlayer/build/CMakeFiles/dataFileOperatorTest.dir
+/home/yeet/Documents/programing/python/PPPlayer/build/CMakeFiles/edit_cache.dir
+/home/yeet/Documents/programing/python/PPPlayer/build/CMakeFiles/rebuild_cache.dir

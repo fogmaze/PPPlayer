@@ -11,7 +11,7 @@ import core.Constants as c
 if platform.system() == "Windows":
     lib = cdll.LoadLibrary("build/dataFileOperator.dll")
 elif platform.system() == "Linux":
-    lib = cdll.LoadLibrary("build/libdataFileOperator.so")
+    lib = CDLL("build/libdataFileOperator.so")
 else:
     raise Exception("Unsupport os!")
 
@@ -93,8 +93,9 @@ class BallDataSet(torch.utils.data.Dataset):
             d_list_l[i] = [d_ori.inputs[1].camera_x, d_ori.inputs[1].camera_y, d_ori.inputs[1].camera_z ,d_ori.inputs[1].line_rad_xy[i], d_ori.inputs[1].line_rad_xz[i]]
         
         for i in range(c.SIMULATE_TEST_LEN):
-            d_list_ans.append([d_ori.curvePoints[i].x, d_ori.curvePoints[i].y])
-            d_list_t.append(d_ori.curveTimestamps[i])
+            d_list_ans[i] = [d_ori.curvePoints[i].x, d_ori.curvePoints[i].y, d_ori.curvePoints[i].z]
+            d_list_t[i] = d_ori.curveTimestamps[i]
+        
         return torch.tensor(d_list_r, device=self.device), torch.tensor(d_list_l, device=self.device), torch.tensor(d_list_t, device=self.device), torch.tensor(d_list_ans, device=self.device)
 
     def __del__(self):

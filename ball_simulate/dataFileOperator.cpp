@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
-#include <torch/torch.h>
-#include <torch/script.h>
 
 #define INPUT_LEN 20
 #define TEST_LEN 200
@@ -122,8 +120,7 @@ bool saveToFile(void* header, const char* file_name) {
 
 extern "C"
 int main() {
-    torch::Tensor tensor = torch::rand({2, 3});
-    cout << tensor.sizes() << endl;
+    return 0;
 }
 
 
