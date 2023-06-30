@@ -1,10 +1,5 @@
 # ninja log v5
-11473	12106	1686797843107960714	libdataFileOperator.so	9de557b1d45769ad
-0	1927	1688118500550929767	build.ninja	eae7df64da08b3cf
-14	11466	1686797842463960724	CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o	33868ed775ecaec0
-13	11473	1686797842463960724	CMakeFiles/dataFileOperator.dir/ball_simulate/dataFileOperator.cpp.o	3c334c48f4192ef4
-11467	12106	1686797843107960714	dataFileOperatorTest	dd5874f212652fae
-7	188	1688118519403312601	CMakeFiles/dataFileOperator.dir/ball_simulate/dataFileOperator.cpp.o	7e89884583bed018
-8	188	1688118519403312601	CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o	d939e720314733e1
-188	232	1688118519447313486	dataFileOperatorTest	3559be02687212b6
-188	233	1688118519447313486	libdataFileOperator.so	2926194caca62208
+0	177	1688123755106109936	CMakeFiles/dataFileOperator.dir/ball_simulate/dataFileOperator.cpp.o	7e89884583bed018
+0	178	1688123755106109936	CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o	d939e720314733e1
+177	217	1688123755142112317	libdataFileOperator.so	2926194caca62208
+178	221	1688123755146112581	dataFileOperatorTest	3559be02687212b6
