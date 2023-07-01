@@ -2,7 +2,6 @@ import sys
 import os
 sys.path.append(os.getcwd())
 import ball_simulate.dataFileOperator as dfo
-import ball_simulate.simulate as sim
 from argparse import ArgumentParser
 import logging
 import parse
@@ -158,9 +157,10 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
     optimizer = torch.optim.Adam(model.parameters(), lr = LR)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
-    ball_datas = dfo.BallDataSet(dataset+".train.bin")
-    dataloader_train = DataLoader(dataset=ball_datas,batch_size=batch_size,shuffle=True)
-    ball_datas_valid = dfo.BallDataSet(dataset+".valid.bin")
+    ball_datas_train = dfo.BallDataSet(dataset + ".train.bin",device=device)
+    dataloader_train = DataLoader(dataset=ball_datas_train,batch_size=batch_size,shuffle=True, num_workers=0)
+
+    ball_datas_valid = dfo.BallDataSet_sync(dataset + ".valid.bin",device=device)
     dataloader_valid = DataLoader(dataset=ball_datas_valid,batch_size=batch_size)
 
     train_loss = 0
@@ -287,6 +287,7 @@ if __name__ == "__main__":
         testModel()
         exit(0)
     if args.set_data:
+        import ball_simulate.simulate as sim
         sim.simulate(GUI=False, dataLength=100000, outputFileName="ball_simulate/dataset/medium.train.bin")
         sim.simulate(GUI=False, dataLength=10000, outputFileName="ball_simulate/dataset/medium.valid.bin")
         exit(0)

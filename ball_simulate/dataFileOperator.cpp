@@ -49,6 +49,41 @@ extern "C" void* loadFromFile(const char* file_name) {
 }
 
 extern "C"
+Data getFileData_sync(char* file_name, int index) {
+    fstream fh;
+    fh.open(file_name, ios::in | ios::binary);
+    if (!fh.is_open()) {
+        return Data();
+    }
+    fh.seekg(index * sizeof(Data) + sizeof(FileDataHeader), ios::beg);
+    Data* data = new Data;
+    fh.read(((char*)data), sizeof(Data));
+    fh.close();
+    Data d = *data;
+    delete data;
+    return d;
+}
+
+extern "C"
+void releaseData_sync(void* data) {
+    Data* d = (Data*)data;
+    delete d;
+}
+
+extern "C"
+int getFileDataLength_sync(char* file_name) {
+    fstream fh;
+    fh.open(file_name, ios::in | ios::binary);
+    if (!fh.is_open()) {
+        return -1;
+    }
+    FileDataHeader* header = new FileDataHeader;
+    fh.read(((char*)header), sizeof(FileDataHeader));
+    fh.close();
+    return header->data_length;
+}
+
+extern "C"
 bool loadIsSuccess(void* data) {
     return data != nullptr;
 }

@@ -6,6 +6,7 @@ import sys
 import os
 sys.path.append(os.getcwd())
 import core.Constants as c
+import threading
 
 # check os
 if platform.system() == "Windows":
@@ -57,9 +58,15 @@ lib.putData.argtypes = [c_void_p, c_int, DataStruct]
 lib.putData.restype = c_bool
 lib.saveToFile.argtypes = [c_void_p, c_char_p]
 lib.saveToFile.restype = c_bool
+lib.getFileData_sync.argtypes = [c_char_p, c_int]
+lib.getFileData_sync.restype = DataStruct
+lib.releaseData_sync.argtypes = [c_void_p]
+lib.releaseData_sync.restype = None
+lib.getFileDataLength_sync.argtypes = [c_char_p]
+lib.getFileDataLength_sync.restype = c_int
 
 
-class BallDataSet(torch.utils.data.Dataset):
+class BallDataSet(torch.utils.data.Dataset) :
     def __init__(self, fileName, dataLength = None, device = "cuda:0"):
         if not os.path.exists(fileName):
             #cerate file
@@ -108,6 +115,31 @@ class BallDataSet(torch.utils.data.Dataset):
     def saveToFile(self):
         return lib.saveToFile(self.data, self.filename.encode('utf-8'))
 
+
+class BallDataSet_sync(torch.utils.data.Dataset) :
+    def __init__(self, fileName, device = "cuda:0"):
+        self.fileName = fileName
+        self.device = torch.device(device)
+    
+    def __len__(self):
+        return lib.getFileDataLength_sync(self.fileName.encode('utf-8'))
+    
+    def __getitem__(self, index):
+        d_ori = lib.getFileData_sync(self.fileName.encode('utf-8'), index)
+        d_list_r = [None] * c.SIMULATE_INPUT_LEN
+        d_list_l = [None] * c.SIMULATE_INPUT_LEN
+        d_list_t = [None] * c.SIMULATE_TEST_LEN
+        d_list_ans = [None] * c.SIMULATE_TEST_LEN
+        for i in range(c.SIMULATE_INPUT_LEN):
+            d_list_r[i] = [d_ori.inputs[0].camera_x, d_ori.inputs[0].camera_y, d_ori.inputs[0].camera_z ,d_ori.inputs[0].line_rad_xy[i], d_ori.inputs[0].line_rad_xz[i]]
+            d_list_l[i] = [d_ori.inputs[1].camera_x, d_ori.inputs[1].camera_y, d_ori.inputs[1].camera_z ,d_ori.inputs[1].line_rad_xy[i], d_ori.inputs[1].line_rad_xz[i]]
+        
+        for i in range(c.SIMULATE_TEST_LEN):
+            d_list_ans[i] = [d_ori.curvePoints[i].x, d_ori.curvePoints[i].y, d_ori.curvePoints[i].z]
+            d_list_t[i] = d_ori.curveTimestamps[i]
+        
+        return torch.tensor(d_list_r, device=self.device), torch.tensor(d_list_l, device=self.device), torch.tensor(d_list_t, device=self.device), torch.tensor(d_list_ans, device=self.device)
+
 def testPutData():
     d = BallDataSet("t.bin", dataLength=2)
     for i in range(2) :
@@ -151,5 +183,9 @@ def testLoadData():
     print(a[1].curveTimestamps[0])
     print(a[1].curveTimestamps[1])
 if __name__ == "__main__":
-    lib.main()
+    ds = BallDataSet("./ball_simulate/dataset/medium.valid.bin")
+    dss = BallDataSet_sync("./ball_simulate/dataset/medium.valid.bin")
+
+    a = ds[7]
+    b = dss[7]
     pass
