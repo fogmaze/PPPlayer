@@ -157,8 +157,8 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
     optimizer = torch.optim.Adam(model.parameters(), lr = LR)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
-    ball_datas_train = dfo.BallDataSet(dataset + ".train.bin",device=device)
-    dataloader_train = DataLoader(dataset=ball_datas_train,batch_size=batch_size,shuffle=True, num_workers=0)
+    ball_datas_train = dfo.BallDataSet_sync(dataset + ".train.bin",device=device)
+    dataloader_train = DataLoader(dataset=ball_datas_train,batch_size=batch_size,shuffle=True, num_workers=4)
 
     ball_datas_valid = dfo.BallDataSet_sync(dataset + ".valid.bin",device=device)
     dataloader_valid = DataLoader(dataset=ball_datas_valid,batch_size=batch_size)
