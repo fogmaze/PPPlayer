@@ -52,7 +52,8 @@ build cmake_object_order_depends_target_dataFileOperator: phony || CMakeFiles/da
 build CMakeFiles/dataFileOperator.dir/ball_simulate/dataFileOperator.cpp.o: CXX_COMPILER__dataFileOperator_Debug /home/yeet/Documents/programing/python/PPPlayer/ball_simulate/dataFileOperator.cpp || cmake_object_order_depends_target_dataFileOperator
   DEFINES = -DdataFileOperator_EXPORTS
   DEP_FILE = CMakeFiles/dataFileOperator.dir/ball_simulate/dataFileOperator.cpp.o.d
-  FLAGS = -g -fPIC
+  FLAGS = -g -D_DEBUG -fPIC
+  INCLUDES = -I/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/include
   OBJECT_DIR = CMakeFiles/dataFileOperator.dir
   OBJECT_FILE_DIR = CMakeFiles/dataFileOperator.dir/ball_simulate
 
@@ -65,7 +66,8 @@ build CMakeFiles/dataFileOperator.dir/ball_simulate/dataFileOperator.cpp.o: CXX_
 # Link the shared library libdataFileOperator.so
 
 build libdataFileOperator.so: CXX_SHARED_LIBRARY_LINKER__dataFileOperator_Debug CMakeFiles/dataFileOperator.dir/ball_simulate/dataFileOperator.cpp.o
-  LANGUAGE_COMPILE_FLAGS = -g
+  LANGUAGE_COMPILE_FLAGS = -g -D_DEBUG
+  LINK_PATH = -L/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/lib
   OBJECT_DIR = CMakeFiles/dataFileOperator.dir
   POST_BUILD = :
   PRE_LINK = :
@@ -85,7 +87,8 @@ build cmake_object_order_depends_target_dataFileOperatorTest: phony || CMakeFile
 
 build CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o: CXX_COMPILER__dataFileOperatorTest_Debug /home/yeet/Documents/programing/python/PPPlayer/ball_simulate/dataFileOperator.cpp || cmake_object_order_depends_target_dataFileOperatorTest
   DEP_FILE = CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o.d
-  FLAGS = -g
+  FLAGS = -g -D_DEBUG
+  INCLUDES = -I/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/include
   OBJECT_DIR = CMakeFiles/dataFileOperatorTest.dir
   OBJECT_FILE_DIR = CMakeFiles/dataFileOperatorTest.dir/ball_simulate
 
@@ -98,13 +101,49 @@ build CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o: 
 # Link the executable dataFileOperatorTest
 
 build dataFileOperatorTest: CXX_EXECUTABLE_LINKER__dataFileOperatorTest_Debug CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o
-  FLAGS = -g
+  FLAGS = -g -D_DEBUG
   LINK_FLAGS = -rdynamic
+  LINK_PATH = -L/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/lib
   OBJECT_DIR = CMakeFiles/dataFileOperatorTest.dir
   POST_BUILD = :
   PRE_LINK = :
   TARGET_FILE = dataFileOperatorTest
   TARGET_PDB = dataFileOperatorTest.dbg
+
+# =============================================================================
+# Object build statements for EXECUTABLE target physx_simulate
+
+
+#############################################
+# Order-only phony target for physx_simulate
+
+build cmake_object_order_depends_target_physx_simulate: phony || CMakeFiles/physx_simulate.dir
+
+build CMakeFiles/physx_simulate.dir/ball_simulate/physx_simulate.cpp.o: CXX_COMPILER__physx_simulate_Debug /home/yeet/Documents/programing/python/PPPlayer/ball_simulate/physx_simulate.cpp || cmake_object_order_depends_target_physx_simulate
+  DEP_FILE = CMakeFiles/physx_simulate.dir/ball_simulate/physx_simulate.cpp.o.d
+  FLAGS = -g -D_DEBUG
+  INCLUDES = -I/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/include
+  OBJECT_DIR = CMakeFiles/physx_simulate.dir
+  OBJECT_FILE_DIR = CMakeFiles/physx_simulate.dir/ball_simulate
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target physx_simulate
+
+
+#############################################
+# Link the executable physx_simulate
+
+build physx_simulate: CXX_EXECUTABLE_LINKER__physx_simulate_Debug CMakeFiles/physx_simulate.dir/ball_simulate/physx_simulate.cpp.o | ../cpp_packages/lib/libPVDRuntime_64.so ../cpp_packages/lib/libPhysXCharacterKinematic_static_64.a ../cpp_packages/lib/libPhysXCommon_static_64.a ../cpp_packages/lib/libPhysXCooking_static_64.a ../cpp_packages/lib/libPhysXExtensions_static_64.a ../cpp_packages/lib/libPhysXFoundation_static_64.a ../cpp_packages/lib/libPhysXGpu_64.so ../cpp_packages/lib/libPhysXPvdSDK_static_64.a ../cpp_packages/lib/libPhysXVehicle2_static_64.a ../cpp_packages/lib/libPhysXVehicle_static_64.a ../cpp_packages/lib/libPhysX_static_64.a ../cpp_packages/lib/libSnippetRender_static_64.a ../cpp_packages/lib/libSnippetUtils_static_64.a
+  FLAGS = -g -D_DEBUG
+  LINK_FLAGS = -rdynamic
+  LINK_LIBRARIES = -Wl,-rpath,/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/lib  ../cpp_packages/lib/libPVDRuntime_64.so  ../cpp_packages/lib/libPhysXCharacterKinematic_static_64.a  ../cpp_packages/lib/libPhysXCommon_static_64.a  ../cpp_packages/lib/libPhysXCooking_static_64.a  ../cpp_packages/lib/libPhysXExtensions_static_64.a  ../cpp_packages/lib/libPhysXFoundation_static_64.a  ../cpp_packages/lib/libPhysXGpu_64.so  ../cpp_packages/lib/libPhysXPvdSDK_static_64.a  ../cpp_packages/lib/libPhysXVehicle2_static_64.a  ../cpp_packages/lib/libPhysXVehicle_static_64.a  ../cpp_packages/lib/libPhysX_static_64.a  ../cpp_packages/lib/libSnippetRender_static_64.a  ../cpp_packages/lib/libSnippetUtils_static_64.a
+  LINK_PATH = -L/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/lib
+  OBJECT_DIR = CMakeFiles/physx_simulate.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = physx_simulate
+  TARGET_PDB = physx_simulate.dbg
 
 
 #############################################
@@ -142,7 +181,7 @@ build dataFileOperator: phony libdataFileOperator.so
 #############################################
 # Folder: /home/yeet/Documents/programing/python/PPPlayer/build
 
-build all: phony libdataFileOperator.so dataFileOperatorTest
+build all: phony libdataFileOperator.so dataFileOperatorTest physx_simulate
 
 # =============================================================================
 # Unknown Build Time Dependencies.

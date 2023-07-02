@@ -1,12 +1,17 @@
 [
 {
   "directory": "/home/yeet/Documents/programing/python/PPPlayer/build",
-  "command": "/usr/bin/c++ -DdataFileOperator_EXPORTS -g -fPIC -o CMakeFiles/dataFileOperator.dir/ball_simulate/dataFileOperator.cpp.o -c /home/yeet/Documents/programing/python/PPPlayer/ball_simulate/dataFileOperator.cpp",
+  "command": "/usr/bin/c++ -DdataFileOperator_EXPORTS -I/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/include -g -D_DEBUG -fPIC -o CMakeFiles/dataFileOperator.dir/ball_simulate/dataFileOperator.cpp.o -c /home/yeet/Documents/programing/python/PPPlayer/ball_simulate/dataFileOperator.cpp",
   "file": "/home/yeet/Documents/programing/python/PPPlayer/ball_simulate/dataFileOperator.cpp"
 },
 {
   "directory": "/home/yeet/Documents/programing/python/PPPlayer/build",
-  "command": "/usr/bin/c++ -g -o CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o -c /home/yeet/Documents/programing/python/PPPlayer/ball_simulate/dataFileOperator.cpp",
+  "command": "/usr/bin/c++ -I/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/include -g -D_DEBUG -o CMakeFiles/dataFileOperatorTest.dir/ball_simulate/dataFileOperator.cpp.o -c /home/yeet/Documents/programing/python/PPPlayer/ball_simulate/dataFileOperator.cpp",
   "file": "/home/yeet/Documents/programing/python/PPPlayer/ball_simulate/dataFileOperator.cpp"
+},
+{
+  "directory": "/home/yeet/Documents/programing/python/PPPlayer/build",
+  "command": "/usr/bin/c++ -I/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/include -g -D_DEBUG -o CMakeFiles/physx_simulate.dir/ball_simulate/physx_simulate.cpp.o -c /home/yeet/Documents/programing/python/PPPlayer/ball_simulate/physx_simulate.cpp",
+  "file": "/home/yeet/Documents/programing/python/PPPlayer/ball_simulate/physx_simulate.cpp"
 }
 ]

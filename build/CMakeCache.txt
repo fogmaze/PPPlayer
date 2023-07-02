@@ -232,9 +232,6 @@ ball_simulate_IS_TOP_LEVEL:STATIC=ON
 //Value Computed by CMake
 ball_simulate_SOURCE_DIR:STATIC=/home/yeet/Documents/programing/python/PPPlayer
 
-//Dependencies for the target
-dataFileOperator_LIB_DEPENDS:STATIC=general;;
-
 
 ########################
 # INTERNAL cache entries
