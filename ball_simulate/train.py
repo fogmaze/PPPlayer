@@ -214,12 +214,12 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
 
             scheduler.step()
         except KeyboardInterrupt:
-            c_exit = input("exit?[y/n]")
-            if c_exit == "y":
+            c_exit = input("exit?[Y/n]")
+            if c_exit == "Y" or c_exit == "y" or c_exit == chr(13) :
                 break
 
 
-def exportLatestModel(model_name:str, weight:str):
+def exportLatestModel(model_name:str, weight:str) :
     model = MODEL_MAP[model_name](device='cpu')
     print("exporting: " + weight)
     model.load_state_dict(torch.load(weight))
@@ -228,7 +228,7 @@ def exportLatestModel(model_name:str, weight:str):
     model_script.save('model_final.pth')
 
 
-def validModel(model_name, weight):
+def validModel(model_name, weight) :
     model = MODEL_MAP[model_name](device='cuda:0')
     print("validating: " + weight)
     model.cuda()
@@ -246,7 +246,7 @@ def validModel(model_name, weight):
     print("loss: " + str(loss_sum / len(ball_datas)))
 
 
-def testModel(model_name, weight, batch_size=1, num_data = 50):
+def testModel(model_name, weight, batch_size=1, num_data = 50) :
     model = MODEL_MAP[model_name](device='cpu')
 
     model.load_state_dict(torch.load(weight))
