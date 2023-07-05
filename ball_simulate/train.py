@@ -216,11 +216,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
                 break
 
 
-<<<<<<< HEAD
-def exportLatestModel(model_name:str, weight:str) :
-=======
 def exportModel(model_name:str, weight:str):
->>>>>>> 05ad587 (add physx)
     model = MODEL_MAP[model_name](device='cpu')
     print("exporting: " + weight)
     model.load_state_dict(torch.load(weight))
@@ -247,9 +243,6 @@ def validModel(model_name, weight) :
     print("loss: " + str(loss_sum / len(ball_datas)))
 
 
-<<<<<<< HEAD
-def testModel(model_name, weight, batch_size=1, num_data = 50) :
-=======
 def configRoom(ax:Axes):
     lim = CAMERA_AREA_HALF_LENGTH
     ax.set_xlim(-lim,lim)
@@ -287,7 +280,6 @@ def plotOutput(ax, out):
 
 
 def visualizeModelOutput(model_name, weight):
->>>>>>> 05ad587 (add physx)
     model = MODEL_MAP[model_name](device='cpu')
     batch_size = 1
 
