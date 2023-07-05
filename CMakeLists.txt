@@ -35,10 +35,19 @@ set(LIB_DIR "cpp_packages/lib")
 
 # Generate a list of all .so and .a files in the specified directory
 file(GLOB LIB_FILES "${LIB_DIR}/*.so" "${LIB_DIR}/*.a")
-message(${LIB_FILES})
 
-# Iterate over the list of library files and link them to your targe
-foreach(LIB_FILE ${LIB_FILES})
-    #message(${LIB_FILE})
-    target_link_libraries(physx_simulate ${LIB_FILE})
-endforeach()
+set(PhysXLIBS
+  libPhysXExtensions_static_64.a
+  libPhysX_static_64.a
+  libPhysXPvdSDK_static_64.a
+  libPhysXVehicle_static_64.a
+  libPhysXCharacterKinematic_static_64.a
+  libPhysXCooking_static_64.a
+  libPhysXCommon_static_64.a
+  libPhysXFoundation_static_64.a
+  libSnippetUtils_static_64.a
+  libSnippetRender_static_64.a
+)
+
+
+target_link_libraries(physx_simulate PRIVATE ${PhysXLIBS})

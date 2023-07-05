@@ -184,8 +184,6 @@ def testLoadData():
     print(a[1].curveTimestamps[1])
 if __name__ == "__main__":
     ds = BallDataSet("./ball_simulate/dataset/medium.valid.bin")
-    dss = BallDataSet_sync("./ball_simulate/dataset/medium.valid.bin")
 
     a = ds[7]
-    b = dss[7]
     pass

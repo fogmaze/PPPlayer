@@ -134,10 +134,10 @@ build CMakeFiles/physx_simulate.dir/ball_simulate/physx_simulate.cpp.o: CXX_COMP
 #############################################
 # Link the executable physx_simulate
 
-build physx_simulate: CXX_EXECUTABLE_LINKER__physx_simulate_Debug CMakeFiles/physx_simulate.dir/ball_simulate/physx_simulate.cpp.o | ../cpp_packages/lib/libPVDRuntime_64.so ../cpp_packages/lib/libPhysXCharacterKinematic_static_64.a ../cpp_packages/lib/libPhysXCommon_static_64.a ../cpp_packages/lib/libPhysXCooking_static_64.a ../cpp_packages/lib/libPhysXExtensions_static_64.a ../cpp_packages/lib/libPhysXFoundation_static_64.a ../cpp_packages/lib/libPhysXGpu_64.so ../cpp_packages/lib/libPhysXPvdSDK_static_64.a ../cpp_packages/lib/libPhysXVehicle2_static_64.a ../cpp_packages/lib/libPhysXVehicle_static_64.a ../cpp_packages/lib/libPhysX_static_64.a ../cpp_packages/lib/libSnippetRender_static_64.a ../cpp_packages/lib/libSnippetUtils_static_64.a
+build physx_simulate: CXX_EXECUTABLE_LINKER__physx_simulate_Debug CMakeFiles/physx_simulate.dir/ball_simulate/physx_simulate.cpp.o
   FLAGS = -g -D_DEBUG
   LINK_FLAGS = -rdynamic
-  LINK_LIBRARIES = -Wl,-rpath,/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/lib  ../cpp_packages/lib/libPVDRuntime_64.so  ../cpp_packages/lib/libPhysXCharacterKinematic_static_64.a  ../cpp_packages/lib/libPhysXCommon_static_64.a  ../cpp_packages/lib/libPhysXCooking_static_64.a  ../cpp_packages/lib/libPhysXExtensions_static_64.a  ../cpp_packages/lib/libPhysXFoundation_static_64.a  ../cpp_packages/lib/libPhysXGpu_64.so  ../cpp_packages/lib/libPhysXPvdSDK_static_64.a  ../cpp_packages/lib/libPhysXVehicle2_static_64.a  ../cpp_packages/lib/libPhysXVehicle_static_64.a  ../cpp_packages/lib/libPhysX_static_64.a  ../cpp_packages/lib/libSnippetRender_static_64.a  ../cpp_packages/lib/libSnippetUtils_static_64.a
+  LINK_LIBRARIES = -Wl,-rpath,/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/lib  -Wl,-Bstatic  -lPhysXExtensions_static_64  -lPhysX_static_64  -lPhysXPvdSDK_static_64  -lPhysXVehicle_static_64  -lPhysXCharacterKinematic_static_64  -lPhysXCooking_static_64  -lPhysXCommon_static_64  -lPhysXFoundation_static_64  -lSnippetUtils_static_64  -lSnippetRender_static_64  -Wl,-Bdynamic
   LINK_PATH = -L/home/yeet/Documents/programing/python/PPPlayer/cpp_packages/lib
   OBJECT_DIR = CMakeFiles/physx_simulate.dir
   POST_BUILD = :

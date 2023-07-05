@@ -139,10 +139,13 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
     restitution = 1
     p.changeDynamics(sphere, -1, restitution=restitution)
     p.changeDynamics(plane, -1, restitution=restitution)
-    p.changeDynamics(plane, -1, lateralFriction=0)
-    p.changeDynamics(sphere, -1, lateralFriction=0)
-    p.changeDynamics(sphere, -1, spinningFriction=0)
-    p.changeDynamics(sphere, -1, rollingFriction=0)
+    p.changeDynamics(plane, -1, lateralFriction=0.6)
+    p.changeDynamics(plane, -1, spinningFriction=0.6)
+    p.changeDynamics(plane, -1, rollingFriction=0.6)
+    
+    p.changeDynamics(sphere, -1, lateralFriction=0.6)
+    p.changeDynamics(sphere, -1, spinningFriction=0.6)
+    p.changeDynamics(sphere, -1, rollingFriction=0.6)
     p.setRealTimeSimulation(0)
     p.setTimeStep(stepTime)
 
@@ -153,12 +156,14 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
         cam1_pos = randomCameraPos()
         cam2_pos = randomCameraPos()
 
-        ball_pos = randomBallPos()
+        ball_posu = randomBallPos()
+        ball_pos = equ.Point3d(0, 0, 5)
 
         #set ball pos
         p.resetBasePositionAndOrientation(sphere, [ball_pos.x, ball_pos.y, ball_pos.z], startOrientation)
-        linearVelocity = [random.uniform(-5,5), random.uniform(-5,5), random.uniform(0, 3)]
-        angularVelocity = [0, 0, 0]
+        linearVelocityu = [random.uniform(-5,5), random.uniform(-5,5), random.uniform(0, 3)]
+        angularVelocity = [0, 50, 100]
+        linearVelocity=[0,0,0]
         p.resetBaseVelocity(sphere, linearVelocity, angularVelocity)
 
 
@@ -272,7 +277,7 @@ def norm(data:dfo.DataStruct) :
 
 if __name__ == "__main__":
     #print(calculateMeanStd("train.bin"))
-    simulate(GUI=False, dataLength=100000, outputFileName="ball_simulate/dataset/medium.train.bin")
+    simulate(GUI=True, dataLength=100000, outputFileName="ball_simulate/dataset/medium.train.bin")
     simulate(GUI=False, dataLength=10000, outputFileName="ball_simulate/dataset/medium.valid.bin")
     pass
 

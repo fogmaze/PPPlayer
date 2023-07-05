@@ -4,17 +4,26 @@ sys.path.append(os.getcwd())
 import ball_simulate.dataFileOperator as dfo
 from argparse import ArgumentParser
 import logging
-import parse
-import shutil
 import time
 import torch
 import torch.nn as nn
 import torch
-from torch.utils.data import Dataset,DataLoader
+from torch.utils.data import DataLoader
 from core import *
 import core
-import pickle
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+import core.Equation3d as equ
+from typing import List,Tuple
 import tqdm
+
+BALL_AREA_HALF_LENGTH = 3
+BALL_AREA_HALF_WIDTH = 2
+BALL_AREA_HEIGHT = 1
+
+CAMERA_AREA_HALF_LENGTH = 7/2
+CAMERA_AREA_HALF_WIDTH = 5/2
+CAMERA_AREA_HEIGHT = 1.5
 
 
 class ISEFWINNER_BASE(nn.Module):
@@ -115,18 +124,6 @@ class ISEFWINNER_SMALL(ISEFWINNER_BASE):
 
 
 
-def findLatestSave(name = None):
-        all_save_dirs = os.listdir('model_saves/')
-        all_save_dirs.sort(reverse=True)
-        while len(os.listdir(os.path.join('model_saves/',all_save_dirs[0]))) < 2:
-            del all_save_dirs[0]
-        def fileneme_order(s):
-            return int(parse.parse('epoch_{}.pt',s)[0])
-        last_saves = os.listdir(os.path.join('model_saves/',all_save_dirs[0]))
-        last_saves.sort(key=fileneme_order,reverse=True)
-        return os.path.join('model_saves/',all_save_dirs[0],last_saves[0])
-
-
 def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, dataset = "",model_name = "small", weight = None, device = "cuda:0"):
     torch.multiprocessing.set_start_method('spawn')
     train_logger = logging.getLogger('training')
@@ -219,7 +216,11 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
                 break
 
 
+<<<<<<< HEAD
 def exportLatestModel(model_name:str, weight:str) :
+=======
+def exportModel(model_name:str, weight:str):
+>>>>>>> 05ad587 (add physx)
     model = MODEL_MAP[model_name](device='cpu')
     print("exporting: " + weight)
     model.load_state_dict(torch.load(weight))
@@ -246,29 +247,66 @@ def validModel(model_name, weight) :
     print("loss: " + str(loss_sum / len(ball_datas)))
 
 
+<<<<<<< HEAD
 def testModel(model_name, weight, batch_size=1, num_data = 50) :
+=======
+def configRoom(ax:Axes):
+    lim = CAMERA_AREA_HALF_LENGTH
+    ax.set_xlim(-lim,lim)
+    ax.set_ylim(-lim,lim)
+    ax.set_zlim(0,lim)
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+
+def drawLine3d(axe:plt.Axes,line:equ.LineEquation3d):
+    points = [line.getPoint({'x':-BALL_AREA_HALF_LENGTH}),line.getPoint({'x':BALL_AREA_HALF_LENGTH})]
+    X = [points[0][0],points[1][0]]
+    Y = [points[0][1],points[1][1]]
+    Z = [points[0][2],points[1][2]]
+    axe.plot(X,Y,Z)
+
+def createRoom()->Axes:
+    ax = plt.axes(projection='3d')
+    configRoom(ax)
+    return ax
+
+def cleenRoom(axe:plt.Axes):
+    axe.cla()
+    configRoom(ax=axe)
+
+def plotOutput(ax, out):
+
+    for input_data in inp:
+        for work in input_data:
+            drawLine3d(ax,work.lineCamBall)
+    # plot ball points
+    for pos in ans:
+        ax.scatter(pos.ball_pos.x,pos.ball_pos.y,pos.ball_pos.z)
+
+
+
+def visualizeModelOutput(model_name, weight):
+>>>>>>> 05ad587 (add physx)
     model = MODEL_MAP[model_name](device='cpu')
+    batch_size = 1
 
     model.load_state_dict(torch.load(weight))
     model.eval()
 
     criterion = nn.MSELoss()
     ball_datas = dfo.BallDataSet("ball_simulate/medium.valid.bin")
-    loader = DataLoader(ball_datas,batch_size)
-    i = 0
-    for X1,x1_len,X2,x2_len,labels in tqdm.tqdm(loader):
-        model.reset_hidden_cell(batch_size=batch_size)
-        out = model(X1,x1_len,X2,x2_len)
-        loss = criterion(out, labels.view(out.shape[0],-1))
-        print(loss.item())
-        if i >= num_data:
-            break
-        i += 1
+
+    r, l, t, ans = ball_datas[4]
+    out = model(r,l,t)
+
+    print("loss: " + str(criterion(out, ans).item()))
     
+
+
 MODEL_MAP = {
     "small":ISEFWINNER_SMALL
 }
-
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
@@ -277,17 +315,15 @@ if __name__ == "__main__":
     argparser.add_argument('-e', default=35, type=int)
     argparser.add_argument('-m', default="small", type=str)
     argparser.add_argument('-d', default="./ball_simulate/dataset/medium", type=str)
-    argparser.add_argument('-s', default=7, type=int)
+    argparser.add_argument('-s', default=10, type=int)
     argparser.add_argument('-w', default=None, type=str)
     argparser.add_argument('--set-data', dest='set_data', action='store_true', default=False)
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
     argparser.add_argument('--test', dest='test', action='store_true', default=False)
     args = argparser.parse_args()
     if args.export:
-        exportLatestModel()
         exit(0)
     if args.test:
-        testModel()
         exit(0)
     if args.set_data:
         import ball_simulate.simulate as sim
