@@ -1,3 +1,4 @@
+import random
 import sys
 import os
 sys.path.append(os.getcwd())
@@ -9,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch
 from torch.utils.data import DataLoader
-from core import *
+from core.Constants import *
 import core
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
@@ -17,18 +18,11 @@ import core.Equation3d as equ
 from typing import List,Tuple
 import tqdm
 
-BALL_AREA_HALF_LENGTH = 3
-BALL_AREA_HALF_WIDTH = 2
-BALL_AREA_HEIGHT = 1
-
-CAMERA_AREA_HALF_LENGTH = 7/2
-CAMERA_AREA_HALF_WIDTH = 5/2
-CAMERA_AREA_HEIGHT = 1.5
 
 
 class ISEFWINNER_BASE(nn.Module):
     #input:  [cam_x, cam_y, cam_z, rad_xy, rad_xz] * 2 , [time]
-    #output: [speed_xy,      start.x,   start.y    end.x,      end.y,      highest]
+    #output: [x, y, z]
     device = "cuda:0"
     input_size:int = 5
     output_size:int = 3
@@ -50,8 +44,6 @@ class ISEFWINNER_BASE(nn.Module):
     #input shape:(batch_size, seq_len, input_size)
     def forward(self, X1:torch.Tensor, X2:torch.Tensor ,T:torch.Tensor):
             
-            
-
         x1_batch_size = len(X1)
         x2_batch_size = len(X2)
 
@@ -120,6 +112,53 @@ class ISEFWINNER_SMALL(ISEFWINNER_BASE):
             nn.Linear(mlp2_l2_out, mlp2_l3_out),
             nn.Tanh(),
             nn.Linear(mlp2_l3_out, self.output_size)
+        )
+
+class ISEFWINNER_MEDIUM(ISEFWINNER_BASE):
+    def __init__(self,device = "cuda:0"):
+        self.device = device
+
+        mlp1_l1_out = 100
+        mlp1_l2_out = 80
+        mlp1_l3_out = 80
+        mlp1_l4_out = 50
+
+        mlp2_l1_out = 90
+        mlp2_l2_out = 60
+        mlp2_l3_out = 50
+        mlp2_l4_out = 30
+
+        self.mlp1_out = mlp1_l4_out
+        self.mlp2_out = mlp2_l4_out
+        self.lstm_out = 60
+        self.lstm_num_layers = 6
+
+        batch_size = 1
+        super().__init__()
+        self.mlp1 = nn.Sequential(
+            nn.Linear(self.input_size,mlp1_l1_out),
+            nn.ReLU(),
+            nn.Linear(mlp1_l1_out,mlp1_l2_out),
+            nn.Tanh(),
+            nn.Linear(mlp1_l2_out,mlp1_l3_out),
+            nn.Tanh(),
+            nn.Linear(mlp1_l3_out,mlp1_l4_out),
+        )
+        self.lstm = nn.LSTM(input_size = mlp1_l4_out,hidden_size= self.lstm_out,num_layers = self.lstm_num_layers)
+
+        self.llstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
+        self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
+        
+        self.mlp2 = nn.Sequential(
+            nn.Linear(self.lstm_out * 2 + 1, mlp2_l1_out),
+            nn.ReLU(),
+            nn.Linear(mlp2_l1_out, mlp2_l2_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l2_out, mlp2_l3_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l3_out, mlp2_l4_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l4_out, self.output_size)
         )
 
 
@@ -206,7 +245,11 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
                 print("save model")
                 if not os.path.isdir(model_save_dir):
                     os.makedirs(model_save_dir)
-                torch.save(model.state_dict(),model_save_dir + "epoch_" + str(e) + ".pt")
+                dirsavename = model_save_dir + "epoch_" + str(e) + "/"
+                os.makedirs(dirsavename)
+                torch.save(model.state_dict(),model_save_dir + "weight.pt")
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output.png")
+
                 min_validloss = real_validationloss
 
             scheduler.step()
@@ -242,7 +285,6 @@ def validModel(model_name, weight) :
         loss_sum += loss.item()
     print("loss: " + str(loss_sum / len(ball_datas)))
 
-
 def configRoom(ax:Axes):
     lim = CAMERA_AREA_HALF_LENGTH
     ax.set_xlim(-lim,lim)
@@ -268,18 +310,38 @@ def cleenRoom(axe:plt.Axes):
     axe.cla()
     configRoom(ax=axe)
 
-def plotOutput(ax, out):
-
-    for input_data in inp:
-        for work in input_data:
-            drawLine3d(ax,work.lineCamBall)
-    # plot ball points
-    for pos in ans:
-        ax.scatter(pos.ball_pos.x,pos.ball_pos.y,pos.ball_pos.z)
+def plotOutput(ax, out, color = 'r'):
+    o = out.view(-1,3)
+    for p in o:
+        ax.scatter(p[0].item(),p[1].item(),p[2].item(),c=color)
 
 
 
-def visualizeModelOutput(model_name, weight):
+def saveVisualizeModelOutput(model, dataset, imgFileName, seed = 3):
+    model.eval()
+    criterion = nn.MSELoss()
+
+    r, l, t, ans = dataset[seed]
+    r = r.view(1, -1, 5)
+    l = l.view(1, -1, 5)
+    t = t.view(1, -1)
+    ans = ans.view(1, -1, 3)
+    out = model(r,l,t).view(-1, 3)
+    ans = ans.view(-1, 3)
+
+    print("loss: " + str(criterion(out, ans).item()))
+
+    normer.unnorm_ans_tensor(ans)
+    normer.unnorm_ans_tensor(out)
+
+    ax = createRoom()
+    plotOutput(ax, out)
+    plotOutput(ax, ans, color='b')
+
+    plt.savefig(imgFileName)
+    plt.close()
+
+def visualizeModelOutput(model_name, weight, seed = 3):
     model = MODEL_MAP[model_name](device='cpu')
     batch_size = 1
 
@@ -287,17 +349,29 @@ def visualizeModelOutput(model_name, weight):
     model.eval()
 
     criterion = nn.MSELoss()
-    ball_datas = dfo.BallDataSet("ball_simulate/medium.valid.bin")
+    ball_datas = dfo.BallDataSet("ball_simulate/dataset/medium.valid.bin", device='cpu')
 
-    r, l, t, ans = ball_datas[4]
-    out = model(r,l,t)
+    r, l, t, ans = ball_datas[seed]
+    r = r.view(1, -1, 5)
+    l = l.view(1, -1, 5)
+    t = t.view(1, -1)
+    ans = ans.view(1, -1, 3)
+    out = model(r,l,t).view(-1, 3)
+    ans = ans.view(-1, 3)
 
     print("loss: " + str(criterion(out, ans).item()))
+
+    normer.unnorm_ans_tensor(ans)
+    normer.unnorm_ans_tensor(out)
+
+    ax = createRoom()
+    plotOutput(ax, out)
+    plotOutput(ax, ans, color='b')
+    plt.show()
     
-
-
 MODEL_MAP = {
-    "small":ISEFWINNER_SMALL
+    "small":ISEFWINNER_SMALL,
+    "medium":ISEFWINNER_MEDIUM
 }
 
 if __name__ == "__main__":

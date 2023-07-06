@@ -22,15 +22,7 @@ FPS = 30
 SHUTTER_RANDOM_ERROR_STD = 0.005
 SHUTTER_SYSTEMATIC_ERROR_STD = 0.01
 
-CURVE_SHOWING_GAP = 0.05
 
-BALL_AREA_HALF_LENGTH = 3
-BALL_AREA_HALF_WIDTH = 2
-BALL_AREA_HEIGHT = 1
-
-CAMERA_AREA_HALF_LENGTH = 7/2
-CAMERA_AREA_HALF_WIDTH = 5/2
-CAMERA_AREA_HEIGHT = 1.5
 
 class Work:
     timestamp:float
@@ -156,14 +148,12 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
         cam1_pos = randomCameraPos()
         cam2_pos = randomCameraPos()
 
-        ball_posu = randomBallPos()
-        ball_pos = equ.Point3d(0, 0, 5)
+        ball_pos = randomBallPos()
 
         #set ball pos
         p.resetBasePositionAndOrientation(sphere, [ball_pos.x, ball_pos.y, ball_pos.z], startOrientation)
-        linearVelocityu = [random.uniform(-5,5), random.uniform(-5,5), random.uniform(0, 3)]
-        angularVelocity = [0, 50, 100]
-        linearVelocity=[0,0,0]
+        linearVelocity = [random.uniform(-5,5), random.uniform(-5,5), random.uniform(0, 3)]
+        angularVelocity = [0, 0, 0]
         p.resetBaseVelocity(sphere, linearVelocity, angularVelocity)
 
 
@@ -238,46 +228,14 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
                 dataStruct.curvePoints[k].y = ans_data[k].ball_pos.y
                 dataStruct.curvePoints[k].z = ans_data[k].ball_pos.z
                 dataStruct.curveTimestamps[k] = ans_data[k].timestamp
-            norm(dataStruct)
+            normer.norm(dataStruct)
             dataset.putData(i*SINGLE_SIMULATE_SAMPLE_LEN+j, dataStruct)
     dataset.saveToFile()
 
-def norm(data:dfo.DataStruct) :
-    CAM_MEAN = [0.0, 0.0, CAMERA_AREA_HEIGHT/2]
-    CAM_STD = [CAMERA_AREA_HALF_LENGTH, CAMERA_AREA_HALF_WIDTH, CAMERA_AREA_HEIGHT/2]
-    LINE_MEAN = [0, 0]
-    LINE_STD = [math.pi/2, math.pi/2]
-    BALL_MEAN = [0.0, 0.0, BALL_AREA_HEIGHT/2]
-    BALL_STD = [BALL_AREA_HALF_LENGTH*2, BALL_AREA_HALF_WIDTH*2, BALL_AREA_HEIGHT/2]
-    TIME_MEAN = [CURVE_SHOWING_GAP*SIMULATE_TEST_LEN/2]
-    TIME_STD = [CURVE_SHOWING_GAP*SIMULATE_TEST_LEN/2]
-
-    data.inputs[0].camera_x = (data.inputs[0].camera_x - CAM_MEAN[0]) / CAM_STD[0]
-    data.inputs[0].camera_y = (data.inputs[0].camera_y - CAM_MEAN[1]) / CAM_STD[1]
-    data.inputs[0].camera_z = (data.inputs[0].camera_z - CAM_MEAN[2]) / CAM_STD[2]
-    data.inputs[1].camera_x = (data.inputs[1].camera_x - CAM_MEAN[0]) / CAM_STD[0]
-    data.inputs[1].camera_y = (data.inputs[1].camera_y - CAM_MEAN[1]) / CAM_STD[1]
-    data.inputs[1].camera_z = (data.inputs[1].camera_z - CAM_MEAN[2]) / CAM_STD[2]
-
-    for i in range(SIMULATE_INPUT_LEN):
-        data.inputs[0].line_rad_xy[i] = (data.inputs[0].line_rad_xy[i] - LINE_MEAN[0]) / LINE_STD[0]
-        data.inputs[0].line_rad_xz[i] = (data.inputs[0].line_rad_xz[i] - LINE_MEAN[1]) / LINE_STD[1]
-        data.inputs[1].line_rad_xy[i] = (data.inputs[1].line_rad_xy[i] - LINE_MEAN[0]) / LINE_STD[0]
-        data.inputs[1].line_rad_xz[i] = (data.inputs[1].line_rad_xz[i] - LINE_MEAN[1]) / LINE_STD[1]
-
-        data.inputs[0].timestamps[i] = (data.inputs[0].timestamps[i] - TIME_MEAN[0]) / TIME_STD[0]
-        data.inputs[1].timestamps[i] = (data.inputs[1].timestamps[i] - TIME_MEAN[0]) / TIME_STD[0]
-    
-    for i in range(SIMULATE_TEST_LEN) :
-        data.curvePoints[i].x = (data.curvePoints[i].x - BALL_MEAN[0]) / BALL_STD[0]
-        data.curvePoints[i].y = (data.curvePoints[i].y - BALL_MEAN[1]) / BALL_STD[1]
-        data.curvePoints[i].z = (data.curvePoints[i].z - BALL_MEAN[2]) / BALL_STD[2]
-        data.curveTimestamps[i] = (data.curveTimestamps[i] - TIME_MEAN[0]) / TIME_STD[0]
-        
 
 if __name__ == "__main__":
     #print(calculateMeanStd("train.bin"))
-    simulate(GUI=True, dataLength=100000, outputFileName="ball_simulate/dataset/medium.train.bin")
+    simulate(GUI=False, dataLength=1000000, outputFileName="ball_simulate/dataset/medium.train.bin")
     simulate(GUI=False, dataLength=10000, outputFileName="ball_simulate/dataset/medium.valid.bin")
     pass
 
