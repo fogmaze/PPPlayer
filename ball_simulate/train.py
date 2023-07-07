@@ -254,10 +254,10 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
                 os.makedirs(dirsavename)
                 torch.save(model.state_dict(), dirsavename + "weight.pt")
                 saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output1.png", seed=1)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output2.png", seed=2)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output3.png", seed=3)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output4.png", seed=4)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output5.png", seed=5)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output2.png", seed=100)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output3.png", seed=200)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output4.png", seed=300)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output5.png", seed=400)
                 model.reset_hidden_cell(batch_size=batch_size)
 
                 min_validloss = real_validationloss
