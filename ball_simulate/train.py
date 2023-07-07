@@ -204,6 +204,9 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
 
     train_loss = 0
     valid_loss = 0
+
+    train_loss_history = []
+    valid_loss_history = []
     
     min_validloss = 0
     for e in range(epochs):
@@ -237,6 +240,8 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
             
             real_trainingloss = trainloss_sum / len(dataloader_train.dataset) * batch_size
             real_validationloss = validloss_sum / len(dataloader_valid.dataset) * batch_size
+            train_loss_history.append(real_trainingloss)
+            valid_loss_history.append(real_validationloss)
 
             print("==========================[epoch:" + str(e) + "]==============================")
             train_logger.info("epoch:{}\tlr:{:e}\ttraining loss:{:0.10f}\tvalidation loss:{:0.10f}".format(e,(optimizer.param_groups[0]['lr']),real_trainingloss,real_validationloss))
@@ -247,8 +252,13 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
                     os.makedirs(model_save_dir)
                 dirsavename = model_save_dir + "epoch_" + str(e) + "/"
                 os.makedirs(dirsavename)
-                torch.save(model.state_dict(),model_save_dir + "weight.pt")
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output.png")
+                torch.save(model.state_dict(), dirsavename + "weight.pt")
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output1.png", seed=1)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output2.png", seed=2)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output3.png", seed=3)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output4.png", seed=4)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output5.png", seed=5)
+                model.reset_hidden_cell(batch_size=batch_size)
 
                 min_validloss = real_validationloss
 
@@ -257,6 +267,10 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
             c_exit = input("exit?[Y/n]")
             if c_exit == "Y" or c_exit == "y" or c_exit == chr(13) :
                 break
+    plt.plot(train_loss_history)
+    plt.plot(valid_loss_history)
+    plt.legend(['train_loss', 'valid_loss'], loc='upper left')
+    plt.savefig(model_save_dir + "loss.png")
 
 
 def exportModel(model_name:str, weight:str):
@@ -317,9 +331,10 @@ def plotOutput(ax, out, color = 'r'):
 
 
 
-def saveVisualizeModelOutput(model, dataset, imgFileName, seed = 3):
+def saveVisualizeModelOutput(model:ISEFWINNER_BASE, dataset, imgFileName, seed = 3):
     model.eval()
     criterion = nn.MSELoss()
+    model.reset_hidden_cell(batch_size=1)
 
     r, l, t, ans = dataset[seed]
     r = r.view(1, -1, 5)

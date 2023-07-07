@@ -58,4 +58,3 @@ private:
 
 }
 
-#endif //PHYSX_SNIPPET_CAMERA_H
