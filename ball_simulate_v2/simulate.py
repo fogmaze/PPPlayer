@@ -11,7 +11,6 @@ from typing import List, Tuple
 import time
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
-import numpy as np
 import ball_simulate_v2.dataFileOperator as dfo
 
 
