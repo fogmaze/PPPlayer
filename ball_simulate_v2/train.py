@@ -2,7 +2,7 @@ import random
 import sys
 import os
 sys.path.append(os.getcwd())
-import ball_simulate.dataFileOperator as dfo
+import ball_simulate_v2.dataFileOperator as dfo
 from argparse import ArgumentParser
 import logging
 import time
@@ -42,7 +42,7 @@ class ISEFWINNER_BASE(nn.Module):
         self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers, batch_size, self.lstm_out, device=self.device), torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device))
 
     #input shape:(batch_size, seq_len, input_size)
-    def forward(self, X1:torch.Tensor, X2:torch.Tensor ,T:torch.Tensor):
+    def forward(self, X1:torch.Tensor, X1_len:torch.Tensor, X2:torch.Tensor, X2_len:torch.Tensor, T:torch.Tensor):
             
         x1_batch_size = len(X1)
         x2_batch_size = len(X2)
@@ -59,15 +59,32 @@ class ISEFWINNER_BASE(nn.Module):
         X2_seq, self.rlstm_hidden_cell = self.lstm(X2, self.rlstm_hidden_cell)
         #shape: (seq_len, batch_size, input_size)
 
-        #shape of T: (seq_len, batch_size, 1)
-        T = T.transpose(0, 1).view(-1, x1_batch_size, 1)
-        res = None
-        for i in range(T.shape[0]) :
-            inp = torch.cat((self.llstm_hidden_cell[0][self.lstm_num_layers-1], self.rlstm_hidden_cell[0][self.lstm_num_layers-1], T[i]),1)
-            if res == None:
-                res = self.mlp2(inp).view(x1_batch_size, 1, self.output_size)
-            else:
-                res = torch.cat((res, self.mlp2(inp).view(x1_batch_size, 1, self.output_size)), 1)
+        X1_len_ind = X1_len - 1
+        X2_len_ind = X2_len - 1
+
+        X1_ind = X1_len_ind.view(1, x1_batch_size, 1).expand(1, x1_batch_size, self.lstm_out)
+        X2_ind = X2_len_ind.view(1, x2_batch_size, 1).expand(1, x2_batch_size, self.lstm_out)
+
+        X1 = X1_seq.gather(0, X1_ind).view(1, x1_batch_size, self.lstm_out)
+        X2 = X2_seq.gather(0, X2_ind).view(1, x2_batch_size, self.lstm_out)
+        
+        #shape: (1, batch_size, input_size)
+        X1 = X1.transpose(0, 1)
+        X2 = X2.transpose(0, 1)
+        #shape: (batch_size, 1, input_size)
+
+        X = torch.cat((X1, X2), 2)
+
+        #shape of T: batch_size, out_seq_len
+        X = X.repeat(1, T.shape[1], 1)
+        #shape: (batch_size, out_seq_len, input_size)
+
+        X = torch.cat((X, T.view(x1_batch_size, T.shape[1], 1)), 2)
+        #shape: (batch_size, out_seq_len, input_size + 1)
+
+        res = self.mlp2(X.view(-1, self.lstm_out * 2 + 1)).view(x1_batch_size, T.shape[1], self.output_size)
+
+        # out shape : (batch_size, seq_len, output_size)
         return res
 
 class ISEFWINNER_SMALL(ISEFWINNER_BASE):
@@ -164,13 +181,12 @@ class ISEFWINNER_MEDIUM(ISEFWINNER_BASE):
 
 
 def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, dataset = "",model_name = "small", weight = None, device = "cuda:0"):
-    model_save_dir = time.strftime("./ball_simulate/model_saves/" + model_name + "%Y-%m-%d_%H-%M-%S/",time.localtime())
-
+    model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + model_name + "%Y-%m-%d_%H-%M-%S/",time.localtime())
+    os.makedirs(model_save_dir)
     torch.multiprocessing.set_start_method('spawn')
     train_logger = logging.getLogger('training')
     train_logger.setLevel(logging.DEBUG)
     console_handler = logging.StreamHandler()
-    os.makedirs(model_save_dir)
     file_handler = logging.FileHandler(os.path.join(model_save_dir, 'training.log'))
     format_log = logging.Formatter('%(asctime)s - %(message)s')
     console_handler.setLevel(logging.DEBUG)
@@ -198,11 +214,11 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
     optimizer = torch.optim.Adam(model.parameters(), lr = LR)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
-    ball_datas_train = dfo.BallDataSet(dataset + ".train.bin",device=device)
-    dataloader_train = DataLoader(dataset=ball_datas_train,batch_size=batch_size,shuffle=True, num_workers=0)
+    ball_datas_train = dfo.BallDataSet(os.path.join("./ball_simulate_v2/dataset/", dataset + ".train.bin"), device=device)
+    dataloader_train = DataLoader(dataset=ball_datas_train, batch_size=batch_size,shuffle=True, num_workers=0)
 
-    ball_datas_valid = dfo.BallDataSet(dataset + ".valid.bin",device=device)
-    dataloader_valid = DataLoader(dataset=ball_datas_valid,batch_size=batch_size)
+    ball_datas_valid = dfo.BallDataSet(os.path.join("./ball_simulate_v2/dataset/", dataset + ".valid.bin"), device=device)
+    dataloader_valid = DataLoader(dataset=ball_datas_valid, batch_size=batch_size)
 
     train_loss = 0
     valid_loss = 0
@@ -221,10 +237,10 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
             validloss_sum = 0
             
             #data_sample = splitTrainData_batch([createTrainData() for _ in range(batch_size)],normalized=True)
-            for r, l, t, ans in tqdm.tqdm(dataloader_train):
+            for r, r_len, l, l_len, t, ans in tqdm.tqdm(dataloader_train):
                 model.reset_hidden_cell(batch_size=r.shape[0])
                 optimizer.zero_grad()
-                out = model(r,l,t)
+                out = model(r, r_len, l, l_len, t)
                 train_loss = criterion(out, ans)
                 train_loss.backward()
                 trainloss_sum += train_loss.item()
@@ -234,9 +250,9 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
             torch.cuda.empty_cache()
             
             model.eval()
-            for r, l, t, ans in tqdm.tqdm(dataloader_valid):
+            for r, r_len, l, l_len, t, ans in tqdm.tqdm(dataloader_valid):
                 model.reset_hidden_cell(batch_size=ans.shape[0])
-                out = model(r,l,t)
+                out = model(r, r_len, l, l_len, t)
                 valid_loss = criterion(out, ans)
                 validloss_sum += valid_loss.item()
             
@@ -291,13 +307,13 @@ def validModel(model_name, weight) :
     model.load_state_dict(torch.load(weight))
     model.eval()
     criterion = nn.MSELoss().cuda()
-    ball_datas = dfo.BallDataSet("ball_simulate/medium.valid.bin",device='cuda:0')
+    ball_datas = dfo.BallDataSet("ball_simulate_v2/medium.valid.bin",device='cuda:0')
     loader = DataLoader(ball_datas,1)
     loss_sum = 0
     for X1,x1_len,X2,x2_len,labels in tqdm.tqdm(loader):
         model.reset_hidden_cell(batch_size=1)
         out = model(X1,x1_len,X2,x2_len)
-        loss = criterion(out, labels.view(out.shape[0],-1))
+        loss = criterion(out, labels.view(out.shape[0], -1))
         loss_sum += loss.item()
     print("loss: " + str(loss_sum / len(ball_datas)))
 
@@ -338,12 +354,12 @@ def saveVisualizeModelOutput(model:ISEFWINNER_BASE, dataset, imgFileName, seed =
     criterion = nn.MSELoss()
     model.reset_hidden_cell(batch_size=1)
 
-    r, l, t, ans = dataset[seed]
+    r, r_len, l, l_len, t, ans = dataset[seed]
     r = r.view(1, -1, 5)
     l = l.view(1, -1, 5)
     t = t.view(1, -1)
     ans = ans.view(1, -1, 3)
-    out = model(r,l,t).view(-1, 3)
+    out = model(r, r_len, l, l_len, t).view(-1, 3)
     ans = ans.view(-1, 3)
 
     print("loss: " + str(criterion(out, ans).item()))
@@ -366,14 +382,14 @@ def visualizeModelOutput(model_name, weight, seed = 3):
     model.eval()
 
     criterion = nn.MSELoss()
-    ball_datas = dfo.BallDataSet("ball_simulate/dataset/medium.valid.bin", device='cpu')
+    ball_datas = dfo.BallDataSet("ball_simulate_v2/dataset/medium.valid.bin", device='cpu')
 
-    r, l, t, ans = ball_datas[seed]
+    r, r_len, l, l_len, t, ans = ball_datas[seed]
     r = r.view(1, -1, 5)
     l = l.view(1, -1, 5)
     t = t.view(1, -1)
+    out = model(r, r_len, l, l_len, t).view(-1, 3)
     ans = ans.view(1, -1, 3)
-    out = model(r,l,t).view(-1, 3)
     ans = ans.view(-1, 3)
 
     print("loss: " + str(criterion(out, ans).item()))
@@ -391,13 +407,15 @@ MODEL_MAP = {
     "medium":ISEFWINNER_MEDIUM
 }
 
+
+
 if __name__ == "__main__":
     argparser = ArgumentParser()
     argparser.add_argument('-lr', default=0.001, type=float)
     argparser.add_argument('-b', default=16, type=int)
     argparser.add_argument('-e', default=35, type=int)
     argparser.add_argument('-m', default="small", type=str)
-    argparser.add_argument('-d', default="./ball_simulate/dataset/medium", type=str)
+    argparser.add_argument('-d', default="./ball_simulate_v2/dataset/small", type=str)
     argparser.add_argument('-s', default=10, type=int)
     argparser.add_argument('-w', default=None, type=str)
     argparser.add_argument('--set-data', dest='set_data', action='store_true', default=False)
@@ -410,8 +428,8 @@ if __name__ == "__main__":
         exit(0)
     if args.set_data:
         import ball_simulate.simulate as sim
-        sim.simulate(GUI=False, dataLength=100000, outputFileName="ball_simulate/dataset/medium.train.bin")
-        sim.simulate(GUI=False, dataLength=10000, outputFileName="ball_simulate/dataset/medium.valid.bin")
+        sim.simulate(GUI=False, dataLength=100000, outputFileName="ball_simulate_v2/dataset/medium.train.bin")
+        sim.simulate(GUI=False, dataLength=10000, outputFileName="ball_simulate_v2/dataset/medium.valid.bin")
         exit(0)
     train(scheduler_step_size=args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w)
     pass

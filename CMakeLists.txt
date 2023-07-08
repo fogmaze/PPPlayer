@@ -10,12 +10,12 @@ IF (WIN32 AND NOT CYGWIN)
 ENDIF ()
 
 add_library(dataFileOperator SHARED ball_simulate/dataFileOperator.cpp)
-add_executable(dataFileOperatorTest ball_simulate/dataFileOperator.cpp)
-add_executable(physx_simulate ball_simulate/physx_simulate.cpp)
+add_library(dataFileOperatorV2 SHARED ball_simulate_v2/dataFileOperator.cpp)
+#add_executable(physx_simulate ball_simulate/physx_simulate.cpp)
 
-target_link_directories(dataFileOperatorTest PRIVATE cpp_packages/lib)
 target_link_directories(dataFileOperator PRIVATE cpp_packages/lib)
-target_link_directories(physx_simulate PRIVATE cpp_packages/lib)
+target_link_directories(dataFileOperatorV2 PRIVATE cpp_packages/lib)
+#target_link_directories(physx_simulate PRIVATE cpp_packages/lib)
 
 include_directories(cpp_packages/include)
 
@@ -50,4 +50,4 @@ set(PhysXLIBS
 )
 
 
-target_link_libraries(physx_simulate PRIVATE ${PhysXLIBS})
+#target_link_libraries(physx_simulate PRIVATE ${PhysXLIBS})

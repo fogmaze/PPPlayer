@@ -1,5 +1,4 @@
 /home/yeet/Documents/programing/python/PPPlayer/build/CMakeFiles/dataFileOperator.dir
-/home/yeet/Documents/programing/python/PPPlayer/build/CMakeFiles/dataFileOperatorTest.dir
-/home/yeet/Documents/programing/python/PPPlayer/build/CMakeFiles/physx_simulate.dir
+/home/yeet/Documents/programing/python/PPPlayer/build/CMakeFiles/dataFileOperatorV2.dir
 /home/yeet/Documents/programing/python/PPPlayer/build/CMakeFiles/edit_cache.dir
 /home/yeet/Documents/programing/python/PPPlayer/build/CMakeFiles/rebuild_cache.dir
