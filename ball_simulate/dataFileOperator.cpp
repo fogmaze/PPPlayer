@@ -2,8 +2,8 @@
 #include <iostream>
 #include <fstream>
 
-#define INPUT_LEN 20
-#define TEST_LEN 200
+#define INPUT_LEN 100
+#define TEST_LEN 100
 
 using namespace std;
 
@@ -48,6 +48,7 @@ extern "C" void* loadFromFile(const char* file_name) {
     return (void*)file_data_header;
 }
 
+/*
 extern "C"
 Data getFileData_sync(char* file_name, int index) {
     fstream fh;
@@ -59,6 +60,23 @@ Data getFileData_sync(char* file_name, int index) {
     Data* data = new Data;
     fh.read(((char*)data), sizeof(Data));
     fh.close();
+    Data d = *data;
+    delete data;
+    return d;
+}
+*/
+
+extern "C"
+Data getFileData_sync(char* file_name, int index) {
+    FILE* f = fopen(file_name, "r");
+    if (f == nullptr) {
+        cout << "data file open failed" << endl;
+        return Data();
+    }
+    fseek(f, index * sizeof(Data) + sizeof(FileDataHeader), SEEK_SET);
+    Data* data = new Data;
+    fread(data, sizeof(Data), 1, f);
+    fclose(f);
     Data d = *data;
     delete data;
     return d;

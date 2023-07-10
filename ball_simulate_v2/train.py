@@ -17,6 +17,7 @@ from matplotlib.axes import Axes
 import core.Equation3d as equ
 from typing import List,Tuple
 import tqdm
+import csv
 
 
 
@@ -178,10 +179,62 @@ class ISEFWINNER_MEDIUM(ISEFWINNER_BASE):
             nn.Linear(mlp2_l4_out, self.output_size)
         )
 
+class ISEFWINNER_LARGE(ISEFWINNER_BASE):
+    def __init__(self,device = "cuda:0"):
+        self.device = device
+
+        mlp1_l1_out = 200
+        mlp1_l2_out = 150
+        mlp1_l3_out = 150
+        mlp1_l4_out = 90
+        mlp1_l5_out = 70
+
+        mlp2_l1_out = 130
+        mlp2_l2_out = 120
+        mlp2_l3_out = 100
+        mlp2_l4_out = 60
+        mlp2_l5_out = 60
 
 
-def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, dataset = "",model_name = "small", weight = None, device = "cuda:0"):
-    model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + model_name + "%Y-%m-%d_%H-%M-%S/",time.localtime())
+        self.mlp1_out = mlp1_l5_out
+        self.mlp2_out = self.output_size
+        self.lstm_out = 60
+        self.lstm_num_layers = 8
+
+        batch_size = 1
+        super().__init__()
+        self.mlp1 = nn.Sequential(
+            nn.Linear(self.input_size,mlp1_l1_out),
+            nn.ReLU(),
+            nn.Linear(mlp1_l1_out, mlp1_l2_out),
+            nn.Tanh(),
+            nn.Linear(mlp1_l2_out, mlp1_l3_out),
+            nn.Tanh(),
+            nn.Linear(mlp1_l3_out, mlp1_l4_out),
+            nn.Tanh(),
+            nn.Linear(mlp1_l4_out, mlp1_l5_out)
+        )
+        self.lstm = nn.LSTM(input_size = self.mlp1_out, hidden_size=self.lstm_out, num_layers = self.lstm_num_layers)
+
+        self.llstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
+        self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
+        
+        self.mlp2 = nn.Sequential(
+            nn.Linear(self.lstm_out * 2 + 1, mlp2_l1_out),
+            nn.ReLU(),
+            nn.Linear(mlp2_l1_out, mlp2_l2_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l2_out, mlp2_l3_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l3_out, mlp2_l4_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l4_out, mlp2_l5_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l5_out, self.output_size)
+        )
+
+def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, dataset = "",model_name = "small", name="default", weight = None, device = "cuda:0"):
+    model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + model_name + "%Y-%m-%d_%H-%M-%S-"+name+"/",time.localtime())
     os.makedirs(model_save_dir)
     torch.multiprocessing.set_start_method('spawn')
     train_logger = logging.getLogger('training')
@@ -196,6 +249,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
     train_logger.addHandler(file_handler)
     train_logger.addHandler(console_handler)
 
+    training_params = 'epochs:{}, batch_size:{}, scheduler_step_size:{}, LR:{}, dataset:{}, model_name:{}, weight:{}, device:{}'.format(epochs,batch_size,scheduler_step_size,LR,dataset,model_name,weight,device)
     train_logger.info('start training with args: epochs:{}, batch_size:{}, scheduler_step_size:{}, LR:{}, dataset:{}, model_name:{}, weight:{}, device:{}'.format(epochs,batch_size,scheduler_step_size,LR,dataset,model_name,weight,device))
     
     if (MODEL_MAP.get(model_name) == None):
@@ -214,10 +268,10 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
     optimizer = torch.optim.Adam(model.parameters(), lr = LR)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
-    ball_datas_train = dfo.BallDataSet(os.path.join("./ball_simulate_v2/dataset/", dataset + ".train.bin"), device=device)
-    dataloader_train = DataLoader(dataset=ball_datas_train, batch_size=batch_size,shuffle=True, num_workers=0)
+    ball_datas_train = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".train.bin"), device=device)
+    dataloader_train = DataLoader(dataset=ball_datas_train, batch_size=batch_size,shuffle=True, num_workers=2)
 
-    ball_datas_valid = dfo.BallDataSet(os.path.join("./ball_simulate_v2/dataset/", dataset + ".valid.bin"), device=device)
+    ball_datas_valid = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".valid.bin"), device=device)
     dataloader_valid = DataLoader(dataset=ball_datas_valid, batch_size=batch_size)
 
     train_loss = 0
@@ -289,6 +343,16 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
     plt.plot(valid_loss_history)
     plt.legend(['train_loss', 'valid_loss'], loc='upper left')
     plt.savefig(model_save_dir + "loss.png")
+    # save data to csv file
+    with open(model_save_dir + "loss.csv", "w") as f:
+        writer = csv.writer(f)
+        #write params
+        writer.writerow([training_params])
+        # write the header
+        writer.writerow(["epoch", "train_loss", "valid_loss"])
+        # write the data
+        for i in range(len(train_loss_history)):
+            writer.writerow([i, train_loss_history[i], valid_loss_history[i]])
 
 
 def exportModel(model_name:str, weight:str):
@@ -404,21 +468,21 @@ def visualizeModelOutput(model_name, weight, seed = 3):
     
 MODEL_MAP = {
     "small":ISEFWINNER_SMALL,
-    "medium":ISEFWINNER_MEDIUM
+    "medium":ISEFWINNER_MEDIUM,
+    "large":ISEFWINNER_LARGE
 }
-
-
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
     argparser.add_argument('-lr', default=0.001, type=float)
     argparser.add_argument('-b', default=16, type=int)
-    argparser.add_argument('-e', default=35, type=int)
+    argparser.add_argument('-e', default=30, type=int)
     argparser.add_argument('-m', default="small", type=str)
-    argparser.add_argument('-d', default="./ball_simulate_v2/dataset/small", type=str)
-    argparser.add_argument('-s', default=10, type=int)
+    argparser.add_argument('-d', default="medium", type=str)
+    argparser.add_argument('-s', default=6, type=int)
     argparser.add_argument('-w', default=None, type=str)
-    argparser.add_argument('--set-data', dest='set_data', action='store_true', default=False)
+    argparser.add_argument('-a', default="default", type=str)
+    argparser.add_argument('-n', default="default", type=str)
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
     argparser.add_argument('--test', dest='test', action='store_true', default=False)
     args = argparser.parse_args()
@@ -426,10 +490,5 @@ if __name__ == "__main__":
         exit(0)
     if args.test:
         exit(0)
-    if args.set_data:
-        import ball_simulate.simulate as sim
-        sim.simulate(GUI=False, dataLength=100000, outputFileName="ball_simulate_v2/dataset/medium.train.bin")
-        sim.simulate(GUI=False, dataLength=10000, outputFileName="ball_simulate_v2/dataset/medium.valid.bin")
-        exit(0)
-    train(scheduler_step_size=args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w)
+    train(scheduler_step_size=args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w, name=args.n)
     pass

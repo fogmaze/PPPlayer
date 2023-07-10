@@ -2,8 +2,8 @@
 #include <iostream>
 #include <fstream>
 
-#define INPUT_LEN 20
-#define TEST_LEN 200
+#define INPUT_LEN 100
+#define TEST_LEN 100
 
 using namespace std;
 

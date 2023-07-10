@@ -198,8 +198,8 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
     optimizer = torch.optim.Adam(model.parameters(), lr = LR)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
-    ball_datas_train = dfo.BallDataSet(dataset + ".train.bin",device=device)
-    dataloader_train = DataLoader(dataset=ball_datas_train,batch_size=batch_size,shuffle=True, num_workers=0)
+    ball_datas_train = dfo.BallDataSet_sync(dataset + ".train.bin",device=device)
+    dataloader_train = DataLoader(dataset=ball_datas_train,batch_size=batch_size,shuffle=False, num_workers=0)
 
     ball_datas_valid = dfo.BallDataSet(dataset + ".valid.bin",device=device)
     dataloader_valid = DataLoader(dataset=ball_datas_valid,batch_size=batch_size)
@@ -397,7 +397,7 @@ if __name__ == "__main__":
     argparser.add_argument('-b', default=16, type=int)
     argparser.add_argument('-e', default=35, type=int)
     argparser.add_argument('-m', default="small", type=str)
-    argparser.add_argument('-d', default="./ball_simulate/dataset/medium", type=str)
+    argparser.add_argument('-d', default="./ball_simulate/dataset/tiny", type=str)
     argparser.add_argument('-s', default=10, type=int)
     argparser.add_argument('-w', default=None, type=str)
     argparser.add_argument('--set-data', dest='set_data', action='store_true', default=False)
@@ -407,11 +407,6 @@ if __name__ == "__main__":
     if args.export:
         exit(0)
     if args.test:
-        exit(0)
-    if args.set_data:
-        import ball_simulate.simulate as sim
-        sim.simulate(GUI=False, dataLength=100000, outputFileName="ball_simulate/dataset/medium.train.bin")
-        sim.simulate(GUI=False, dataLength=10000, outputFileName="ball_simulate/dataset/medium.valid.bin")
         exit(0)
     train(scheduler_step_size=args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w)
     pass

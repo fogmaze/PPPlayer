@@ -168,31 +168,30 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
             works.append(BallWork(j*CURVE_SHOWING_GAP, (2, j)))
         works = sorted(works, key = lambda x: x.timestamp)
         nowTimeStamp = 0
-        nowWorkIndex = 0
-        while len(works) > nowWorkIndex:
-            if works[nowWorkIndex].timestamp > nowTimeStamp:
-            #if True:
-                p.stepSimulation()
-                nowTimeStamp += stepTime
-                if GUI:
-                    time.sleep(stepTime)
-                continue
+        while len(works):
+            while works[0].timestamp <= nowTimeStamp:
+                nowW = works.pop(0)
 
-            #get ball pos
-            ball_pos_list = p.getBasePositionAndOrientation(sphere)[0]
-            ball_pos = equ.Point3d(ball_pos_list[0], ball_pos_list[1], ball_pos_list[2])
+                #get ball pos
+                ball_pos_list = p.getBasePositionAndOrientation(sphere)[0]
+                ball_pos = equ.Point3d(ball_pos_list[0], ball_pos_list[1], ball_pos_list[2])
 
-            #do work
-            works[nowWorkIndex].action(ball_pos)
+                #do work
+                nowW.action(ball_pos)
 
-            if works[nowWorkIndex].index[0] == 0:
-                cam1_data.append(works[nowWorkIndex])
-            elif works[nowWorkIndex].index[0] == 1:
-                cam2_data.append(works[nowWorkIndex])
-            elif works[nowWorkIndex].index[0] == 2:
-                ans_data.append(works[nowWorkIndex])
+                if nowW.index[0] == 0:
+                    cam1_data.append(nowW)
+                elif nowW.index[0] == 1:
+                    cam2_data.append(nowW)
+                elif nowW.index[0] == 2:
+                    ans_data.append(nowW)
 
-            nowWorkIndex += 1
+                if len(works) == 0:
+                    break
+            p.stepSimulation()
+            nowTimeStamp += stepTime
+            if GUI:
+                time.sleep(stepTime)
         
         if GUI:
             ax = createRoom()
@@ -234,7 +233,7 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
 
 if __name__ == "__main__":
     #print(calculateMeanStd("train.bin"))
-    simulate(GUI=False, dataLength=1000000, outputFileName="ball_simulate/dataset/medium.train.bin")
-    simulate(GUI=False, dataLength=10000, outputFileName="ball_simulate/dataset/medium.valid.bin")
+    simulate(GUI=False, dataLength=1000, outputFileName="ball_simulate/dataset/tiny.train.bin")
+    simulate(GUI=False, dataLength=1000, outputFileName="ball_simulate/dataset/tiny.valid.bin")
     pass
 
