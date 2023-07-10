@@ -1,3 +1,6 @@
+set(CMAKE_CURRENT_BINARY_DIR build)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
 find_package(PythonInterp REQUIRED)
 cmake_minimum_required(VERSION 3.0.0)
 project(ball_simulate VERSION 0.1.0)

@@ -1,4 +1,0 @@
-/home/changer/Documents/programming/python/PPPlayer/build/CMakeFiles/dataFileOperator.dir
-/home/changer/Documents/programming/python/PPPlayer/build/CMakeFiles/dataFileOperatorV2.dir
-/home/changer/Documents/programming/python/PPPlayer/build/CMakeFiles/edit_cache.dir
-/home/changer/Documents/programming/python/PPPlayer/build/CMakeFiles/rebuild_cache.dir

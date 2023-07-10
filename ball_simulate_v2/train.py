@@ -486,6 +486,9 @@ if __name__ == "__main__":
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
     argparser.add_argument('--test', dest='test', action='store_true', default=False)
     args = argparser.parse_args()
+    # if ball_simulate_v2/dataset not exested, then create
+    if not os.path.exists("ball_simulate_v2/dataset"):
+        os.mkdir("ball_simulate_v2/dataset")
     if args.export:
         exit(0)
     if args.test:

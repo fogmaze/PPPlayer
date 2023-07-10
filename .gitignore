@@ -3,6 +3,7 @@ ball_simulate/dataset/
 ball_simulate/model_saves/
 ball_simulate_v2/dataset/
 ball_simulate_v2/model_saves/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
