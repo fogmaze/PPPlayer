@@ -234,7 +234,7 @@ class ISEFWINNER_LARGE(ISEFWINNER_BASE):
         )
 
 def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, dataset = "",model_name = "small", name="default", weight = None, device = "cuda:0"):
-    model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + model_name + "%Y-%m-%d_%H-%M-%S-"+name+"/",time.localtime())
+    model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
     os.makedirs(model_save_dir)
     torch.multiprocessing.set_start_method('spawn')
     train_logger = logging.getLogger('training')
@@ -318,27 +318,26 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
             print("==========================[epoch:" + str(e) + "]==============================")
             train_logger.info("epoch:{}\tlr:{:e}\ttraining loss:{:0.10f}\tvalidation loss:{:0.10f}".format(e,(optimizer.param_groups[0]['lr']),real_trainingloss,real_validationloss))
 
-            if min_validloss > real_validationloss or e == 0:
-                print("save model")
-                if not os.path.isdir(model_save_dir):
-                    os.makedirs(model_save_dir)
-                dirsavename = model_save_dir + "epoch_" + str(e) + "/"
-                os.makedirs(dirsavename)
-                torch.save(model.state_dict(), dirsavename + "weight.pt")
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output1.png", seed=1)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output2.png", seed=100)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output3.png", seed=200)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output4.png", seed=300)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output5.png", seed=400)
-                model.reset_hidden_cell(batch_size=batch_size)
-
-                min_validloss = real_validationloss
+            print("save model")
+            if not os.path.isdir(model_save_dir):
+                os.makedirs(model_save_dir)
+            dirsavename = model_save_dir + "epoch_" + str(e) + "/"
+            os.makedirs(dirsavename)
+            torch.save(model.state_dict(), dirsavename + "weight.pt")
+            saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output1.png", seed=1)
+            saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output2.png", seed=100)
+            saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output3.png", seed=200)
+            saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output4.png", seed=300)
+            saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output5.png", seed=400)
+            model.reset_hidden_cell(batch_size=batch_size)
 
             scheduler.step()
         except KeyboardInterrupt:
             c_exit = input("exit?[Y/n]")
             if c_exit == "Y" or c_exit == "y" or c_exit == chr(13) :
                 break
+
+    plt.cla()
     plt.plot(train_loss_history)
     plt.plot(valid_loss_history)
     plt.legend(['train_loss', 'valid_loss'], loc='upper left')

@@ -17,7 +17,7 @@ import multiprocessing
 import ball_simulate_v2.dataFileOperator as dfo
 
 
-stepTime = 1./900.
+stepTime = 1./60.
 G = 9.8
 FPS = 30
 
@@ -133,13 +133,6 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
     restitution = 1
     p.changeDynamics(sphere, -1, restitution=restitution)
     p.changeDynamics(plane, -1, restitution=restitution)
-    p.changeDynamics(plane, -1, lateralFriction=0.6)
-    p.changeDynamics(plane, -1, spinningFriction=0.6)
-    p.changeDynamics(plane, -1, rollingFriction=0.6)
-    
-    p.changeDynamics(sphere, -1, lateralFriction=0.6)
-    p.changeDynamics(sphere, -1, spinningFriction=0.6)
-    p.changeDynamics(sphere, -1, rollingFriction=0.6)
     p.setRealTimeSimulation(0)
     p.setTimeStep(stepTime)
 
@@ -401,6 +394,8 @@ def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"
             saver.terminate()
 
     print("simulate done")
+
+simulate(GUI=True)
 
 if __name__ == "__main__":
     #print(calculateMeanStd("train.bin"))
