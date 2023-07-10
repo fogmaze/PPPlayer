@@ -17,7 +17,7 @@ import multiprocessing
 import ball_simulate_v2.dataFileOperator as dfo
 
 
-stepTime = 1./60.
+stepTime = 1./600.
 G = 9.8
 FPS = 30
 
