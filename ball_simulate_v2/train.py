@@ -477,7 +477,7 @@ if __name__ == "__main__":
     argparser.add_argument('-b', default=16, type=int)
     argparser.add_argument('-e', default=30, type=int)
     argparser.add_argument('-m', default="small", type=str)
-    argparser.add_argument('-d', default="medium", type=str)
+    argparser.add_argument('-d', default="tiny_pred", type=str)
     argparser.add_argument('-s', default=6, type=int)
     argparser.add_argument('-w', default=None, type=str)
     argparser.add_argument('-a', default="default", type=str)

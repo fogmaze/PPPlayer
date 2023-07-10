@@ -3,7 +3,7 @@
 #include <fstream>
 
 #define INPUT_LEN 100
-#define TEST_LEN 100
+#define TEST_LEN 250
 
 using namespace std;
 

@@ -25,7 +25,6 @@ SHUTTER_RANDOM_ERROR_STD = 0.005
 SHUTTER_SYSTEMATIC_ERROR_STD = 0.01
 
 
-
 class Work:
     timestamp:float
     index:int
@@ -395,7 +394,6 @@ def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"
 
     print("simulate done")
 
-simulate(GUI=True)
 
 if __name__ == "__main__":
     #print(calculateMeanStd("train.bin"))
