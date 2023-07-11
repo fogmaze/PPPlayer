@@ -154,6 +154,9 @@ class BallDataSet_sync(torch.utils.data.Dataset) :
             d_list_t[i] = d_ori.curveTimestamps[i]
         
         return torch.tensor(d_list_r, device=self.device), torch.tensor(d_ori.inputs[0].seq_len, device=self.device), torch.tensor(d_list_l, device=self.device), torch.tensor(d_ori.inputs[1].seq_len, device=self.device), torch.tensor(d_list_t, device=self.device), torch.tensor(d_list_ans, device=self.device)
+    
+    def saveToFile(self):
+        pass
 
 
 def testPutData():

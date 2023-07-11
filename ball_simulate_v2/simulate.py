@@ -227,7 +227,6 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
 
             normer.norm(dataStruct)
             dataset.putData(i*SINGLE_SIMULATE_SAMPLE_LEN+j, dataStruct)
-    dataset.saveToFile()
 
 def work_simulate(queue:multiprocessing.Queue, dataLength):
     SINGLE_SIMULATE_SAMPLE_LEN = 5
@@ -365,7 +364,6 @@ def work_putData(queue:multiprocessing.Queue, fileName, dataLength) :
                 dataSet.putData(ind, data)
                 ind += 1
             pbar.update(len(datas))
-        dataSet.saveToFile()
         print("save to file : ", fileName)
 
 def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"):
