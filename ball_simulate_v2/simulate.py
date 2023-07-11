@@ -137,7 +137,7 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
 
     p.setGravity(0, 0, -G)
 
-    dataset = dfo.BallDataSet(outputFileName, dataLength)
+    dataset = dfo.BallDataSet_sync(outputFileName, dataLength)
     for i in tqdm.tqdm(range(int(dataLength/SINGLE_SIMULATE_SAMPLE_LEN))) :
         cam1_pos = randomCameraPos()
         cam2_pos = randomCameraPos()
@@ -356,7 +356,7 @@ def work_simulate(queue:multiprocessing.Queue, dataLength):
         queue.put(bat)
 
 def work_putData(queue:multiprocessing.Queue, fileName, dataLength) :
-    dataSet = dfo.BallDataSet(fileName=fileName, dataLength=dataLength)
+    dataSet = dfo.BallDataSet_sync(fileName=fileName, dataLength=dataLength)
     with tqdm.tqdm(total=dataLength) as pbar:
         ind = 0
         while ind != dataLength :

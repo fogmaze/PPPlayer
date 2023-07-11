@@ -50,37 +50,6 @@ extern "C" void* loadFromFile(const char* file_name) {
 }
 
 extern "C"
-Data getFileData_sync(char* file_name, int index) {
-    ifstream fh;
-    fh.open(file_name, ios::in | ios::binary);
-    if (!fh.is_open()) {
-        return Data();
-    }
-    fh.seekg(0, ios::beg);
-    fh.seekg(index * sizeof(Data) + sizeof(FileDataHeader), ios::beg);
-    Data* data = new Data;
-    fh.read(((char*)data), sizeof(Data));
-    fh.close();
-    Data d = *data;
-    delete data;
-    return d;
-}
-
-
-extern "C"
-int getFileDataLength_sync(char* file_name) {
-    fstream fh;
-    fh.open(file_name, ios::in | ios::binary);
-    if (!fh.is_open()) {
-        return -1;
-    }
-    FileDataHeader* header = new FileDataHeader;
-    fh.read(((char*)header), sizeof(FileDataHeader));
-    fh.close();
-    return header->data_length;
-}
-
-extern "C"
 bool loadIsSuccess(void* data) {
     return data != nullptr;
 }
@@ -151,9 +120,63 @@ bool saveToFile(void* header, const char* file_name) {
 }
 
 extern "C"
-int main() {
-    return 0;
+Data getFileData_sync(char* file_name, int index) {
+    ifstream fh;
+    fh.open(file_name, ios::in | ios::binary);
+    if (!fh.is_open()) {
+        return Data();
+    }
+    fh.seekg(0, ios::beg);
+    fh.seekg(index * sizeof(Data) + sizeof(FileDataHeader), ios::beg);
+    Data* data = new Data;
+    fh.read(((char*)data), sizeof(Data));
+    fh.close();
+    Data d = *data;
+    delete data;
+    return d;
+}
+
+
+extern "C"
+int getFileDataLength_sync(char* file_name) {
+    fstream fh;
+    fh.open(file_name, ios::in | ios::binary);
+    if (!fh.is_open()) {
+        return -1;
+    }
+    FileDataHeader* header = new FileDataHeader;
+    fh.read(((char*)header), sizeof(FileDataHeader));
+    fh.close();
+    return header->data_length;
+}
+
+extern "C"
+void createEmptyFile_sync(char* file_name, int data_length) {
+    FILE *fp = fopen(file_name, "w");
+    // write header
+    FileDataHeader header;
+    header.data_length = data_length;
+    fwrite(&header, sizeof(FileDataHeader), 1, fp);
+    // write data
+    Data data;
+    for (int i = 0; i < data_length; i++) {
+        fwrite(&data, sizeof(Data), 1, fp);
+    }
+    fclose(fp);
+}
+
+
+extern "C"
+void putData_sync(char* file_name, int index, Data data) {
+    FILE *fp = fopen(file_name, "r+");
+    fseek(fp, index * sizeof(Data) + sizeof(FileDataHeader), SEEK_SET);
+    fwrite(&data, sizeof(Data), 1, fp);
+    fclose(fp);
 }
 
 
 
+extern "C"
+int main() {
+    return 0;
+}

@@ -64,6 +64,10 @@ lib.getFileData_sync.argtypes = [c_char_p, c_int]
 lib.getFileData_sync.restype = DataStruct
 lib.getFileDataLength_sync.argtypes = [c_char_p]
 lib.getFileDataLength_sync.restype = c_int
+lib.createEmptyFile_sync.argtypes = [c_char_p, c_int]
+lib.createEmptyFile_sync.restype = None
+lib.putData_sync.argtypes = [c_char_p, c_int, DataStruct]
+lib.putData_sync.restype = None
 
 
 class BallDataSet(torch.utils.data.Dataset) :
@@ -72,7 +76,7 @@ class BallDataSet(torch.utils.data.Dataset) :
             #cerate file
             print("create file")
             if dataLength == None:
-                raise Exception("dataLength can't be None!")
+                raise Exception("dataLength can't be None! or filen not found")
             self.data = lib.createHeader(dataLength)
         elif dataLength != None:
             print("create file")
@@ -117,13 +121,24 @@ class BallDataSet(torch.utils.data.Dataset) :
 
 
 class BallDataSet_sync(torch.utils.data.Dataset) :
-    def __init__(self, fileName, device = "cuda:0"):
+    def __init__(self, fileName, dataLength = None, device = "cuda:0"):
         self.fileName = fileName
         self.device = torch.device(device)
+
+        if dataLength != None:
+            lib.createEmptyFile_sync(self.fileName.encode('utf-8'), dataLength)
+        
+        if not os.path.exists(fileName) :
+            raise Exception("file not found")
+        self.length = lib.getFileDataLength_sync(self.fileName.encode('utf-8'))
+        pass
     
     def __len__(self):
-        return lib.getFileDataLength_sync(self.fileName.encode('utf-8'))
+        return self.length
     
+    def putData(self, index:int, data:DataStruct):
+        return lib.putData_sync(self.fileName.encode('utf-8'), index, data)
+
     def __getitem__(self, index):
         d_ori = lib.getFileData_sync(self.fileName.encode('utf-8'), index)
         d_list_r = [None] * c.SIMULATE_INPUT_LEN
@@ -171,8 +186,6 @@ def testPutData():
         a.curvePoints[1].y = 24
         a.curveTimestamps[0] = 25
         d.putData(i, a)
-        print(i)
-    d.saveToFile()
 
 def testLoadData():
     a = BallDataSet("t.bin")
@@ -184,11 +197,10 @@ def testLoadData():
     print(a[1].curveTimestamps[0])
     print(a[1].curveTimestamps[1])
 if __name__ == "__main__":
-    ds = BallDataSet("./ball_simulate_v2/dataset/medium.valid.bin")
-    dss = BallDataSet_sync("./ball_simulate_v2/dataset/medium.valid.bin")
+    testPutData()
+    ds = BallDataSet_sync("t.bin")
+    a = ds[0]
+    b = ds[1]
 
-    a = ds[7]
-    b = dss[7]
-    d = ds[10]
-    e = dss[10]
+
     pass
