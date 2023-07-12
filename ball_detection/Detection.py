@@ -9,22 +9,14 @@ from ColorRange import *
 from pupil_apriltags import Detector
 
 
-def ketstone_correction(source) :
-    result = []
+def homography_matrix(source) :
+    tag_len = 12.9 #set tag length (cm)
     detector = Detector()
-    apriltag = cv2.imread(source) #image has apriltag inside
-    detection = detector.detect(cv2.cvtColor(apriltag, cv2.COLOR_BGR2GRAY))
-
-    for detect in detection :
-        for point in detect.corners :
-            result.append(point[0])
-            result.append(point[1])
-    x1, y1, x2, y2, x3, y3, x4, y4 = result
-    len = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
-    src_point = np.float32([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
-    dst_point = np.float32([[x1, y1], [x1+len, y1], [x1+len, y1+len], [x1, y1+len]])
-    perspective_matrix = cv2.getPerspectiveTransform(src_point, dst_point)
-    return perspective_matrix
+    detection = detector.detect(cv2.cvtColor(source, cv2.COLOR_BGR2GRAY))
+    coners = detection[0].corners
+    tar = np.float32([[0, tag_len], [tag_len, tag_len], [tag_len, 0], [0, 0]])
+    homography = cv2.findHomography(coners, tar)[0]
+    return homography
 
 
 class Detection :
@@ -47,7 +39,7 @@ class Detection :
         yCenter = y + h // 2
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
         cv2.circle(frame, (xCenter, yCenter), 2, (0, 255, 0), -1)
-        cv2.putText(frame, ("x : {} y : {}".format(xCenter, yCenter)), (10, 30), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
+        #cv2.putText(frame, ("x : {} y : {}".format(xCenter, yCenter)), (10, 30), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
 
     def compareFrames(self, frame, compare) :
         move = cv2.bitwise_xor(frame, compare)
@@ -77,14 +69,12 @@ class Detection :
    
  
     def runDetevtion(self, apriltag_source, source, path_bad, path_all) :
-        perspective_matrix = ketstone_correction(apriltag_source)
         cam = cv2.VideoCapture(source)
         whetherTheFirstFrame = True
 
         while(True) :
             numberOfBall = 0
             ret, frame = cam.read()
-            frame = cv2.warpPerspective(frame, perspective_matrix, (frame.shape[1], frame.shape[0]))
 
             if ret :
                 if whetherTheFirstFrame :
@@ -98,6 +88,8 @@ class Detection :
                     if self.ballFeature(area, h, w) :
                         self.drawDirection(frame, x, y, h, w)
                         numberOfBall += 1
+                        ball_in_world = np.dot(homography_matrix(apriltag_source), np.array([x+w//2, y+h//2, 1]))
+                        print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
 
                 if not numberOfBall == 1 :
                     self.writeVideo("ball_detection_TestVideos/" + path_bad, frame)
