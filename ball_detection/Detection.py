@@ -4,9 +4,27 @@ import pickle
 import os
 import math
 import threading
-from ColorRange import *
 import multiprocessing as mp
+from ColorRange import *
+from pupil_apriltags import Detector
 
+
+def ketstone_correction(source) :
+    result = []
+    detector = Detector()
+    apriltag = cv2.imread(source) #image has apriltag inside
+    detection = detector.detect(cv2.cvtColor(apriltag, cv2.COLOR_BGR2GRAY))
+
+    for detect in detection :
+        for point in detect.corners :
+            result.append(point[0])
+            result.append(point[1])
+    x1, y1, x2, y2, x3, y3, x4, y4 = result
+    len = math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+    src_point = np.float32([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
+    dst_point = np.float32([[x1, y1], [x1+len, y1], [x1+len, y1+len], [x1, y1+len]])
+    perspective_matrix = cv2.getPerspectiveTransform(src_point, dst_point)
+    return perspective_matrix
 
 
 class Detection :
@@ -56,14 +74,17 @@ class Detection :
             return False
         
         return True
+   
  
-    def runDetevtion(self, source, path_bad, path_all) :
+    def runDetevtion(self, apriltag_source, source, path_bad, path_all) :
+        perspective_matrix = ketstone_correction(apriltag_source)
         cam = cv2.VideoCapture(source)
         whetherTheFirstFrame = True
 
         while(True) :
             numberOfBall = 0
             ret, frame = cam.read()
+            frame = cv2.warpPerspective(frame, perspective_matrix, (frame.shape[1], frame.shape[0]))
 
             if ret :
                 if whetherTheFirstFrame :
@@ -94,11 +115,20 @@ class Detection :
 if __name__ == "__main__" :
     detector = Detection()
 
-    camera1 = mp.Process(target=detector.runDetevtion, args=(0, "bad_1.mp4", "all_1.mp4"))
-    camera2 = mp.Process(target=detector.runDetevtion, args=(1, "bad_2.mp4", "all_2.mp4"))
+    camera1 = mp.Process(target=detector.runDetevtion, args=(0, "apriltag_source", "bad_1.mp4", "all_1.mp4"))
+    camera2 = mp.Process(target=detector.runDetevtion, args=(1, "apriltag_source", "bad_2.mp4", "all_2.mp4"))
     
     camera1.start()
     camera2.start()
     
 
     cv2.destroyAllWindows()
+
+    #img = cv2.imread("ball_detection/apriltag-pad.jpg")
+    #result = ketstone_correction("ball_detection/apriltag-pad.jpg")
+    #src_point = np.float32([[result[0], result[1]], [result[2], result[3]], [result[4], result[5]], [result[6], result[7]]])
+    #dst_point = np.float32([[0, 0], [640, 0], [640, 480], [0, 480]])
+    #perspective_matrix = cv2.getPerspectiveTransform(src_point, dst_point)
+    #warped = cv2.warpPerspective(img, perspective_matrix, (640, 480))
+    #cv2.imshow("warped", warped)
+    #cv2.waitKey(0)

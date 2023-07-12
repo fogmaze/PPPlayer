@@ -50,12 +50,14 @@ def getCameraPosition_realTime(cameraMatrix) :
         if res is not None :
             print(res)
         
-
 def getBallPixelSize(distance, cameraMatrix) :
     BALL_REAL_SIZE = 3.8
     return BALL_REAL_SIZE * cameraMatrix[0][0] / distance
 
-#print(getBallPixelSize(100), getBallPixelSize(450))
+def ketstone_correction() :
+    img = cv2.imread("image ha apriltag inside") #set image
+    detector = Detector()
+    
 
 if __name__ == "__main__" :
     cameraMatrix = pickle.load(open('calibration1', 'rb'))
