@@ -233,7 +233,7 @@ class ISEFWINNER_LARGE(ISEFWINNER_BASE):
             nn.Linear(mlp2_l5_out, self.output_size)
         )
 
-def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, dataset = "",model_name = "small", name="default", weight = None, device = "cuda:0"):
+def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, dataset = "",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2):
     model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
     os.makedirs(model_save_dir)
     torch.multiprocessing.set_start_method('spawn')
@@ -269,7 +269,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
     ball_datas_train = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".train.bin"), device=device)
-    dataloader_train = DataLoader(dataset=ball_datas_train, batch_size=batch_size,shuffle=True, num_workers=2)
+    dataloader_train = DataLoader(dataset=ball_datas_train, batch_size=batch_size,shuffle=True, num_workers=num_workers)
 
     ball_datas_valid = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".valid.bin"), device=device)
     dataloader_valid = DataLoader(dataset=ball_datas_valid, batch_size=batch_size)
@@ -474,14 +474,15 @@ MODEL_MAP = {
 if __name__ == "__main__":
     argparser = ArgumentParser()
     argparser.add_argument('-lr', default=0.001, type=float)
-    argparser.add_argument('-b', default=16, type=int)
+    argparser.add_argument('-b', default=1020, type=int)
     argparser.add_argument('-e', default=30, type=int)
-    argparser.add_argument('-m', default="small", type=str)
-    argparser.add_argument('-d', default="tiny_pred", type=str)
-    argparser.add_argument('-s', default=6, type=int)
+    argparser.add_argument('-m', default="large", type=str)
+    argparser.add_argument('-d', default="bimedium_pred", type=str)
+    argparser.add_argument('-s', default=8, type=int)
     argparser.add_argument('-w', default=None, type=str)
     argparser.add_argument('-a', default="default", type=str)
     argparser.add_argument('-n', default="default", type=str)
+    argparser.add_argument('--num_workers', default=2, type=int)
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
     argparser.add_argument('--test', dest='test', action='store_true', default=False)
     args = argparser.parse_args()
@@ -492,5 +493,5 @@ if __name__ == "__main__":
         exit(0)
     if args.test:
         exit(0)
-    train(scheduler_step_size=args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w, name=args.n)
+    train(scheduler_step_size=args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w, name=args.n, num_workers=args.num_workers)
     pass

@@ -255,13 +255,6 @@ def work_simulate(queue:multiprocessing.Queue, dataLength):
     restitution = 1
     p.changeDynamics(sphere, -1, restitution=restitution)
     p.changeDynamics(plane, -1, restitution=restitution)
-    p.changeDynamics(plane, -1, lateralFriction=0.6)
-    p.changeDynamics(plane, -1, spinningFriction=0.6)
-    p.changeDynamics(plane, -1, rollingFriction=0.6)
-    
-    p.changeDynamics(sphere, -1, lateralFriction=0.6)
-    p.changeDynamics(sphere, -1, spinningFriction=0.6)
-    p.changeDynamics(sphere, -1, rollingFriction=0.6)
     p.setRealTimeSimulation(0)
     p.setTimeStep(stepTime)
 
@@ -399,13 +392,14 @@ if __name__ == "__main__":
     argparser.add_argument("--GUI", default=False, action="store_true")
     argparser.add_argument("-l", default=10, type=int)
     argparser.add_argument("-n", default="train.bin")
+    argparser.add_argument("--num_workers", default=6, type=int)
     argparser.add_argument("--fast", default=False, action="store_true")
 
     #fetch params
     args = argparser.parse_args()
     if args.fast:
-        simulate_fast(dataLength=args.l, num_workers=4, outputFileName="ball_simulate_v2/dataset/{}.train.bin".format(args.n))
-        simulate_fast(dataLength=10000, num_workers=4, outputFileName="ball_simulate_v2/dataset/{}.valid.bin".format(args.n))
+        simulate_fast(dataLength=args.l, num_workers=args.num_workers, outputFileName="ball_simulate_v2/dataset/{}.train.bin".format(args.n))
+        simulate_fast(dataLength=10000, num_workers=args.num_workers, outputFileName="ball_simulate_v2/dataset/{}.valid.bin".format(args.n))
         exit()
 
     simulate(GUI=args.GUI, dataLength=args.l, outputFileName="ball_simulate_v2/dataset/{}.train.bin".format(args.n))
