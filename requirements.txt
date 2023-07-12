@@ -5,3 +5,5 @@ parse
 tqdm
 matplotlib
 pybullet
+pupil_apriltags
+opencv-python
