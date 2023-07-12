@@ -88,7 +88,7 @@ class Detection :
                     if self.ballFeature(area, h, w) :
                         self.drawDirection(frame, x, y, h, w)
                         numberOfBall += 1
-                        ball_in_world = np.dot(homography_matrix(apriltag_source), np.array([x+w//2, y+h//2, 1]))
+                        ball_in_world = np.dot(homography_matrix(apriltag_source), np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
                         print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
 
                 if not numberOfBall == 1 :
