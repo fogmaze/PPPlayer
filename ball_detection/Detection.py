@@ -27,8 +27,14 @@ class Detection :
 
     #save test frames
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    frame_rate = 30.0
-    frame_size = (640, 480)
+
+    def __init__(self, frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None) :
+        self.frame_size = frame_size
+        self.frame_rate = frame_rate
+        self.range = load(rangeFile)
+        self.upper = self.range.upper
+        self.lower = self.range.lower
+
 
     def writeVideo(self, path, frame) :
         video_writer = cv2.VideoWriter(path, self.fourcc, self.frame_rate, self.frame_size)
@@ -68,7 +74,7 @@ class Detection :
         return True
    
  
-    def runDetevtion(self, apriltag_source, source, path_bad, path_all) :
+    def runDetevtion(self, apriltag_source, source, save_name) :
         cam = cv2.VideoCapture(source)
         whetherTheFirstFrame = True
 
@@ -92,9 +98,9 @@ class Detection :
                         print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
 
                 if not numberOfBall == 1 :
-                    self.writeVideo("ball_detection_TestVideos/" + path_bad, frame)
+                    self.writeVideo("ball_detection/TestVideos/" + save_name + "_bad.mp4", frame)
 
-                self.writeVideo("ball_detection_TestVideos/" + path_all, frame)
+                self.writeVideo("ball_detection/TestVideos/" + save_name + "_tagged.mp4", frame)
                 
                 window = "Camera " + str(source) 
                 cv2.imshow(window, frame)
@@ -105,10 +111,11 @@ class Detection :
         
 
 if __name__ == "__main__" :
-    detector = Detection()
+    detector1 = Detection()
+    detector2 = Detection()
 
-    camera1 = mp.Process(target=detector.runDetevtion, args=(0, "apriltag_source", "bad_1.mp4", "all_1.mp4"))
-    camera2 = mp.Process(target=detector.runDetevtion, args=(1, "apriltag_source", "bad_2.mp4", "all_2.mp4"))
+    camera1 = mp.Process(target=detector1.runDetevtion, args=(0, "apriltag_source", "bad_1.mp4", "all_1.mp4"))
+    camera2 = mp.Process(target=detector2.runDetevtion, args=(1, "apriltag_source", "bad_2.mp4", "all_2.mp4"))
     
     camera1.start()
     camera2.start()
