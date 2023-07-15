@@ -471,14 +471,6 @@ MODEL_MAP = {
     "large":ISEFWINNER_LARGE
 }
 
-ds = dfo.BallDataSet_sync(fileName="ball_simulate_v2/dataset/tiny_pred.train.bin")
-a = ds[10][5]
-normer.unnorm_ans_tensor(a)
-ax = createRoom()
-plotOutput(ax,a)
-plt.show()
-exit()
-
 if __name__ == "__main__":
     argparser = ArgumentParser()
     argparser.add_argument('-lr', default=0.001, type=float)
