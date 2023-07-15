@@ -1,45 +1,74 @@
+import time
 import cv2
 import numpy as np
-import pickle
-import os
 import math
-import threading
 import multiprocessing as mp
 from ColorRange import *
 from pupil_apriltags import Detector
+import csv
+import core.Equation3d as equ
 
 
 def homography_matrix(source) :
     tag_len = 12.9 #set tag length (cm)
     detector = Detector()
     detection = detector.detect(cv2.cvtColor(source, cv2.COLOR_BGR2GRAY))
+    if len(detection) == 0 :
+        return None
     coners = detection[0].corners
     tar = np.float32([[0, tag_len], [tag_len, tag_len], [tag_len, 0], [0, 0]])
     homography = cv2.findHomography(coners, tar)[0]
     return homography
 
+def getCameraPosition(source) :
+    tag_len = 12.9 #set tag length (cm)
+    detector = Detector()
+    detection = detector.detect(cv2.cvtColor(source, cv2.COLOR_BGR2GRAY))
+    if len(detection) == 0 :
+        return None
+    # TODO: get camera position
+    res = equ.Point3d(0, 0, 0)
+    return res
 
 class Detection :
-    #colorrange
-    range = load("color_range")
-    upper = range.upper
-    lower = range.lower
-
     #save test frames
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
-    def __init__(self, frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None) :
+    def __init__(self,frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None) :
         self.frame_size = frame_size
         self.frame_rate = frame_rate
+        self.camera_position = None
         self.range = load(rangeFile)
         self.upper = self.range.upper
         self.lower = self.range.lower
+        self.homography_matrix = None
+        self.video_writer_all = None
+        self.video_writer_bad = None
+        self.video_writer_tagged = None
+        if save_name is not None :
+            if not os.path.exists("ball_detection/result/" + save_name) :
+                os.makedirs("ball_detection/result/" + save_name)
+            self.video_writer_all = cv2.VideoWriter("ball_detection/result/" + save_name + "/all.mp4", self.fourcc, self.frame_rate, self.frame_size)
+            self.video_writer_bad = cv2.VideoWriter("ball_detection/result/" + save_name + "/bad.mp4", self.fourcc, self.frame_rate, self.frame_size)
+            self.video_writer_tagged = cv2.VideoWriter("ball_detection/result/" + save_name + "/tagged.mp4", self.fourcc, self.frame_rate, self.frame_size)
+            self.detection_csv = open("ball_detection/result/" + save_name + "/detection.csv", "w", newline='')
+            self.detection_csv_writer = csv.writer(self.detection_csv)
+            self.detection_csv_writer.writerow(["time", "found", "id", "x", "y", "h", "w", "cam_x", "cam_y", "cam_z","rxy", "rxz"])
+    
+    def __del__(self) :
+        if self.video_writer_all is not None :
+            self.video_writer_all.release()
+        if self.video_writer_bad is not None :
+            self.video_writer_bad.release()
+        if self.video_writer_tagged is not None :
+            self.video_writer_tagged.release()
+        if self.detection_csv is not None :
+            self.detection_csv.close()
+        cv2.destroyAllWindows()
 
-
-    def writeVideo(self, path, frame) :
-        video_writer = cv2.VideoWriter(path, self.fourcc, self.frame_rate, self.frame_size)
-        video_writer.write(frame)
-
+    def updateCsv(self, time, found, id, x, y, h, w, cam_x, cam_y, cam_z, rxy, rxz) :
+        self.detection_csv_writer.writerow([time, found, id, x, y, h, w, cam_x, cam_y, cam_z, rxy, rxz])
+            
     def drawDirection(self, frame, x, y, h, w) :
         xCenter = x + w // 2
         yCenter = y + h // 2
@@ -58,7 +87,7 @@ class Detection :
     def detectContours(self, frame) :
         return cv2.findContours(frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[0]
 
-    def ballFeature(self,area, h, w) :
+    def isBallFeature(self,area, h, w) :
         r = math.sqrt(h*h + w*w) / 2
         a = math.pi * r * r
         rmin = 3.7178529388965496/2.0
@@ -70,37 +99,58 @@ class Detection :
             return False
         if not 0 < circle < 100 :
             return False
-        
         return True
    
- 
-    def runDetevtion(self, apriltag_source, source, save_name) :
+    def runDetevtion(self, source) :
         cam = cv2.VideoCapture(source)
         whetherTheFirstFrame = True
+        startTime = time.perf_counter()
 
         while(True) :
             numberOfBall = 0
             ret, frame = cam.read()
 
             if ret :
+                self.video_writer_all.write(frame)
+
                 if whetherTheFirstFrame :
                     compare = frame
                     whetherTheFirstFrame = False
                     continue
-                
-                for contour in self.detectContours(self.maskFrames(self.compareFrames(frame, compare))) :
+
+                if self.homography_matrix is None :
+                    self.homography_matrix = homography_matrix(frame)
+                    if self.homography_matrix is None :
+                        print("No tag detected")
+
+                if self.camera_position is None :
+                    self.camera_position = getCameraPosition(frame)
+                    if self.camera_position is None :
+                        print("No tag detected")
+
+                detected = self.detectContours(self.maskFrames(self.compareFrames(frame, compare)))
+                for contour in detected :
                     area = cv2.contourArea(contour)
                     x, y, w, h = cv2.boundingRect(contour)
-                    if self.ballFeature(area, h, w) :
+                    if self.isBallFeature(area, h, w) :
                         self.drawDirection(frame, x, y, h, w)
+
                         numberOfBall += 1
-                        ball_in_world = np.dot(homography_matrix(apriltag_source), np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
-                        print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
+                        if self.homography_matrix is not None and self.camera_position is not None:
+                            ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
+                            projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
+                            line = equ.LineEquation3d(self.camera_position, projection)
+                            self.updateCsv(time.perf_counter() - startTime, True, numberOfBall, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg())
+                            print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
+                        else :
+                            self.updateCsv(time.perf_counter() - startTime, "Yes", numberOfBall, x, y, h, w, 0, 0, 0, 0, 0)
+                        if numberOfBall == 0 :
+                            self.updateCsv(time.perf_counter() - startTime, "No", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
                 if not numberOfBall == 1 :
-                    self.writeVideo("ball_detection/TestVideos/" + save_name + "_bad.mp4", frame)
-
-                self.writeVideo("ball_detection/TestVideos/" + save_name + "_tagged.mp4", frame)
+                    self.video_writer_all.write(frame)
+                else:
+                    self.video_writer_tagged.write(frame)
                 
                 window = "Camera " + str(source) 
                 cv2.imshow(window, frame)
@@ -108,21 +158,34 @@ class Detection :
                 if cv2.waitKey(100) == ord(' ') :
                     break
 
+def detectProcess(source, save_name) :
+    detector = Detection(save_name=save_name)
+    detector.runDetevtion(source, source=0)
         
 
 if __name__ == "__main__" :
     detector1 = Detection()
     detector2 = Detection()
 
-    camera1 = mp.Process(target=detector1.runDetevtion, args=(0, "apriltag_source", "bad_1.mp4", "all_1.mp4"))
-    camera2 = mp.Process(target=detector2.runDetevtion, args=(1, "apriltag_source", "bad_2.mp4", "all_2.mp4"))
+    camera1 = mp.Process(target=detectProcess, args=(0, "camera1"))
+    camera2 = mp.Process(target=detectProcess, args=(1, "camera2"))
     
     camera1.start()
     camera2.start()
     
-
-    cv2.destroyAllWindows()
-
+    while True :
+        try:
+            if not camera1.is_alive() or not camera2.is_alive() :
+                break
+            time.sleep(1)
+        except KeyboardInterrupt:
+            break
+    if camera1.is_alive() :
+        camera1.terminate()
+    if camera2.is_alive() :
+        camera2.terminate()
+    camera1.join()
+    camera2.join()
     #img = cv2.imread("ball_detection/apriltag-pad.jpg")
     #result = ketstone_correction("ball_detection/apriltag-pad.jpg")
     #src_point = np.float32([[result[0], result[1]], [result[2], result[3]], [result[4], result[5]], [result[6], result[7]]])

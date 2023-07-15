@@ -124,9 +124,9 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
     angularVelocity = [0, 0, 0]
     p.resetBaseVelocity(sphere, linearVelocity, angularVelocity)
 
-    linearDamping = 6 * math.pi * radius * 0.0185
-    angularDamping = 0.1
-    p.changeDynamics(sphere, -1, linearDamping=linearDamping, angularDamping=angularDamping)
+    #linearDamping = 6 * math.pi * radius * 0.0185
+    #angularDamping = 0.1
+    #p.changeDynamics(sphere, -1, linearDamping=linearDamping, angularDamping=angularDamping)
 
 
     restitution = 1
@@ -247,9 +247,9 @@ def work_simulate(queue:multiprocessing.Queue, dataLength):
     angularVelocity = [0, 0, 0]
     p.resetBaseVelocity(sphere, linearVelocity, angularVelocity)
 
-    linearDamping = 6 * math.pi * radius * 0.0185
-    angularDamping = 0.1
-    p.changeDynamics(sphere, -1, linearDamping=linearDamping, angularDamping=angularDamping)
+    #linearDamping = 6 * math.pi * radius * 0.0185
+    #angularDamping = 0.1
+    #p.changeDynamics(sphere, -1, linearDamping=linearDamping, angularDamping=angularDamping)
 
 
     restitution = 1
@@ -384,6 +384,8 @@ def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"
             saver.terminate()
 
     print("simulate done")
+
+
 
 
 if __name__ == "__main__":
