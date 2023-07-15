@@ -23,6 +23,13 @@ FPS = 30
 
 SHUTTER_RANDOM_ERROR_STD = 0.005
 SHUTTER_SYSTEMATIC_ERROR_STD = 0.01
+CAMERA_POSITION_ERROR_STD = 0.05
+BALL_POSITION_ERROR_STD = 0.05
+
+INPUT_IGNORE_AREA_MEAN = 2
+INPUT_IGNORE_AREA_STD = 1
+INPUT_IGNORE_WIDTH_MEAN = 4
+INPUT_IGNORE_WIDTH_STD = 3
 
 
 class Work:
@@ -37,8 +44,8 @@ class CameraWork(Work):
         self.camera_pos = camera_pos
         self.index = index
         
-    def action(self, ball_pos):
-        lineCamBall = equ.LineEquation3d(self.camera_pos, ball_pos)
+    def action(self, ball_pos_ideal):
+        lineCamBall = equ.LineEquation3d(self.camera_pos, ball_pos_ideal + randomBallPosError())
         self.rad_xy = math.atan(lineCamBall.line_xy.a)
         self.rad_xz = math.atan(lineCamBall.line_xz.a)
         self.lineCamBall = lineCamBall
@@ -62,11 +69,34 @@ def randomCameraPos():
         z = random.uniform(0, CAMERA_AREA_HEIGHT)
     return equ.Point3d(x, y, z)
 
+def randomCameraPosError():
+    x = random.gauss(0, CAMERA_POSITION_ERROR_STD)
+    y = random.gauss(0, CAMERA_POSITION_ERROR_STD)
+    z = random.gauss(0, CAMERA_POSITION_ERROR_STD)
+    return equ.Point3d(x, y, z)
+
 def randomBallPos():
     x = random.uniform(-BALL_AREA_HALF_LENGTH, BALL_AREA_HALF_LENGTH)
     y = random.uniform(-BALL_AREA_HALF_WIDTH, BALL_AREA_HALF_WIDTH)
     z = random.uniform(0, BALL_AREA_HEIGHT)
     return equ.Point3d(x, y, z)
+
+def randomBallPosError():
+    x = random.gauss(0, BALL_POSITION_ERROR_STD)
+    y = random.gauss(0, BALL_POSITION_ERROR_STD)
+    z = random.gauss(0, BALL_POSITION_ERROR_STD)
+    return equ.Point3d(x, y, z)
+
+def randomInpIdxs() -> List[int]:
+    ignore_area_len = round(random.gauss(INPUT_IGNORE_AREA_MEAN, INPUT_IGNORE_AREA_STD))
+    all = [1] * SIMULATE_INPUT_LEN
+    for i in range(ignore_area_len) :
+        beg = random.randrange(0, SIMULATE_INPUT_LEN)
+        for j in range(beg, beg + round(random.gauss(INPUT_IGNORE_WIDTH_MEAN, INPUT_IGNORE_WIDTH_STD))):
+            if j < SIMULATE_INPUT_LEN:
+                all[j] = 0
+    return [i for i in range(SIMULATE_INPUT_LEN) if all[i] == 1]
+
 
 def configRoom(ax:Axes):
     lim = CAMERA_AREA_HALF_LENGTH
@@ -142,7 +172,12 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
         cam1_pos = randomCameraPos()
         cam2_pos = randomCameraPos()
 
+        cam1_error = randomCameraPosError()
+        cam2_error = randomCameraPosError()
+
         ball_pos = randomBallPos()
+
+        camera_systematic_error = random.gauss(0, SHUTTER_SYSTEMATIC_ERROR_STD)
 
         #set ball pos
         p.resetBasePositionAndOrientation(sphere, [ball_pos.x, ball_pos.y, ball_pos.z], startOrientation)
@@ -155,10 +190,9 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
         cam1_data:List[CameraWork] = []
         cam2_data:List[CameraWork] = []
         ans_data:List[BallWork] = []
-        camera_systematic_error = random.normalvariate(0, SHUTTER_SYSTEMATIC_ERROR_STD)
         for j in range(SIMULATE_INPUT_LEN):
-            works.append(CameraWork(abs(j/FPS + random.normalvariate(0,SHUTTER_RANDOM_ERROR_STD)), cam1_pos, (0,j)))
-            works.append(CameraWork(abs(j/FPS + random.normalvariate(0,SHUTTER_RANDOM_ERROR_STD) + camera_systematic_error), cam2_pos, (1, j)))
+            works.append(CameraWork(abs(j/FPS + random.gauss(0,SHUTTER_RANDOM_ERROR_STD)), cam1_pos + cam1_error, (0,j)))
+            works.append(CameraWork(abs(j/FPS + random.gauss(0,SHUTTER_RANDOM_ERROR_STD) + camera_systematic_error), cam2_pos + cam2_error, (1, j)))
         for j in range(SIMULATE_TEST_LEN):
             works.append(BallWork(j*CURVE_SHOWING_GAP, (2, j)))
         works = sorted(works, key = lambda x: x.timestamp)
@@ -200,12 +234,12 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
             dataStruct = dfo.DataStruct()
             cam1_end = random.randint(3, len(cam1_data))
             cam2_end = min(random.randint(cam1_end-2, cam1_end+2), len(cam2_data))
-            dataStruct.inputs[0].camera_x = cam1_data[0].camera_pos.x
-            dataStruct.inputs[0].camera_y = cam1_data[0].camera_pos.y
-            dataStruct.inputs[0].camera_z = cam1_data[0].camera_pos.z
-            dataStruct.inputs[1].camera_x = cam2_data[0].camera_pos.x
-            dataStruct.inputs[1].camera_y = cam2_data[0].camera_pos.y
-            dataStruct.inputs[1].camera_z = cam2_data[0].camera_pos.z
+            dataStruct.inputs[0].camera_x = cam1_pos.x
+            dataStruct.inputs[0].camera_y = cam1_pos.y
+            dataStruct.inputs[0].camera_z = cam1_pos.z
+            dataStruct.inputs[1].camera_x = cam2_pos.x
+            dataStruct.inputs[1].camera_y = cam2_pos.y
+            dataStruct.inputs[1].camera_z = cam2_pos.z
             dataStruct.inputs[0].seq_len = cam1_end
             dataStruct.inputs[1].seq_len = cam2_end
 
@@ -386,7 +420,8 @@ def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"
     print("simulate done")
 
 
-
+print(randomInpIdxs())
+exit()
 
 if __name__ == "__main__":
     #print(calculateMeanStd("train.bin"))

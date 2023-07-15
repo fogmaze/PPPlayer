@@ -1,10 +1,6 @@
-#include "PxConfig.h"
-#include "PxPhysicsAPI.h"
-#include "vehicle/PxVehicleSDK.h"
-#include "extensions/PxExtensionsAPI.h"
-#include "extensions/PxDefaultErrorCallback.h"
-#include "extensions/PxDefaultAllocator.h"
-#include "snippetrender/SnippetCamera.h"
+#include <PxConfig.h>
+#include <PxPhysicsAPI.h>
+//#include "snippetrender/SnippetCamera.h"
 
 using namespace physx;
 
@@ -14,7 +10,6 @@ void simulate() {
     PxSimulationFilterShader gDefaultFilterShader = PxDefaultSimulationFilterShader;
     PxFoundation* gFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gDefaultAllocatorCallback, gDefaultErrorCallback);
     PxPhysics* gPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *gFoundation, PxTolerancesScale(), true);
-
 
 }
 
@@ -50,7 +45,7 @@ int main() {
 // Copyright (c) 2004-2008 AGEIA Technologies, Inc. All rights reserved.
 // Copyright (c) 2001-2004 NovodeX AG. All rights reserved.  
 
-
+/*
 #include <vector>
 
 #include "PxPhysicsAPI.h"
@@ -109,4 +104,6 @@ void renderLoop()
 	initPhysics(true);
 	glutMainLoop();
 }
+
+*/
 

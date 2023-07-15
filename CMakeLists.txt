@@ -14,13 +14,15 @@ ENDIF ()
 
 add_library(dataFileOperator SHARED ball_simulate/dataFileOperator.cpp)
 add_library(dataFileOperatorV2 SHARED ball_simulate_v2/dataFileOperator.cpp)
-#add_executable(physx_simulate ball_simulate/physx_simulate.cpp)
+add_executable(physx_simulate ball_simulate/physx_simulate.cpp)
 
 target_link_directories(dataFileOperator PRIVATE cpp_packages/lib)
 target_link_directories(dataFileOperatorV2 PRIVATE cpp_packages/lib)
-#target_link_directories(physx_simulate PRIVATE cpp_packages/lib)
+target_link_directories(physx_simulate PRIVATE cpp_packages/lib)
 
 include_directories(cpp_packages/include)
+
+include_directories(cpp_packages/include/physx)
 
 #set(CMAKE_PREFIX_PATH cpp_packages/libtorch)
 #include_directories(cpp_packages/libtorch/include)
@@ -36,14 +38,12 @@ include_directories(cpp_packages/include)
 
 set(LIB_DIR "cpp_packages/lib")
 
-# Generate a list of all .so and .a files in the specified directory
-file(GLOB LIB_FILES "${LIB_DIR}/*.so" "${LIB_DIR}/*.a")
-
 set(PhysXLIBS
   libPhysXExtensions_static_64.a
   libPhysX_static_64.a
   libPhysXPvdSDK_static_64.a
   libPhysXVehicle_static_64.a
+  libPhysXVehicle2_static_64.a
   libPhysXCharacterKinematic_static_64.a
   libPhysXCooking_static_64.a
   libPhysXCommon_static_64.a
@@ -52,5 +52,4 @@ set(PhysXLIBS
   libSnippetRender_static_64.a
 )
 
-
-#target_link_libraries(physx_simulate PRIVATE ${PhysXLIBS})
+target_link_libraries(physx_simulate PRIVATE ${PhysXLIBS})
