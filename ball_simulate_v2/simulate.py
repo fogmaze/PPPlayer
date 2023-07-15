@@ -245,16 +245,26 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
             dataStruct.inputs[0].seq_len = cam1_end
             dataStruct.inputs[1].seq_len = cam2_end
 
-            for k in range(cam1_end):
-                dataStruct.inputs[0].line_rad_xy[k] = cam1_data[k].rad_xy
-                dataStruct.inputs[0].line_rad_xz[k] = cam1_data[k].rad_xz
-                dataStruct.inputs[0].timestamps[k] = cam1_data[k].timestamp
-            
-            for k in range(cam2_end):
-                dataStruct.inputs[1].line_rad_xy[k] = cam2_data[k].rad_xy
-                dataStruct.inputs[1].line_rad_xz[k] = cam2_data[k].rad_xz
-                dataStruct.inputs[1].timestamps[k] = cam2_data[k].timestamp
-            
+            ind = 0
+            for k in cam1_ign:
+                dataStruct.inputs[0].line_rad_xy[ind] = cam1_data[k].rad_xy
+                dataStruct.inputs[0].line_rad_xz[ind] = cam1_data[k].rad_xz
+                dataStruct.inputs[0].timestamps[ind] = cam1_data[k].timestamp
+                ind += 1
+                if ind >= cam1_end:
+                    break
+            dataStruct.inputs[0].seq_len = ind
+
+            ind = 0
+            for k in cam2_ign:
+                dataStruct.inputs[1].line_rad_xy[ind] = cam2_data[k].rad_xy
+                dataStruct.inputs[1].line_rad_xz[ind] = cam2_data[k].rad_xz
+                dataStruct.inputs[1].timestamps[ind] = cam2_data[k].timestamp
+                ind += 1
+                if ind >= cam2_end:
+                    break
+            dataStruct.inputs[1].seq_len = ind
+
             for k in range(len(ans_data)):
                 dataStruct.curvePoints[k].x = ans_data[k].ball_pos.x
                 dataStruct.curvePoints[k].y = ans_data[k].ball_pos.y
