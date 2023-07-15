@@ -229,6 +229,8 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
             plotData(ax,(cam1_data,cam2_data),ans_data)
             plt.show()
 
+        cam1_ign = randomInpIdxs()
+        cam2_ign = randomInpIdxs()
         # save data
         for j in range(SINGLE_SIMULATE_SAMPLE_LEN) :
             dataStruct = dfo.DataStruct()
