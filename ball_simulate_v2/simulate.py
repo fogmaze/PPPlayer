@@ -17,21 +17,6 @@ import multiprocessing
 import ball_simulate_v2.dataFileOperator as dfo
 
 
-stepTime = 1./600.
-G = 9.8
-FPS = 30
-
-SHUTTER_RANDOM_ERROR_STD = 0.005
-SHUTTER_SYSTEMATIC_ERROR_STD = 0.01
-CAMERA_POSITION_ERROR_STD = 0.05
-BALL_POSITION_ERROR_STD = 0.05
-
-INPUT_IGNORE_AREA_MEAN = 3
-INPUT_IGNORE_AREA_STD = 2
-INPUT_IGNORE_WIDTH_MEAN = 4
-INPUT_IGNORE_WIDTH_STD = 3
-
-
 class Work:
     timestamp:float
     index:int
