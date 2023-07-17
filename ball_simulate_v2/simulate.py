@@ -26,8 +26,8 @@ SHUTTER_SYSTEMATIC_ERROR_STD = 0.01
 CAMERA_POSITION_ERROR_STD = 0.05
 BALL_POSITION_ERROR_STD = 0.05
 
-INPUT_IGNORE_AREA_MEAN = 2
-INPUT_IGNORE_AREA_STD = 1
+INPUT_IGNORE_AREA_MEAN = 3
+INPUT_IGNORE_AREA_STD = 2
 INPUT_IGNORE_WIDTH_MEAN = 4
 INPUT_IGNORE_WIDTH_STD = 3
 
@@ -432,8 +432,6 @@ def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"
     print("simulate done")
 
 
-print(randomInpIdxs())
-exit()
 
 if __name__ == "__main__":
     #print(calculateMeanStd("train.bin"))
