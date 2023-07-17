@@ -7,6 +7,8 @@ from ColorRange import *
 from pupil_apriltags import Detector
 import csv
 import core.Equation3d as equ
+import camera_calibrate.utils as utils
+import camera_calibrate.Calibration as calib
 
 
 def homography_matrix(source) :
@@ -20,21 +22,11 @@ def homography_matrix(source) :
     homography = cv2.findHomography(coners, tar)[0]
     return homography
 
-def getCameraPosition(source) :
-    tag_len = 12.9 #set tag length (cm)
-    detector = Detector()
-    detection = detector.detect(cv2.cvtColor(source, cv2.COLOR_BGR2GRAY))
-    if len(detection) == 0 :
-        return None
-    # TODO: get camera position
-    res = equ.Point3d(0, 0, 0)
-    return res
-
 class Detection :
     #save test frames
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
-    def __init__(self,frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None) :
+    def __init__(self, source, calibrationFile="calibration1",frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None) :
         self.frame_size = frame_size
         self.frame_rate = frame_rate
         self.camera_position = None
@@ -45,6 +37,8 @@ class Detection :
         self.video_writer_all = None
         self.video_writer_bad = None
         self.video_writer_tagged = None
+        self.inmtx = calib.load_calibration(calibrationFile)
+        self.source = source
         if save_name is not None :
             if not os.path.exists("ball_detection/result/" + save_name) :
                 os.makedirs("ball_detection/result/" + save_name)
@@ -101,8 +95,8 @@ class Detection :
             return False
         return True
    
-    def runDetevtion(self, source) :
-        cam = cv2.VideoCapture(source)
+    def runDetevtion(self) :
+        cam = cv2.VideoCapture(self.source)
         whetherTheFirstFrame = True
         startTime = time.perf_counter()
 
@@ -124,7 +118,7 @@ class Detection :
                         print("No tag detected")
 
                 if self.camera_position is None :
-                    self.camera_position = getCameraPosition(frame)
+                    self.camera_position = utils.calculateCameraPosition(self.inmtx, frame)
                     if self.camera_position is None :
                         print("No tag detected")
 
@@ -152,7 +146,7 @@ class Detection :
                 else:
                     self.video_writer_tagged.write(frame)
                 
-                window = "Camera " + str(source) 
+                window = "Camera " + str(self.source) 
                 cv2.imshow(window, frame)
 
                 if cv2.waitKey(100) == ord(' ') :

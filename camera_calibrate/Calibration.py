@@ -1,23 +1,17 @@
+import numpy as np
 import cv2
 import numpy as np
 import pickle
 import glob
+import asyncio
 import os
 
-def save(path, object) :
-    with open(path, "wb") as f :
-        pickle.dump(object, f)
-
-def load(path1, path2) :
-    with open(path1, "rb") as f1 , open(path2, "rb") as f2:
-        return pickle.load(f1), pickle.load(f2)
-    
 
 class Calibrator():
-    def __init__ (self) :
+    def __init__ (self, grid_size_in_millimeter = 36) :
         self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         self.object_points = np.zeros((6*9,3), np.float32)
-        self.object_points[:,:2] = np.mgrid[0:9,0:6].T.reshape(-1,2) * 3.6
+        self.object_points[:,:2] = np.mgrid[0:9,0:6].T.reshape(-1,2) * grid_size_in_millimeter
         self.points2D = []
         self.points3D = []
 
@@ -55,22 +49,41 @@ class Calibrator():
             if key == ord('1') :
                 cv2.destroyAllWindows()
                 self.runCalibrate()
-                save("calibration1", self.mtx)
+                save_calibration("calibration1", self.mtx)
                 break
             elif key == ord('2') :
                 cv2.destroyAllWindows()
                 self.runCalibrate()
-                save("calibration2", self.mtx)
+                save_calibration("calibration2", self.mtx)
                 break
 
+def save_calibration(path, object:np.ndarray) -> None :
+    with open(path, "wb") as f :
+        pickle.dump(object, f)
+
+def load_calibration(path1) -> np.ndarray :
+    with open(path1, "rb") as f :
+        return pickle.load(f)
 
 
-
-
+def testCameraMatrix(mtx:np.ndarray, real_point:np.ndarray) :
+    cap = cv2.VideoCapture(0)
+    while True :
+        ret, frame = cap.read()
+        cv2.imshow('frame', frame)
+        key = cv2.waitKey(10) & 0xFF
+        if key == ord('q') :
+            break
+        if key == ord('w') :
+            inp = input("input real point: ").split()
+            real_point = np.array([float(inp[0]), float(inp[1]), float(inp[2])])
+            res = np.matmul(mtx, real_point)
+            pxp = res / res[2]
+            print(pxp)
+    cap.release()
+    cv2.destroyAllWindows()
 
 if __name__ == ("__main__") :
-    calibrate = Calibrator()
-    calibrate.run(0)
-
-
-
+    m = load_calibration("calibration1")
+    print(type(m))
+    

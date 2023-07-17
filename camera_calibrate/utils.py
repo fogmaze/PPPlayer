@@ -1,8 +1,8 @@
+import numpy as np
 from pupil_apriltags import Detector, Detection
 import cv2
 import time
 import pickle
-
 
 
 def takePicture():
@@ -27,7 +27,7 @@ def takePicture():
                 #time.sleep(5)
                 a = True
 
-def calculateCameraPosition(cameraMatrix, frame, tagSize=12.9) :
+def calculateCameraPosition(cameraMatrix:np.ndarray, frame, tagSize=0.129) :
     detector = Detector()
     results = detector.detect(frame, estimate_tag_pose=True, camera_params=(cameraMatrix[0][0],cameraMatrix[1][1],cameraMatrix[0][2],cameraMatrix[1][2]), tag_size=tagSize)
     if len(results) == 1:
@@ -51,7 +51,7 @@ def getCameraPosition_realTime(cameraMatrix) :
             print(res)
         
 def getBallPixelSize(distance, cameraMatrix) :
-    BALL_REAL_SIZE = 3.8
+    BALL_REAL_SIZE = 0.038
     return BALL_REAL_SIZE * cameraMatrix[0][0] / distance
 
 def ketstone_correction() :
@@ -61,7 +61,7 @@ def ketstone_correction() :
 
 if __name__ == "__main__" :
     cameraMatrix = pickle.load(open('calibration1', 'rb'))
-    print(getBallPixelSize(500, cameraMatrix), getBallPixelSize(100, cameraMatrix))
+    print(getBallPixelSize(5, cameraMatrix), getBallPixelSize(1, cameraMatrix))
     #calculateCameraPosition(cameraMatrix, cv2.imread('test.jpg'))
     #print(cameraMatrix)
     #getCameraPosition_realTime(cameraMatrix)
