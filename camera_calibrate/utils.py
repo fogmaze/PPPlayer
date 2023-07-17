@@ -26,6 +26,8 @@ def takePicture():
                 #sleep for one second
                 #time.sleep(5)
                 a = True
+    cap.release()
+    cv2.destroyAllWindows()
 
 def calculateCameraPosition(cameraMatrix:np.ndarray, frame, tagSize=0.129) :
     detector = Detector()
@@ -38,7 +40,6 @@ def calculateCameraPosition(cameraMatrix:np.ndarray, frame, tagSize=0.129) :
 
 def getCameraPosition_realTime(cameraMatrix) :
     cap = cv2.VideoCapture(0)
-    a = False
     while True :
         ret, frame = cap.read()
         time.sleep(1)
@@ -58,7 +59,6 @@ def ketstone_correction() :
     img = cv2.imread("image ha apriltag inside") #set image
     detector = Detector()
     
-
 if __name__ == "__main__" :
     cameraMatrix = pickle.load(open('calibration1', 'rb'))
     print(getBallPixelSize(5, cameraMatrix), getBallPixelSize(1, cameraMatrix))

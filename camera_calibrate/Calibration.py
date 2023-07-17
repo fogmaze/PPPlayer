@@ -66,7 +66,7 @@ def load_calibration(path1) -> np.ndarray :
         return pickle.load(f)
 
 
-def testCameraMatrix(mtx:np.ndarray, real_point:np.ndarray) :
+def testCameraMatrix(mtx:np.ndarray) :
     cap = cv2.VideoCapture(0)
     while True :
         ret, frame = cap.read()

@@ -11,10 +11,10 @@ import camera_calibrate.utils as utils
 import camera_calibrate.Calibration as calib
 
 
-def homography_matrix(source) :
-    tag_len = 12.9 #set tag length (cm)
+def find_homography_matrix_to_apriltag(img_bgr) -> np.ndarray | None:
+    tag_len = 12.9 #set tag length (m)
     detector = Detector()
-    detection = detector.detect(cv2.cvtColor(source, cv2.COLOR_BGR2GRAY))
+    detection = detector.detect(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY))
     if len(detection) == 0 :
         return None
     coners = detection[0].corners
@@ -113,7 +113,7 @@ class Detection :
                     continue
 
                 if self.homography_matrix is None :
-                    self.homography_matrix = homography_matrix(frame)
+                    self.homography_matrix = find_homography_matrix_to_apriltag(frame)
                     if self.homography_matrix is None :
                         print("No tag detected")
 
@@ -152,9 +152,34 @@ class Detection :
                 if cv2.waitKey(100) == ord(' ') :
                     break
 
+
+def test_homography() :
+    cap = cv2.VideoCapture(0)
+    homography_matrix = None
+    while True :
+        ret, frame = cap.read()
+        if ret :
+            cv2.imshow("frame", frame)
+            if homography_matrix == None :
+                print("No homography matrix press u to update")
+            key = cv2.waitKey(10)
+            if key == ord('u') :
+                homography_matrix = find_homography_matrix_to_apriltag(frame)
+                if homography_matrix is None :
+                    print("No tag detected")
+            elif key == ord('t') :
+                inp = input("input pixel point : ").split()
+                if len(inp) == 2 and homography_matrix is not None:
+                    pxp = np.array([int(inp[0]), int(inp[1]), 1])
+                    print(np.matmul(homography_matrix, pxp))
+            elif key == ord('q') :
+                break
+    cap.release()
+    cv2.destroyAllWindows()
+
 def detectProcess(source, save_name) :
-    detector = Detection(save_name=save_name)
-    detector.runDetevtion(source, source=0)
+    detector = Detection(source=source, save_name=save_name)
+    detector.runDetevtion()
         
 
 if __name__ == "__main__" :
