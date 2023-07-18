@@ -8,7 +8,7 @@ import os
 
 
 class Calibrator():
-    def __init__ (self, grid_size_in_millimeter = 36) :
+    def __init__ (self, grid_size_in_millimeter = 23.9) :
         self.criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         self.object_points = np.zeros((6*9,3), np.float32)
         self.object_points[:,:2] = np.mgrid[0:9,0:6].T.reshape(-1,2) * grid_size_in_millimeter
@@ -84,6 +84,9 @@ def testCameraMatrix(mtx:np.ndarray) :
     cv2.destroyAllWindows()
 
 if __name__ == ("__main__") :
-    m = load_calibration("calibration1")
-    print(type(m))
+    #c = Calibrator()
+    #c.run(0)
+    testCameraMatrix(load_calibration("calibration1_old"))
+    #old = load_calibration("calibration1_old")
+    #print(old)
     

@@ -7,19 +7,21 @@ from ColorRange import *
 from camera_calibrate.utils import *
 from pupil_apriltags import Detector
 import csv
+import sys
+sys.path.append(os.getcwd())
 import core.Equation3d as equ
 import camera_calibrate.utils as utils
 import camera_calibrate.Calibration as calib
 
 
-def find_homography_matrix_to_apriltag(img_bgr) -> np.ndarray | None:
-    tag_len = 12.9 #set tag length (m)
+def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
+    tag_len = 0.1922 #set tag length (m)
     detector = Detector()
-    detection = detector.detect(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY))
+    detection = detector.detect(img_gray)
     if len(detection) == 0 :
         return None
     coners = detection[0].corners
-    tar = np.float32([[0, tag_len], [tag_len, tag_len], [tag_len, 0], [0, 0]])
+    tar = np.float32([[0, 0], [tag_len, 0], [tag_len, tag_len], [0, tag_len]])
     homography = cv2.findHomography(coners, tar)[0]
     return homography
 
@@ -27,7 +29,7 @@ class Detection :
     #save test frames
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
-    def __init__(self, source, calibrationFile="calibration1",frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None) :
+    def __init__(self, source, calibrationFile="calibration1_old",frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None) :
         self.frame_size = frame_size
         self.frame_rate = frame_rate
         self.camera_position = None
@@ -69,7 +71,7 @@ class Detection :
         yCenter = y + h // 2
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
         cv2.circle(frame, (xCenter, yCenter), 2, (0, 255, 0), -1)
-        #cv2.putText(frame, ("x : {} y : {}".format(xCenter, yCenter)), (10, 30), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
+        cv2.putText(frame, ("x : {} y : {}".format(xCenter, yCenter)), (10, 30), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
 
     def compareFrames(self, frame, compare) :
         move = cv2.bitwise_xor(frame, compare)
@@ -97,7 +99,11 @@ class Detection :
         return True
    
 <<<<<<< HEAD
+<<<<<<< HEAD
     def runDetevtion(self) :
+=======
+    def runDetevtion(self, img) :
+>>>>>>> 586025e (exp1)
         cam = cv2.VideoCapture(self.source)
 =======
  
@@ -106,29 +112,43 @@ class Detection :
         cam = cv2.VideoCapture(source)
 >>>>>>> 917c08d (m)
         whetherTheFirstFrame = True
+        startWriting = False
         startTime = time.perf_counter()
+        self.camera_position = utils.calculateCameraPosition(self.inmtx, img)
+        self.homography_matrix = find_homography_matrix_to_apriltag(img)
 
         while(True) :
             numberOfBall = 0
             ret, frame = cam.read()
 
             if ret :
-                self.video_writer_all.write(frame)
+                key = cv2.waitKey(1)
+
+                if startWriting:
+                    print('a')
+                    self.video_writer_all.write(frame)
 
                 if whetherTheFirstFrame :
                     compare = frame
                     whetherTheFirstFrame = False
                     continue
 
-                if self.homography_matrix is None :
+                if self.homography_matrix is None and key == ord("u"):
                     self.homography_matrix = find_homography_matrix_to_apriltag(frame)
                     if self.homography_matrix is None :
                         print("No tag detected")
 
-                if self.camera_position is None :
+                if self.camera_position is None and key == ord("u"):
                     self.camera_position = utils.calculateCameraPosition(self.inmtx, frame)
                     if self.camera_position is None :
                         print("No tag detected")
+                
+                if key == ord("s") :
+                    startWriting = not startWriting
+                
+                if key == ord(' ') :
+                    break
+                    
 
                 detected = self.detectContours(self.maskFrames(self.compareFrames(frame, compare)))
                 for contour in detected :
@@ -149,45 +169,47 @@ class Detection :
                             self.updateCsv(time.perf_counter() - startTime, "Yes", numberOfBall, x, y, h, w, 0, 0, 0, 0, 0)
                         if numberOfBall == 0 :
                             self.updateCsv(time.perf_counter() - startTime, "No", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+<<<<<<< HEAD
 =======
                         ball_in_world = np.matmul(homography_matrix(apriltag_source), np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
                         print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
 >>>>>>> 917c08d (m)
+=======
+                            
+>>>>>>> 586025e (exp1)
 
-                if not numberOfBall == 1 :
-                    self.video_writer_all.write(frame)
-                else:
-                    self.video_writer_tagged.write(frame)
+                if startWriting:
+                    if not numberOfBall == 1 :
+                        self.video_writer_all.write(frame)
+                    else:
+                        self.video_writer_tagged.write(frame)
                 
                 window = "Camera " + str(self.source) 
                 cv2.imshow(window, frame)
 
-                if cv2.waitKey(100) == ord(' ') :
-                    break
 
 
-def test_homography() :
-    cap = cv2.VideoCapture(0)
+def test_homography(img) :
     homography_matrix = None
     while True :
-        ret, frame = cap.read()
-        if ret :
-            cv2.imshow("frame", frame)
-            if homography_matrix == None :
-                print("No homography matrix press u to update")
-            key = cv2.waitKey(10)
-            if key == ord('u') :
-                homography_matrix = find_homography_matrix_to_apriltag(frame)
-                if homography_matrix is None :
-                    print("No tag detected")
-            elif key == ord('t') :
-                inp = input("input pixel point : ").split()
-                if len(inp) == 2 and homography_matrix is not None:
-                    pxp = np.array([int(inp[0]), int(inp[1]), 1])
-                    print(np.matmul(homography_matrix, pxp))
-            elif key == ord('q') :
-                break
-    cap.release()
+
+        cv2.imshow("frame", img)
+        if homography_matrix is None :
+            print("No homography matrix press u to update")
+        key = cv2.waitKey(10)
+        if key == ord('u') :
+            homography_matrix = find_homography_matrix_to_apriltag(img)
+            if homography_matrix is None :
+                print("No tag detected")
+        elif key == ord('t') :
+            inp = input("input pixel point : ").split()
+            if len(inp) == 2 and homography_matrix is not None:
+                pxp = np.array([int(inp[0]), int(inp[1]), 1])
+                pxp = np.matmul(homography_matrix, pxp)
+                pxp = np.float64([pxp[0]/pxp[2], pxp[1]/pxp[2]])
+                print(pxp)
+        elif key == ord('q') :
+            break
     cv2.destroyAllWindows()
 
 def detectProcess(source, save_name) :
@@ -196,6 +218,12 @@ def detectProcess(source, save_name) :
         
 
 if __name__ == "__main__" :
+    img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
+    dect = Detection(source=0, save_name="camera1")
+    dect.runDetevtion(img)
+
+
+    exit()
     detector1 = Detection()
     detector2 = Detection()
 

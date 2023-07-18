@@ -1,6 +1,11 @@
 import numpy as np
 from pupil_apriltags import Detector, Detection
+import sys
+import os
+sys.path.append(os.getcwd())
+import core.Equation3d as equ
 import cv2
+
 import time
 import pickle
 
@@ -29,13 +34,16 @@ def takePicture():
     cap.release()
     cv2.destroyAllWindows()
 
-def calculateCameraPosition(cameraMatrix:np.ndarray, frame, tagSize=0.129) :
+def calculateCameraPosition(cameraMatrix:np.ndarray, frame, tagSize=0.1922) :
     detector = Detector()
-    results = detector.detect(frame, estimate_tag_pose=True, camera_params=(cameraMatrix[0][0],cameraMatrix[1][1],cameraMatrix[0][2],cameraMatrix[1][2]), tag_size=tagSize)
-    if len(results) == 1:
-        res:Detection = results[0]
-        return res.pose_t[0][0], res.pose_t[1][0], res.pose_t[2][0]
-    else:
+    try:
+        results = detector.detect(frame, estimate_tag_pose=True, camera_params=(cameraMatrix[0][0],cameraMatrix[1][1],cameraMatrix[0][2],cameraMatrix[1][2]), tag_size=tagSize)
+        if len(results) == 1:
+            res:Detection = results[0]
+            t = np.float128([res.pose_t[0][0], res.pose_t[1][0], res.pose_t[2][0]])
+            re = np.matmul(res.pose_R.T, t)
+            return equ.Point3d(-re[0], re[2], re[1])
+    except:
         return None
 
 def getCameraPosition_realTime(cameraMatrix) :
@@ -58,8 +66,18 @@ def getBallPixelSize(distance, cameraMatrix) :
 
     
 if __name__ == "__main__" :
-    cameraMatrix = pickle.load(open('calibration1', 'rb'))
-    print(getBallPixelSize(5, cameraMatrix), getBallPixelSize(1, cameraMatrix))
+    cameraMatrix = pickle.load(open('calibration1_old', 'rb'))
+
+    img = cv2.imread("718-2.jpg", cv2.IMREAD_GRAYSCALE)
+    #dec = Detector()
+    #d = dec.detect(img, estimate_tag_pose=True, camera_params=(cameraMatrix[0][0],cameraMatrix[1][1],cameraMatrix[0][2],cameraMatrix[1][2]), tag_size=29.8)
+    #cv2.imshow('frame', img)
+    #cv2.waitKey(0)
+    
+    print(calculateCameraPosition(cameraMatrix, img).to_str())
+
+
+    #getCameraPosition_realTime(cameraMatrix)
     #calculateCameraPosition(cameraMatrix, cv2.imread('test.jpg'))
     #print(cameraMatrix)
     #getCameraPosition_realTime(cameraMatrix)
