@@ -83,8 +83,8 @@ class ColorRange :
 
 
 if __name__ == "__main__" :
-    cam1 = cv2.VideoCapture("ball_detection/test.mp4")
-    cam2 = cv2.VideoCapture("ball_detection/test.mp4")
+    cam1 = cv2.VideoCapture(0)
+    cam2 = cv2.VideoCapture(0)
 
     cr = load("color_range")
     

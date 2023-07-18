@@ -4,11 +4,11 @@ import numpy as np
 import math
 import multiprocessing as mp
 from ColorRange import *
-from camera_calibrate.utils import *
 from pupil_apriltags import Detector
 import csv
 import sys
 sys.path.append(os.getcwd())
+from camera_calibrate.utils import *
 import core.Equation3d as equ
 import camera_calibrate.utils as utils
 import camera_calibrate.Calibration as calib
@@ -66,12 +66,12 @@ class Detection :
     def updateCsv(self, time, found, id, x, y, h, w, cam_x, cam_y, cam_z, rxy, rxz) :
         self.detection_csv_writer.writerow([time, found, id, x, y, h, w, cam_x, cam_y, cam_z, rxy, rxz])
             
-    def drawDirection(self, frame, x, y, h, w) :
+    def drawDirection(self, frame, x, y, h, w, i) :
         xCenter = x + w // 2
         yCenter = y + h // 2
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
         cv2.circle(frame, (xCenter, yCenter), 2, (0, 255, 0), -1)
-        cv2.putText(frame, ("x : {} y : {}".format(xCenter, yCenter)), (10, 30), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
+        cv2.putText(frame, ("x : {} y : {}".format(xCenter, yCenter)), (10, 40*i), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
 
     def compareFrames(self, frame, compare) :
         move = cv2.bitwise_xor(frame, compare)
@@ -101,7 +101,7 @@ class Detection :
     def runDetevtion(self, img) :
         cam = cv2.VideoCapture(self.source)
         whetherTheFirstFrame = True
-        startWriting = False
+        startWriting = True
         startTime = time.perf_counter()
         self.camera_position = utils.calculateCameraPosition(self.inmtx, img)
         self.homography_matrix = find_homography_matrix_to_apriltag(img)
@@ -114,7 +114,6 @@ class Detection :
                 key = cv2.waitKey(1)
 
                 if startWriting:
-                    print('a')
                     self.video_writer_all.write(frame)
 
                 if whetherTheFirstFrame :
@@ -139,12 +138,14 @@ class Detection :
                     break
                     
 
-                detected = self.detectContours(self.maskFrames(self.compareFrames(frame, compare)))
+                c = self.compareFrames(frame, compare)
+                detected = self.detectContours(self.maskFrames(c))
+                cv2.imshow("mask", self.maskFrames(c))
                 for contour in detected :
                     area = cv2.contourArea(contour)
                     x, y, w, h = cv2.boundingRect(contour)
-                    if self.isBallFeature(area, h, w) :
-                        self.drawDirection(frame, x, y, h, w)
+                    if True : #self.isBallFeature(area, h, w) :
+                        self.drawDirection(frame, x, y, h, w, numberOfBall+1)
 
                         numberOfBall += 1
                         if self.homography_matrix is not None and self.camera_position is not None:
@@ -162,7 +163,7 @@ class Detection :
 
                 if startWriting:
                     if not numberOfBall == 1 :
-                        self.video_writer_all.write(frame)
+                        self.video_writer_bad.write(frame)
                     else:
                         self.video_writer_tagged.write(frame)
                 
@@ -201,7 +202,7 @@ def detectProcess(source, save_name) :
 
 if __name__ == "__main__" :
     img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
-    dect = Detection(source=0, save_name="camera1")
+    dect = Detection(source=0, save_name="20230718-2")
     dect.runDetevtion(img)
 
 
@@ -235,4 +236,4 @@ if __name__ == "__main__" :
     #perspective_matrix = cv2.getPerspectiveTransform(src_point, dst_point)
     #warped = cv2.warpPerspective(img, perspective_matrix, (640, 480))
     #cv2.imshow("warped", warped)
-    #cv2.waitKey(0)
+    #cv2.waitKey(0
