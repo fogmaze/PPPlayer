@@ -5,7 +5,7 @@ import os
 sys.path.append(os.getcwd())
 import core.Equation3d as equ
 import cv2
-
+import csv
 import time
 import pickle
 
@@ -13,6 +13,7 @@ import pickle
 def takePicture():
     cap = cv2.VideoCapture(0)
     a = False
+    i = 0
     while True :
         ret, frame = cap.read()
         if ret :
@@ -24,8 +25,9 @@ def takePicture():
                 break
 
             if key == ord('w') :
-                cameraMatrix = pickle.load(open('calibration1', 'rb'))
-                print(calculateCameraPosition(cameraMatrix, cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)))
+                cv2.imwrite('D{}.jpg'.format(i), frame)
+                i += 1
+
 
             if key == ord('q') :
                 #sleep for one second
@@ -64,17 +66,40 @@ def getBallPixelSize(distance, cameraMatrix) :
     return BALL_REAL_SIZE * cameraMatrix[0][0] / distance
 
 
+def runExerment() :
+    cameraMatrix = pickle.load(open('calibration1_old', 'rb'))
+    with open('experiment_AprilTag/data.csv', 'w', newline='') as f:
+        writer = csv.writer(f)
+        for c in ('A', 'B', 'C', 'D') :
+            res_x = []
+            res_y = []
+            res_z = []
+            for i in range(10) :
+                img = cv2.imread('experiment_AprilTag/{}/{}{}.jpg'.format(c, c, i), cv2.IMREAD_GRAYSCALE)
+                pos = calculateCameraPosition(cameraMatrix, img)
+                res_x.append(pos.x)
+                res_y.append(pos.y)
+                res_z.append(pos.z)
+                print(pos.to_str())
+            writer.writerow(res_x)
+            writer.writerow(res_y)
+            writer.writerow(res_z)
+            
+        
+
+
     
 if __name__ == "__main__" :
-    cameraMatrix = pickle.load(open('calibration1_old', 'rb'))
-
-    img = cv2.imread("718-2.jpg", cv2.IMREAD_GRAYSCALE)
+    runExerment()
+    #cameraMatrix = pickle.load(open('calibration1_old', 'rb'))
+    #takePicture()
+    #img = cv2.imread("718-2.jpg", cv2.IMREAD_GRAYSCALE)
     #dec = Detector()
     #d = dec.detect(img, estimate_tag_pose=True, camera_params=(cameraMatrix[0][0],cameraMatrix[1][1],cameraMatrix[0][2],cameraMatrix[1][2]), tag_size=29.8)
     #cv2.imshow('frame', img)
     #cv2.waitKey(0)
     
-    print(calculateCameraPosition(cameraMatrix, img).to_str())
+    #print(calculateCameraPosition(cameraMatrix, img).to_str())
 
 
     #getCameraPosition_realTime(cameraMatrix)

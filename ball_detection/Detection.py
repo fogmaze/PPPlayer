@@ -98,19 +98,8 @@ class Detection :
             return False
         return True
    
-<<<<<<< HEAD
-<<<<<<< HEAD
-    def runDetevtion(self) :
-=======
     def runDetevtion(self, img) :
->>>>>>> 586025e (exp1)
         cam = cv2.VideoCapture(self.source)
-=======
- 
-    def runDetevtion(self, apriltag_source, source, path_bad, path_all) :
-
-        cam = cv2.VideoCapture(source)
->>>>>>> 917c08d (m)
         whetherTheFirstFrame = True
         startWriting = False
         startTime = time.perf_counter()
@@ -158,7 +147,6 @@ class Detection :
                         self.drawDirection(frame, x, y, h, w)
 
                         numberOfBall += 1
-<<<<<<< HEAD
                         if self.homography_matrix is not None and self.camera_position is not None:
                             ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
                             projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
@@ -169,14 +157,8 @@ class Detection :
                             self.updateCsv(time.perf_counter() - startTime, "Yes", numberOfBall, x, y, h, w, 0, 0, 0, 0, 0)
                         if numberOfBall == 0 :
                             self.updateCsv(time.perf_counter() - startTime, "No", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-<<<<<<< HEAD
-=======
-                        ball_in_world = np.matmul(homography_matrix(apriltag_source), np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
-                        print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
->>>>>>> 917c08d (m)
-=======
+
                             
->>>>>>> 586025e (exp1)
 
                 if startWriting:
                     if not numberOfBall == 1 :
