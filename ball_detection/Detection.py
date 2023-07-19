@@ -9,19 +9,20 @@ import csv
 import sys
 sys.path.append(os.getcwd())
 from camera_calibrate.utils import *
+from core.Constants import *
 import core.Equation3d as equ
 import camera_calibrate.utils as utils
 import camera_calibrate.Calibration as calib
 
 
 def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
-    tag_len = 0.1922 #set tag length (m)
-    detector = Detector()
+    tag_len   = APRILTAG_SIZE #set tag length (m)
+    detector  = Detector()
     detection = detector.detect(img_gray)
     if len(detection) == 0 :
         return None
     coners = detection[0].corners
-    tar = np.float32([[0, 0], [tag_len, 0], [tag_len, tag_len], [0, tag_len]])
+    tar    = np.float32([[0, 0], [tag_len, 0], [tag_len, tag_len], [0, tag_len]])
     homography = cv2.findHomography(coners, tar)[0]
     return homography
 

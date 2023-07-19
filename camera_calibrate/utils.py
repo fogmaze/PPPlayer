@@ -4,6 +4,8 @@ import sys
 import os
 sys.path.append(os.getcwd())
 import core.Equation3d as equ
+import camera_calibrate.Calibration as calib
+from core.Constants import *
 import cv2
 import csv
 import time
@@ -36,7 +38,7 @@ def takePicture():
     cap.release()
     cv2.destroyAllWindows()
 
-def calculateCameraPosition(cameraMatrix:np.ndarray, frame, tagSize=0.1922) :
+def calculateCameraPosition(cameraMatrix:np.ndarray, frame, tagSize=APRILTAG_SIZE) :
     detector = Detector()
     try:
         results = detector.detect(frame, estimate_tag_pose=True, camera_params=(cameraMatrix[0][0],cameraMatrix[1][1],cameraMatrix[0][2],cameraMatrix[1][2]), tag_size=tagSize)
@@ -59,7 +61,7 @@ def getCameraPosition_realTime(cameraMatrix) :
         res = calculateCameraPosition(cameraMatrix, image)
 
         if res is not None :
-            print(res)
+            print(res.to_str())
         
 def getBallPixelSize(distance, cameraMatrix) :
     BALL_REAL_SIZE = 0.038
@@ -85,12 +87,11 @@ def runExerment() :
             writer.writerow(res_y)
             writer.writerow(res_z)
             
-        
-
-
-    
 if __name__ == "__main__" :
-    runExerment()
+    im_hd = calib.load_calibration('calibration_hd')
+    print(im_hd)
+    getCameraPosition_realTime(im_hd)
+    #runExerment()
     #cameraMatrix = pickle.load(open('calibration1_old', 'rb'))
     #takePicture()
     #img = cv2.imread("718-2.jpg", cv2.IMREAD_GRAYSCALE)
