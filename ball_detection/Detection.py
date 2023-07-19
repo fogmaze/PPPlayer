@@ -50,8 +50,11 @@ class Detection :
             self.video_writer_bad = cv2.VideoWriter("ball_detection/result/" + save_name + "/bad.mp4", self.fourcc, self.frame_rate, self.frame_size)
             self.video_writer_tagged = cv2.VideoWriter("ball_detection/result/" + save_name + "/tagged.mp4", self.fourcc, self.frame_rate, self.frame_size)
             self.detection_csv = open("ball_detection/result/" + save_name + "/detection.csv", "w", newline='')
+            self.situation_csv = open("ball_detection/result/" + save_name + "/situation.csv", "w", newline='')
             self.detection_csv_writer = csv.writer(self.detection_csv)
-            self.detection_csv_writer.writerow(["time", "found", "id", "x", "y", "h", "w", "cam_x", "cam_y", "cam_z","rxy", "rxz"])
+            self.situation_csv_writer = csv.writer(self.situation_csv)
+            self.detection_csv_writer.writerow(["iter", "id", "x", "y", "h", "w", "cam_x", "cam_y", "cam_z","rxy", "rxz"])
+            self.situation_csv_writer.writerow(["iter", "time", "fps", "numOfBall"])
     
     def __del__(self) :
         if self.video_writer_all is not None :
@@ -62,21 +65,21 @@ class Detection :
             self.video_writer_tagged.release()
         if self.detection_csv is not None :
             self.detection_csv.close()
+        if self.situation_csv is not None :
+            self.situation_csv.close()
         cv2.destroyAllWindows()
 
-    def updateCsv(self, time, found, id, x, y, h, w, cam_x, cam_y, cam_z, rxy, rxz) :
-        self.detection_csv_writer.writerow([time, found, id, x, y, h, w, cam_x, cam_y, cam_z, rxy, rxz])
             
     def drawDirection(self, frame, x, y, h, w, i) :
         xCenter = x + w // 2
         yCenter = y + h // 2
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        cv2.circle(frame, (xCenter, yCenter), 2, (0, 255, 0), -1)
+        cv2.circle(frame, (xCenter, yCenter), 2, (0, 0, 255), -1)
         cv2.putText(frame, ("x : {} y : {}".format(xCenter, yCenter)), (10, 40*i), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
 
     def compareFrames(self, frame, compare) :
         move = cv2.bitwise_xor(frame, compare)
-        color = cv2.inRange(move, np.array([28, 28, 20]), np.array([255, 255, 255]))
+        color = cv2.inRange(move, np.array([50, 50, 50]), np.array([255, 255, 255]))
         return cv2.bitwise_and(frame, cv2.cvtColor(color, cv2.COLOR_GRAY2BGR))
     
     def maskFrames(self, frame) :
@@ -104,6 +107,8 @@ class Detection :
         whetherTheFirstFrame = True
         startWriting = True
         startTime = time.perf_counter()
+        last_iter_time = startTime
+        iteration = 0
         self.camera_position = utils.calculateCameraPosition(self.inmtx, img)
         self.homography_matrix = find_homography_matrix_to_apriltag(img)
 
@@ -113,6 +118,7 @@ class Detection :
 
             if ret :
                 key = cv2.waitKey(1)
+                this_iter_time = time.perf_counter()
 
                 if startWriting:
                     self.video_writer_all.write(frame)
@@ -141,7 +147,7 @@ class Detection :
 
                 c = self.compareFrames(frame, compare)
                 detected = self.detectContours(self.maskFrames(c))
-                cv2.imshow("mask", self.maskFrames(c))
+                cv2.imshow("mask", c)
                 for contour in detected :
                     area = cv2.contourArea(contour)
                     x, y, w, h = cv2.boundingRect(contour)
@@ -153,14 +159,11 @@ class Detection :
                             ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
                             projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
                             line = equ.LineEquation3d(self.camera_position, projection)
-                            self.updateCsv(time.perf_counter() - startTime, True, numberOfBall, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg())
+                            self.detection_csv_writer.writerow([iteration, numberOfBall, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
                             print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
                         else :
-                            self.updateCsv(time.perf_counter() - startTime, "Yes", numberOfBall, x, y, h, w, 0, 0, 0, 0, 0)
-                        if numberOfBall == 0 :
-                            self.updateCsv(time.perf_counter() - startTime, "No", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-
-                            
+                            self.detection_csv_writer.writerow([iteration, numberOfBall, x, y, h, w, 0, 0, 0, 0, 0])
+                self.situation_csv_writer.writerow([iteration, this_iter_time - startTime, 1000/(this_iter_time-last_iter_time), numberOfBall])
 
                 if startWriting:
                     if not numberOfBall == 1 :
@@ -170,6 +173,10 @@ class Detection :
                 
                 window = "Camera " + str(self.source) 
                 cv2.imshow(window, frame)
+            else :
+                break
+            iteration += 1
+            last_iter_time = this_iter_time
 
 
 
@@ -203,7 +210,7 @@ def detectProcess(source, save_name) :
 
 if __name__ == "__main__" :
     img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
-    dect = Detection(source=0, save_name="20230718-2")
+    dect = Detection(source="ball_detection/result/20230718-2/all.mp4", save_name="718-2-1")
     dect.runDetevtion(img)
 
 

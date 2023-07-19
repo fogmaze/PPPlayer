@@ -182,5 +182,6 @@ void putData_sync(char* file_name, int index, Data data) {
 
 extern "C"
 int main() {
+    std::cout << TEST_LEN << std::endl;
     return 0;
 }

@@ -9,66 +9,74 @@ sys.path.append(os.getcwd())
 import core.Constants as c
 import threading
 
-# check os
-if platform.system() == "Windows":
-    lib = cdll.LoadLibrary("build/dataFileOperatorV2.dll")
-elif platform.system() == "Linux":
-    lib = CDLL("build/libdataFileOperatorV2.so")
-else:
-    raise Exception("Unsupport os!")
+Data_Point = None
+Data_Input = None
+DataStruct = None
 
-class Data_Point(Structure):
-    _fields_ = [
-        ("x",c_double),
-        ("y",c_double),
-        ("z",c_double)
-    ]
+lib = None
 
-class Data_Input(Structure):
-    _fields_ = [
-        ("camera_x", c_double),
-        ("camera_y", c_double),
-        ("camera_z", c_double),
-        ("line_rad_xy", c_double * c.SIMULATE_INPUT_LEN),
-        ("line_rad_xz", c_double * c.SIMULATE_INPUT_LEN),
-        ("timestamps", c_double * c.SIMULATE_INPUT_LEN),
-        ("seq_len", c_int)
-    ]
+def loadLib():
+    global lib, Data_Point, Data_Input, DataStruct
+    libname = "dataFileOperatorV2-{}-{}".format(c.SIMULATE_INPUT_LEN, c.SIMULATE_TEST_LEN)
+    print("load lib {}".format(libname))
+    lib = CDLL("build/lib{}.so".format(libname))
 
-class DataStruct(Structure):
-    _fields_ = [
-        ("inputs", Data_Input * 2),
-        ("curvePoints", Data_Point * c.SIMULATE_TEST_LEN),
-        ("curveTimestamps", c_double * c.SIMULATE_TEST_LEN)
-    ]
+    class Data_Point_(Structure):
+        _fields_ = [
+            ("x",c_double),
+            ("y",c_double),
+            ("z",c_double)
+        ]
+    Data_Point = Data_Point_
 
-lib.main.argtypes = []
-lib.main.restype = c_int
-lib.loadFromFile.argtypes = [c_char_p]
-lib.loadFromFile.restype = c_void_p
-lib.releaseData.argtypes = [c_void_p]
-lib.releaseData.restype = None
-lib.loadIsSuccess.argtypes = [c_void_p]
-lib.loadIsSuccess.restype = c_bool
-lib.getFileDataLength.argtypes = [c_void_p]
-lib.getFileDataLength.restype = c_int
-lib.getFileData.argtypes = [c_void_p, c_int]
-lib.getFileData.restype = c_void_p
-lib.createHeader.argtypes = [c_int]
-lib.createHeader.restype = c_void_p
-lib.putData.argtypes = [c_void_p, c_int, DataStruct]
-lib.putData.restype = c_bool
-lib.saveToFile.argtypes = [c_void_p, c_char_p]
-lib.saveToFile.restype = c_bool
-lib.getFileData_sync.argtypes = [c_char_p, c_int]
-lib.getFileData_sync.restype = DataStruct
-lib.getFileDataLength_sync.argtypes = [c_char_p]
-lib.getFileDataLength_sync.restype = c_int
-lib.createEmptyFile_sync.argtypes = [c_char_p, c_int]
-lib.createEmptyFile_sync.restype = None
-lib.putData_sync.argtypes = [c_char_p, c_int, DataStruct]
-lib.putData_sync.restype = None
+    class Data_Input_(Structure):
+        _fields_ = [
+            ("camera_x", c_double),
+            ("camera_y", c_double),
+            ("camera_z", c_double),
+            ("line_rad_xy", c_double * c.SIMULATE_INPUT_LEN),
+            ("line_rad_xz", c_double * c.SIMULATE_INPUT_LEN),
+            ("timestamps", c_double * c.SIMULATE_INPUT_LEN),
+            ("seq_len", c_int)
+        ]
+    Data_Input = Data_Input_
 
+    class DataStruct_(Structure):
+        _fields_ = [
+            ("inputs", Data_Input * 2),
+            ("curvePoints", Data_Point * c.SIMULATE_TEST_LEN),
+            ("curveTimestamps", c_double * c.SIMULATE_TEST_LEN)
+        ]
+    DataStruct = DataStruct_
+
+    lib.main.argtypes = []
+    lib.main.restype = c_int
+    lib.loadFromFile.argtypes = [c_char_p]
+    lib.loadFromFile.restype = c_void_p
+    lib.releaseData.argtypes = [c_void_p]
+    lib.releaseData.restype = None
+    lib.loadIsSuccess.argtypes = [c_void_p]
+    lib.loadIsSuccess.restype = c_bool
+    lib.getFileDataLength.argtypes = [c_void_p]
+    lib.getFileDataLength.restype = c_int
+    lib.getFileData.argtypes = [c_void_p, c_int]
+    lib.getFileData.restype = c_void_p
+    lib.createHeader.argtypes = [c_int]
+    lib.createHeader.restype = c_void_p
+    lib.putData.argtypes = [c_void_p, c_int, DataStruct]
+    lib.putData.restype = c_bool
+    lib.saveToFile.argtypes = [c_void_p, c_char_p]
+    lib.saveToFile.restype = c_bool
+    lib.getFileData_sync.argtypes = [c_char_p, c_int]
+    lib.getFileData_sync.restype = DataStruct
+    lib.getFileDataLength_sync.argtypes = [c_char_p]
+    lib.getFileDataLength_sync.restype = c_int
+    lib.createEmptyFile_sync.argtypes = [c_char_p, c_int]
+    lib.createEmptyFile_sync.restype = None
+    lib.putData_sync.argtypes = [c_char_p, c_int, DataStruct]
+    lib.putData_sync.restype = None
+
+loadLib()
 
 class BallDataSet(torch.utils.data.Dataset) :
     def __init__(self, fileName, dataLength = None, device = "cuda:0"):
@@ -200,8 +208,10 @@ def testLoadData():
     print(a[1].curveTimestamps[0])
     print(a[1].curveTimestamps[1])
 if __name__ == "__main__":
-    testPutData()
-    ds = BallDataSet_sync("t.bin")
+    c.set2Fitting()
+    loadLib()
+    lib.main()
+    ds = BallDataSet_sync("ball_simulate_v2/dataset/fit_tiny.train.bin")
     a = ds[0]
     b = ds[1]
 

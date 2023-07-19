@@ -6,7 +6,7 @@ import os
 import sys
 sys.path.append(os.getcwd())
 import core.Equation3d as equ
-from core.Constants import *
+import core.Constants as c
 import math
 import random
 from typing import List, Tuple
@@ -48,43 +48,43 @@ def randomCameraPos():
     y = 0
     z = 0
     # if pos not in ball_area, return random pos
-    while x < BALL_AREA_HALF_LENGTH and x > -BALL_AREA_HALF_LENGTH and y < BALL_AREA_HALF_WIDTH and y > -BALL_AREA_HALF_WIDTH and z < BALL_AREA_HEIGHT:
-        x = random.uniform(-CAMERA_AREA_HALF_LENGTH, CAMERA_AREA_HALF_LENGTH)
-        y = random.uniform(-CAMERA_AREA_HALF_WIDTH, CAMERA_AREA_HALF_WIDTH)
-        z = random.uniform(0, CAMERA_AREA_HEIGHT)
+    while x < c.BALL_AREA_HALF_LENGTH and x > -c.BALL_AREA_HALF_LENGTH and y < c.BALL_AREA_HALF_WIDTH and y > -c.BALL_AREA_HALF_WIDTH and z < c.BALL_AREA_HEIGHT:
+        x = random.uniform(-c.CAMERA_AREA_HALF_LENGTH, c.CAMERA_AREA_HALF_LENGTH)
+        y = random.uniform(-c.CAMERA_AREA_HALF_WIDTH, c.CAMERA_AREA_HALF_WIDTH)
+        z = random.uniform(0, c.CAMERA_AREA_HEIGHT)
     return equ.Point3d(x, y, z)
 
 def randomCameraPosError():
-    x = random.gauss(0, CAMERA_POSITION_ERROR_STD)
-    y = random.gauss(0, CAMERA_POSITION_ERROR_STD)
-    z = random.gauss(0, CAMERA_POSITION_ERROR_STD)
+    x = random.gauss(0, c.CAMERA_POSITION_ERROR_STD)
+    y = random.gauss(0, c.CAMERA_POSITION_ERROR_STD)
+    z = random.gauss(0, c.CAMERA_POSITION_ERROR_STD)
     return equ.Point3d(x, y, z)
 
 def randomBallPos():
-    x = random.uniform(-BALL_AREA_HALF_LENGTH, BALL_AREA_HALF_LENGTH)
-    y = random.uniform(-BALL_AREA_HALF_WIDTH, BALL_AREA_HALF_WIDTH)
-    z = random.uniform(0, BALL_AREA_HEIGHT)
+    x = random.uniform(-c.BALL_AREA_HALF_LENGTH, c.BALL_AREA_HALF_LENGTH)
+    y = random.uniform(-c.BALL_AREA_HALF_WIDTH, c.BALL_AREA_HALF_WIDTH)
+    z = random.uniform(0, c.BALL_AREA_HEIGHT)
     return equ.Point3d(x, y, z)
 
 def randomBallPosError():
-    x = random.gauss(0, BALL_POSITION_ERROR_STD)
-    y = random.gauss(0, BALL_POSITION_ERROR_STD)
-    z = random.gauss(0, BALL_POSITION_ERROR_STD)
+    x = random.gauss(0, c.BALL_POSITION_ERROR_STD)
+    y = random.gauss(0,c. BALL_POSITION_ERROR_STD)
+    z = random.gauss(0, c.BALL_POSITION_ERROR_STD)
     return equ.Point3d(x, y, z)
 
 def randomInpIdxs() -> List[int]:
-    ignore_area_len = round(random.gauss(INPUT_IGNORE_AREA_MEAN, INPUT_IGNORE_AREA_STD))
-    all = [1] * SIMULATE_INPUT_LEN
+    ignore_area_len = round(random.gauss(c.INPUT_IGNORE_AREA_MEAN, c.INPUT_IGNORE_AREA_STD))
+    all = [1] * c.SIMULATE_INPUT_LEN
     for i in range(ignore_area_len) :
-        beg = random.randrange(0, SIMULATE_INPUT_LEN)
-        for j in range(beg, beg + round(random.gauss(INPUT_IGNORE_WIDTH_MEAN, INPUT_IGNORE_WIDTH_STD))):
-            if j < SIMULATE_INPUT_LEN:
+        beg = random.randrange(0, c.SIMULATE_INPUT_LEN)
+        for j in range(beg, beg + round(random.gauss(c.INPUT_IGNORE_WIDTH_MEAN, c.INPUT_IGNORE_WIDTH_STD))):
+            if j < c.SIMULATE_INPUT_LEN:
                 all[j] = 0
-    return [i for i in range(SIMULATE_INPUT_LEN) if all[i] == 1]
+    return [i for i in range(c.SIMULATE_INPUT_LEN) if all[i] == 1]
 
 
 def configRoom(ax:Axes):
-    lim = CAMERA_AREA_HALF_LENGTH
+    lim = c.CAMERA_AREA_HALF_LENGTH
     ax.set_xlim(-lim,lim)
     ax.set_ylim(-lim,lim)
     ax.set_zlim(0,lim)
@@ -93,7 +93,7 @@ def configRoom(ax:Axes):
     ax.set_zlabel('z')
 
 def drawLine3d(axe:plt.Axes,line:equ.LineEquation3d):
-    points = [line.getPoint({'x':-BALL_AREA_HALF_LENGTH}),line.getPoint({'x':BALL_AREA_HALF_LENGTH})]
+    points = [line.getPoint({'x':-c.BALL_AREA_HALF_LENGTH}),line.getPoint({'x':c.BALL_AREA_HALF_LENGTH})]
     X = [points[0][0],points[1][0]]
     Y = [points[0][1],points[1][1]]
     Z = [points[0][2],points[1][2]]
@@ -148,9 +148,9 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
     p.changeDynamics(sphere, -1, restitution=restitution)
     p.changeDynamics(plane, -1, restitution=restitution)
     p.setRealTimeSimulation(0)
-    p.setTimeStep(stepTime)
+    p.setTimeStep(c.stepTime)
 
-    p.setGravity(0, 0, -G)
+    p.setGravity(0, 0, -c.G)
 
     dataset = dfo.BallDataSet_sync(outputFileName, dataLength)
     for i in tqdm.tqdm(range(int(dataLength/SINGLE_SIMULATE_SAMPLE_LEN))) :
@@ -162,7 +162,7 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
 
         ball_pos = randomBallPos()
 
-        camera_systematic_error = random.gauss(0, SHUTTER_SYSTEMATIC_ERROR_STD)
+        camera_systematic_error = random.gauss(0, c.SHUTTER_SYSTEMATIC_ERROR_STD)
 
         #set ball pos
         p.resetBasePositionAndOrientation(sphere, [ball_pos.x, ball_pos.y, ball_pos.z], startOrientation)
@@ -175,11 +175,11 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
         cam1_data:List[CameraWork] = []
         cam2_data:List[CameraWork] = []
         ans_data:List[BallWork] = []
-        for j in range(SIMULATE_INPUT_LEN):
-            works.append(CameraWork(abs(j/FPS + random.gauss(0,SHUTTER_RANDOM_ERROR_STD)), cam1_pos + cam1_error, (0,j)))
-            works.append(CameraWork(abs(j/FPS + random.gauss(0,SHUTTER_RANDOM_ERROR_STD) + camera_systematic_error), cam2_pos + cam2_error, (1, j)))
-        for j in range(SIMULATE_TEST_LEN):
-            works.append(BallWork(j*CURVE_SHOWING_GAP, (2, j)))
+        for j in range(c.SIMULATE_INPUT_LEN):
+            works.append(CameraWork(abs(j/c.FPS + random.gauss(0,c.SHUTTER_RANDOM_ERROR_STD)), cam1_pos + cam1_error, (0,j)))
+            works.append(CameraWork(abs(j/c.FPS + random.gauss(0,c.SHUTTER_RANDOM_ERROR_STD) + camera_systematic_error), cam2_pos + cam2_error, (1, j)))
+        for j in range(c.SIMULATE_TEST_LEN):
+            works.append(BallWork(j*c.CURVE_SHOWING_GAP, (2, j)))
         works = sorted(works, key = lambda x: x.timestamp)
         nowTimeStamp = 0
         nowWorkIndex = 0
@@ -187,9 +187,9 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
             if works[nowWorkIndex].timestamp > nowTimeStamp:
             #if True:
                 p.stepSimulation()
-                nowTimeStamp += stepTime
+                nowTimeStamp += c.stepTime
                 if GUI:
-                    time.sleep(stepTime)
+                    time.sleep(c.stepTime)
                 continue
 
             #get ball pos
@@ -256,7 +256,7 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
                 dataStruct.curvePoints[k].z = ans_data[k].ball_pos.z
                 dataStruct.curveTimestamps[k] = ans_data[k].timestamp
 
-            normer.norm(dataStruct)
+            c.normer.norm(dataStruct)
             dataset.putData(i*SINGLE_SIMULATE_SAMPLE_LEN+j, dataStruct)
 
 def work_simulate(queue:multiprocessing.Queue, dataLength):
@@ -287,9 +287,9 @@ def work_simulate(queue:multiprocessing.Queue, dataLength):
     p.changeDynamics(sphere, -1, restitution=restitution)
     p.changeDynamics(plane, -1, restitution=restitution)
     p.setRealTimeSimulation(0)
-    p.setTimeStep(stepTime)
+    p.setTimeStep(c.stepTime)
 
-    p.setGravity(0, 0, -G)
+    p.setGravity(0, 0, -c.G)
 
     for i in range(int(dataLength//SINGLE_SIMULATE_SAMPLE_LEN)) :
         cam1_pos = randomCameraPos()
@@ -308,12 +308,12 @@ def work_simulate(queue:multiprocessing.Queue, dataLength):
         cam1_data:List[CameraWork] = []
         cam2_data:List[CameraWork] = []
         ans_data:List[BallWork] = []
-        camera_systematic_error = random.normalvariate(0, SHUTTER_SYSTEMATIC_ERROR_STD)
-        for j in range(SIMULATE_INPUT_LEN):
-            works.append(CameraWork(abs(j/FPS + random.normalvariate(0,SHUTTER_RANDOM_ERROR_STD)), cam1_pos, (0,j)))
-            works.append(CameraWork(abs(j/FPS + random.normalvariate(0,SHUTTER_RANDOM_ERROR_STD) + camera_systematic_error), cam2_pos, (1, j)))
-        for j in range(SIMULATE_TEST_LEN):
-            works.append(BallWork(j*CURVE_SHOWING_GAP, (2, j)))
+        camera_systematic_error = random.normalvariate(0, c.SHUTTER_SYSTEMATIC_ERROR_STD)
+        for j in range(c.SIMULATE_INPUT_LEN):
+            works.append(CameraWork(abs(j/c.FPS + random.normalvariate(0,c.SHUTTER_RANDOM_ERROR_STD)), cam1_pos, (0,j)))
+            works.append(CameraWork(abs(j/c.FPS + random.normalvariate(0,c.SHUTTER_RANDOM_ERROR_STD) + camera_systematic_error), cam2_pos, (1, j)))
+        for j in range(c.SIMULATE_TEST_LEN):
+            works.append(BallWork(j*c.CURVE_SHOWING_GAP, (2, j)))
         works = sorted(works, key = lambda x: x.timestamp)
         nowTimeStamp = 0
 
@@ -323,7 +323,7 @@ def work_simulate(queue:multiprocessing.Queue, dataLength):
             if works[nowWorkIndex].timestamp > nowTimeStamp:
             #if True:
                 p.stepSimulation()
-                nowTimeStamp += stepTime
+                nowTimeStamp += c.stepTime
                 continue
 
             #get ball pos
@@ -374,7 +374,7 @@ def work_simulate(queue:multiprocessing.Queue, dataLength):
                 dataStruct.curvePoints[k].z = ans_data[k].ball_pos.z
                 dataStruct.curveTimestamps[k] = ans_data[k].timestamp
 
-            normer.norm(dataStruct)
+            c.normer.norm(dataStruct)
             bat.append(dataStruct)
         queue.put(bat)
 
@@ -426,10 +426,22 @@ if __name__ == "__main__":
     argparser.add_argument("-n", default="train.bin")
     argparser.add_argument("--num_workers", default=6, type=int)
     argparser.add_argument("--fast", default=False, action="store_true")
+    argparser.add_argument("--mode", default="fit", type=str)
 
     #fetch params
     args = argparser.parse_args()
-    if args.fast:
+
+    if args.mode != "default":
+        if args.mode == "fit":
+            c.set2Fitting()
+            dfo.loadLib()
+        elif args.mode == "ne":
+            c.set2NoError()
+            dfo.loadLib()
+        else:
+            raise Exception("mode error")
+
+    if args.fast and False:
         simulate_fast(dataLength=args.l, num_workers=args.num_workers, outputFileName="ball_simulate_v2/dataset/{}.train.bin".format(args.n))
         simulate_fast(dataLength=10000, num_workers=args.num_workers, outputFileName="ball_simulate_v2/dataset/{}.valid.bin".format(args.n))
         exit()

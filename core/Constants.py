@@ -39,6 +39,7 @@ def set2NoError() :
     global INPUT_IGNORE_AREA_STD
     global INPUT_IGNORE_WIDTH_MEAN
     global INPUT_IGNORE_WIDTH_STD
+    global normer
 
     SHUTTER_RANDOM_ERROR_STD = 0
     SHUTTER_SYSTEMATIC_ERROR_STD = 0
@@ -48,22 +49,26 @@ def set2NoError() :
     INPUT_IGNORE_AREA_STD = 0
     INPUT_IGNORE_WIDTH_MEAN = 0
     INPUT_IGNORE_WIDTH_STD = 0
+    normer = Normer()
 
 def set2Fitting() :
     global SIMULATE_TEST_LEN
+    global normer
 
     SIMULATE_TEST_LEN = 100
+    normer = Normer()
 
 
 class Normer :
-    CAM_MEAN = [0.0, 0.0, CAMERA_AREA_HEIGHT/2]
-    CAM_STD = [CAMERA_AREA_HALF_LENGTH, CAMERA_AREA_HALF_WIDTH, CAMERA_AREA_HEIGHT/2]
-    LINE_MEAN = [0, 0]
-    LINE_STD = [math.pi/2, math.pi/2]
-    BALL_MEAN = [0.0, 0.0, BALL_AREA_HEIGHT/2]
-    BALL_STD = [BALL_AREA_HALF_LENGTH*2, BALL_AREA_HALF_WIDTH*2, BALL_AREA_HEIGHT/2]
-    TIME_MEAN = [CURVE_SHOWING_GAP*SIMULATE_TEST_LEN/2]
-    TIME_STD = [CURVE_SHOWING_GAP*SIMULATE_TEST_LEN/2]
+    def __init__(self) :
+        self.CAM_MEAN = [0.0, 0.0, CAMERA_AREA_HEIGHT/2]
+        self.CAM_STD = [CAMERA_AREA_HALF_LENGTH, CAMERA_AREA_HALF_WIDTH, CAMERA_AREA_HEIGHT/2]
+        self.LINE_MEAN = [0, 0]
+        self.LINE_STD = [math.pi/2, math.pi/2]
+        self.BALL_MEAN = [0.0, 0.0, BALL_AREA_HEIGHT/2]
+        self.BALL_STD = [BALL_AREA_HALF_LENGTH*2, BALL_AREA_HALF_WIDTH*2, BALL_AREA_HEIGHT/2]
+        self.TIME_MEAN = [CURVE_SHOWING_GAP*SIMULATE_TEST_LEN/2]
+        self.TIME_STD = [CURVE_SHOWING_GAP*SIMULATE_TEST_LEN/2]
 
     def norm(self, data) :
         data.inputs[0].camera_x = (data.inputs[0].camera_x - self.CAM_MEAN[0]) / self.CAM_STD[0]

@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch
 from torch.utils.data import DataLoader
-from core.Constants import *
+import core.Constants as c
 import core
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
@@ -381,7 +381,7 @@ def validModel(model_name, weight) :
     print("loss: " + str(loss_sum / len(ball_datas)))
 
 def configRoom(ax:Axes):
-    lim = CAMERA_AREA_HALF_LENGTH
+    lim = c.CAMERA_AREA_HALF_LENGTH
     ax.set_xlim(-lim,lim)
     ax.set_ylim(-lim,lim)
     ax.set_zlim(0,lim)
@@ -390,7 +390,7 @@ def configRoom(ax:Axes):
     ax.set_zlabel('z')
 
 def drawLine3d(axe:plt.Axes,line:equ.LineEquation3d):
-    points = [line.getPoint({'x':-BALL_AREA_HALF_LENGTH}),line.getPoint({'x':BALL_AREA_HALF_LENGTH})]
+    points = [line.getPoint({'x':-c.BALL_AREA_HALF_LENGTH}),line.getPoint({'x':c.BALL_AREA_HALF_LENGTH})]
     X = [points[0][0],points[1][0]]
     Y = [points[0][1],points[1][1]]
     Z = [points[0][2],points[1][2]]
@@ -427,8 +427,8 @@ def saveVisualizeModelOutput(model:ISEFWINNER_BASE, dataset, imgFileName, seed =
 
     print("loss: " + str(criterion(out, ans).item()))
 
-    normer.unnorm_ans_tensor(ans)
-    normer.unnorm_ans_tensor(out)
+    c.normer.unnorm_ans_tensor(ans)
+    c.normer.unnorm_ans_tensor(out)
 
     ax = createRoom()
     plotOutput(ax, out)
@@ -457,8 +457,8 @@ def visualizeModelOutput(model_name, weight, seed = 3):
 
     print("loss: " + str(criterion(out, ans).item()))
 
-    normer.unnorm_ans_tensor(ans)
-    normer.unnorm_ans_tensor(out)
+    c.normer.unnorm_ans_tensor(ans)
+    c.normer.unnorm_ans_tensor(out)
 
     ax = createRoom()
     plotOutput(ax, out)
@@ -485,6 +485,8 @@ if __name__ == "__main__":
     argparser.add_argument('--num_workers', default=2, type=int)
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
     argparser.add_argument('--test', dest='test', action='store_true', default=False)
+    argparser.add_argument('--mode', default="default", type=str)
+
     args = argparser.parse_args()
     # if ball_simulate_v2/dataset not exested, then create
     if not os.path.exists("ball_simulate_v2/dataset"):
@@ -493,5 +495,15 @@ if __name__ == "__main__":
         exit(0)
     if args.test:
         exit(0)
+
+    if args.mode != "default":
+        if args.mode == "fit" :
+            c.set2Fitting()
+            dfo.loadLib()
+        elif args.mode == "ne" :
+            c.set2NoError()
+            dfo.loadLib()
+        else :
+            raise Exception("mode error")
     train(scheduler_step_size=args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w, name=args.n, num_workers=args.num_workers)
     pass
