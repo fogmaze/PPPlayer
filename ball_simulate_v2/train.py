@@ -474,18 +474,17 @@ MODEL_MAP = {
 if __name__ == "__main__":
     argparser = ArgumentParser()
     argparser.add_argument('-lr', default=0.001, type=float)
-    argparser.add_argument('-b', default=1020, type=int)
+    argparser.add_argument('-b', default=64, type=int)
     argparser.add_argument('-e', default=30, type=int)
-    argparser.add_argument('-m', default="large", type=str)
-    argparser.add_argument('-d', default="bimedium_pred", type=str)
+    argparser.add_argument('-m', default="medium", type=str)
+    argparser.add_argument('-d', default="medium_fit", type=str)
     argparser.add_argument('-s', default=8, type=int)
     argparser.add_argument('-w', default=None, type=str)
-    argparser.add_argument('-a', default="default", type=str)
     argparser.add_argument('-n', default="default", type=str)
-    argparser.add_argument('--num_workers', default=2, type=int)
+    argparser.add_argument('--num_workers', default=0, type=int)
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
     argparser.add_argument('--test', dest='test', action='store_true', default=False)
-    argparser.add_argument('--mode', default="default", type=str)
+    argparser.add_argument('--mode', default="fit", type=str)
 
     args = argparser.parse_args()
     # if ball_simulate_v2/dataset not exested, then create
