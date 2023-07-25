@@ -16,15 +16,16 @@ include_directories(cpp_packages/include)
 set(LIB_DIR "cpp_packages/lib")
 
 add_library(dataFileOperator SHARED ball_simulate/dataFileOperator.cpp)
-add_library(dataFileOperatorV2 SHARED ball_simulate_v2/dataFileOperator.cpp)
 
 target_link_directories(dataFileOperator PRIVATE cpp_packages/lib)
 
 # dfo v2
 add_library(dataFileOperatorV2-100-100 SHARED ball_simulate_v2/dataFileOperator.cpp)
 add_library(dataFileOperatorV2-100-250 SHARED ball_simulate_v2/dataFileOperator.cpp)
-target_compile_definitions(dataFileOperatorV2-100-100 PRIVATE -DINPUT_LEN=100 -DTEST_LEN=100)
+add_library(dataFileOperatorV2-40-250 SHARED ball_simulate_v2/dataFileOperator.cpp)
 target_compile_definitions(dataFileOperatorV2-100-250 PRIVATE -DINPUT_LEN=100 -DTEST_LEN=250)
+target_compile_definitions(dataFileOperatorV2-100-250 PRIVATE -DINPUT_LEN=100 -DTEST_LEN=250)
+target_compile_definitions(dataFileOperatorV2-40-250 PRIVATE -DINPUT_LEN=40 -DTEST_LEN=250)
 
 
 

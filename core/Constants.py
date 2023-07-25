@@ -58,6 +58,13 @@ def set2Fitting() :
     SIMULATE_TEST_LEN = 100
     normer = Normer()
 
+def set2Predict() :
+    global SIMULATE_INPUT_LEN
+    global normer
+
+    SIMULATE_INPUT_LEN = 40
+    normer = Normer()
+
 
 class Normer :
     def __init__(self) :
@@ -121,5 +128,13 @@ class Normer :
             data[i][0] = data[i][0] * self.BALL_STD[0] + self.BALL_MEAN[0]
             data[i][1] = data[i][1] * self.BALL_STD[1] + self.BALL_MEAN[1]
             data[i][2] = data[i][2] * self.BALL_STD[2] + self.BALL_MEAN[2]
+
+    def unorm_input_tensor(self, data) :
+        for i in range(len(data)) :
+            data[i][0] = data[i][0] * self.CAM_STD[0] + self.CAM_MEAN[0]
+            data[i][1] = data[i][1] * self.CAM_STD[1] + self.CAM_MEAN[1]
+            data[i][2] = data[i][2] * self.CAM_STD[2] + self.CAM_MEAN[2]
+            data[i][3] = data[i][3] * self.LINE_STD[0] + self.LINE_MEAN[0]
+            data[i][4] = data[i][4] * self.LINE_STD[1] + self.LINE_MEAN[1]
 
 normer = Normer()

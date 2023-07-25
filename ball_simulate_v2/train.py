@@ -389,12 +389,12 @@ def configRoom(ax:Axes):
     ax.set_ylabel('y')
     ax.set_zlabel('z')
 
-def drawLine3d(axe:plt.Axes,line:equ.LineEquation3d):
+def drawLine3d(axe:plt.Axes,line:equ.LineEquation3d, color="r", label=None):
     points = [line.getPoint({'x':-c.BALL_AREA_HALF_LENGTH}),line.getPoint({'x':c.BALL_AREA_HALF_LENGTH})]
     X = [points[0][0],points[1][0]]
     Y = [points[0][1],points[1][1]]
     Z = [points[0][2],points[1][2]]
-    axe.plot(X,Y,Z)
+    return axe.plot(X,Y,Z, color=color, label=label)
 
 def createRoom()->Axes:
     ax = plt.axes(projection='3d')
@@ -405,12 +405,12 @@ def cleenRoom(axe:plt.Axes):
     axe.cla()
     configRoom(ax=axe)
 
-def plotOutput(ax, out, color = 'r'):
+def plotOutput(ax, out, color = 'r', label=None):
     o = out.view(-1,3)
+    obj = None
     for p in o:
-        ax.scatter(p[0].item(),p[1].item(),p[2].item(),c=color)
-
-
+        obj = ax.scatter(p[0].item(),p[1].item(),p[2].item(),c=color, label=label)
+    return obj
 
 def saveVisualizeModelOutput(model:ISEFWINNER_BASE, dataset, imgFileName, seed = 3):
     model.eval()
@@ -437,6 +437,16 @@ def saveVisualizeModelOutput(model:ISEFWINNER_BASE, dataset, imgFileName, seed =
     plt.savefig(imgFileName)
     plt.close()
 
+def drawLineSeq(axe:plt.Axes, seq:torch.Tensor, seq_len:torch.Tensor, color="r") :
+    lines_t = seq.view(-1, 5)
+    obj = None
+    for i in range(seq_len.view(1)[0]) :
+        line = equ.LineEquation3d(None, None)
+        line.setByPointOblique(equ.Point3d(lines_t[i][0], lines_t[i][1], lines_t[i][2]), lines_t[i][3], lines_t[i][4])
+        obj = drawLine3d(axe, line, color=color)
+    return obj
+
+
 def visualizeModelOutput(model_name, weight, seed = 3):
     model = MODEL_MAP[model_name](device='cpu')
     batch_size = 1
@@ -445,7 +455,7 @@ def visualizeModelOutput(model_name, weight, seed = 3):
     model.eval()
 
     criterion = nn.MSELoss()
-    ball_datas = dfo.BallDataSet("ball_simulate_v2/dataset/medium.valid.bin", device='cpu')
+    ball_datas = dfo.BallDataSet("ball_simulate_v2/dataset/medium_pred.valid.bin", device='cpu')
 
     r, r_len, l, l_len, t, ans = ball_datas[seed]
     r = r.view(1, -1, 5)
@@ -454,15 +464,26 @@ def visualizeModelOutput(model_name, weight, seed = 3):
     out = model(r, r_len, l, l_len, t).view(-1, 3)
     ans = ans.view(1, -1, 3)
     ans = ans.view(-1, 3)
+    r = r.view(-1, 5)
+    l = l.view(-1, 5)
 
     print("loss: " + str(criterion(out, ans).item()))
 
     c.normer.unnorm_ans_tensor(ans)
     c.normer.unnorm_ans_tensor(out)
+    c.normer.unorm_input_tensor(r)
+    c.normer.unorm_input_tensor(l)
 
     ax = createRoom()
-    plotOutput(ax, out)
-    plotOutput(ax, ans, color='b')
+    line_out = plotOutput(ax, out)
+    line_ans = plotOutput(ax, ans, color='b')
+
+    seq_r, = drawLineSeq(ax, r, r_len, color='g')
+    seq_l, = drawLineSeq(ax, l, l_len, color='y')
+
+    # add legend
+    ax.legend([line_out, line_ans, seq_r, seq_l], ["output", "answer", "right", "left"])
+
     plt.show()
     
 MODEL_MAP = {
@@ -470,6 +491,12 @@ MODEL_MAP = {
     "medium":ISEFWINNER_MEDIUM,
     "large":ISEFWINNER_LARGE
 }
+
+
+
+for i in range(0, 100000, 37):
+    visualizeModelOutput("medium", "ball_simulate_v2/model_saves/medium_pred/epoch_29/weight.pt", seed=i)
+exit()
 
 if __name__ == "__main__":
     argparser = ArgumentParser()

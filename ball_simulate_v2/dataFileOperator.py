@@ -84,7 +84,7 @@ class BallDataSet(torch.utils.data.Dataset) :
             #cerate file
             print("create file")
             if dataLength == None:
-                raise Exception("dataLength can't be None! or filen not found")
+                raise Exception("dataLength can't be None! or file not found")
             self.data = lib.createHeader(dataLength)
         elif dataLength != None:
             print("create file")

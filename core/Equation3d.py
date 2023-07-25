@@ -47,6 +47,11 @@ class LineEquation2d :
         self.a = (y1 - y2) / (x1 - x2)
         self.b = (x2 * y1 - x1 * y2) / (x2 - x1)
     def __init__(self, p1,  p2) :
+        if p1 == None or p2 == None:
+            self.a = 0
+            self.b = 0
+            self.c = 1
+            return
         if (p1.x == p2.x) :
             # c = x1;
             self.a = -1
@@ -80,6 +85,11 @@ class LineEquation3d :
     line_xy = None
     line_xz = None
     def __init__(self, point1:Point3d,  point2:Point3d):
+        if point1 == None or point2 == None:
+            self.line_xy = LineEquation2d(None, None)
+            self.line_xz = LineEquation2d(None, None)
+            self.poi_buf = Point()
+            return
         self.line_xy = LineEquation2d(Point(point1.x, point1.y), Point(point2.x, point2.y))
         self.line_xz = LineEquation2d(Point(point1.x, point1.z), Point(point2.x, point2.z))
         self.poi_buf = Point()
@@ -92,6 +102,11 @@ class LineEquation3d :
     def set(self, point1,  point2) :
         self.line_xy.set(point1.x, point1.y, point2.x, point2.y)
         self.line_xz.set(point1.x, point1.z, point2.x, point2.z)
+
+    def setByPointOblique(self, point:Point3d, rad_xy, rad_xz) :
+        self.line_xy.set(point.x, point.y, point.x + math.cos(rad_xy), point.y + math.sin(rad_xy))
+        self.line_xz.set(point.x, point.z, point.x + math.cos(rad_xz), point.z + math.sin(rad_xz))
+
     def getPoint(self, val:dict) :
         result = [None,None,None]
         if 'x' in val:

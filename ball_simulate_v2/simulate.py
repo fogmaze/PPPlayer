@@ -438,6 +438,9 @@ if __name__ == "__main__":
         elif args.mode == "ne":
             c.set2NoError()
             dfo.loadLib()
+        elif args.mode == "predict":
+            c.set2Predict()
+            dfo.loadLib()
         else:
             raise Exception("mode error")
 
