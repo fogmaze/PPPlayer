@@ -189,7 +189,11 @@ def test_homography(img) :
             print("No homography matrix press u to update")
         key = cv2.waitKey(10)
         if key == ord('u') :
-            homography_matrix = find_homography_matrix_to_apriltag(img)
+            detector = Detector()
+            detections = detector.detect(img)
+            if len(detections) == 1 :
+                homography_matrix = detections[0].homography
+            #homography_matrix = find_homography_matrix_to_apriltag(img)
             if homography_matrix is None :
                 print("No tag detected")
         elif key == ord('t') :
@@ -210,6 +214,8 @@ def detectProcess(source, save_name) :
 
 if __name__ == "__main__" :
     img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
+    test_homography(img)
+
     dect = Detection(source="ball_detection/result/20230718-2/all.mp4", save_name="718-2-1")
     dect.runDetevtion(img)
 
