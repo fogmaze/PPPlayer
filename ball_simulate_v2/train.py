@@ -424,15 +424,26 @@ def saveVisualizeModelOutput(model:ISEFWINNER_BASE, dataset, imgFileName, seed =
     ans = ans.view(1, -1, 3)
     out = model(r, r_len, l, l_len, t).view(-1, 3)
     ans = ans.view(-1, 3)
+    r = r.view(-1, 5)
+    l = l.view(-1, 5)
 
-    print("loss: " + str(criterion(out, ans).item()))
+    loss = criterion(out, ans).item()
 
     c.normer.unnorm_ans_tensor(ans)
     c.normer.unnorm_ans_tensor(out)
+    c.normer.unorm_input_tensor(r)
+    c.normer.unorm_input_tensor(l)
 
     ax = createRoom()
-    plotOutput(ax, out)
-    plotOutput(ax, ans, color='b')
+    line_out = plotOutput(ax, out, color='r')
+    line_ans = plotOutput(ax, ans, color='b')
+
+    seq_r, = drawLineSeq(ax, r, r_len, color='g')
+    seq_l, = drawLineSeq(ax, l, l_len, color='y')
+
+    # add legend
+    ax.legend([line_out, line_ans, seq_r, seq_l], ["output", "answer", "right", "left"])
+    plt.gcf().text(0.02, 0.02,s="MSE loss: " + str(loss), size=15)
 
     plt.savefig(imgFileName)
     plt.close()
@@ -449,7 +460,6 @@ def drawLineSeq(axe:plt.Axes, seq:torch.Tensor, seq_len:torch.Tensor, color="r")
 
 def visualizeModelOutput(model_name, weight, seed = 3):
     model = MODEL_MAP[model_name](device='cpu')
-    batch_size = 1
 
     model.load_state_dict(torch.load(weight))
     model.eval()
@@ -467,7 +477,7 @@ def visualizeModelOutput(model_name, weight, seed = 3):
     r = r.view(-1, 5)
     l = l.view(-1, 5)
 
-    print("loss: " + str(criterion(out, ans).item()))
+    loss = criterion(out, ans).item()
 
     c.normer.unnorm_ans_tensor(ans)
     c.normer.unnorm_ans_tensor(out)
@@ -475,7 +485,7 @@ def visualizeModelOutput(model_name, weight, seed = 3):
     c.normer.unorm_input_tensor(l)
 
     ax = createRoom()
-    line_out = plotOutput(ax, out)
+    line_out = plotOutput(ax, out, color='r')
     line_ans = plotOutput(ax, ans, color='b')
 
     seq_r, = drawLineSeq(ax, r, r_len, color='g')
@@ -483,6 +493,7 @@ def visualizeModelOutput(model_name, weight, seed = 3):
 
     # add legend
     ax.legend([line_out, line_ans, seq_r, seq_l], ["output", "answer", "right", "left"])
+    plt.gcf().text(0.02, 0.02,s="MSE loss: " + str(loss), size=15)
 
     plt.show()
     
@@ -492,11 +503,6 @@ MODEL_MAP = {
     "large":ISEFWINNER_LARGE
 }
 
-
-
-for i in range(0, 100000, 37):
-    visualizeModelOutput("medium", "ball_simulate_v2/model_saves/medium_pred/epoch_29/weight.pt", seed=i)
-exit()
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
@@ -528,6 +534,9 @@ if __name__ == "__main__":
             dfo.loadLib()
         elif args.mode == "ne" :
             c.set2NoError()
+            dfo.loadLib()
+        elif args.mode == "predict" :
+            c.set2Predict()
             dfo.loadLib()
         else :
             raise Exception("mode error")
