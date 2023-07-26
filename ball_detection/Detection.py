@@ -182,6 +182,7 @@ class Detection :
 
 def test_homography(img) :
     homography_matrix = None
+    homography_matrix_inv = None
     while True :
 
         cv2.imshow("frame", img)
@@ -193,14 +194,22 @@ def test_homography(img) :
             detections = detector.detect(img)
             if len(detections) == 1 :
                 homography_matrix = detections[0].homography
+                homography_matrix_inv = np.linalg.inv(detections[0].homography)
             #homography_matrix = find_homography_matrix_to_apriltag(img)
             if homography_matrix is None :
                 print("No tag detected")
         elif key == ord('t') :
             inp = input("input pixel point : ").split()
             if len(inp) == 2 and homography_matrix is not None:
-                pxp = np.array([int(inp[0]), int(inp[1]), 1])
+                pxp = np.float128([float(inp[0]), float(inp[1]), 1])
                 pxp = np.matmul(homography_matrix, pxp)
+                pxp = np.float64([pxp[0]/pxp[2], pxp[1]/pxp[2]])
+                print(pxp)
+        elif key == ord('r') :
+            inp = input("input pixel point : ").split()
+            if len(inp) == 2 and homography_matrix is not None:
+                pxp = np.float128([float(inp[0]), float(inp[1]), 1])
+                pxp = np.matmul(homography_matrix_inv, pxp)
                 pxp = np.float64([pxp[0]/pxp[2], pxp[1]/pxp[2]])
                 print(pxp)
         elif key == ord('q') :
@@ -214,7 +223,6 @@ def detectProcess(source, save_name) :
 
 if __name__ == "__main__" :
     img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
-    test_homography(img)
 
     dect = Detection(source="ball_detection/result/20230718-2/all.mp4", save_name="718-2-1")
     dect.runDetevtion(img)

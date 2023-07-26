@@ -324,11 +324,14 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
             dirsavename = model_save_dir + "epoch_" + str(e) + "/"
             os.makedirs(dirsavename)
             torch.save(model.state_dict(), dirsavename + "weight.pt")
-            saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output1.png", seed=1)
-            saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output2.png", seed=100)
-            saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output3.png", seed=200)
-            saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output4.png", seed=300)
-            saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output5.png", seed=400)
+            try:
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output1.png", seed=1)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output2.png", seed=100)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output3.png", seed=200)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output4.png", seed=300)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output5.png", seed=400)
+            except:
+                pass
             model.reset_hidden_cell(batch_size=batch_size)
 
             scheduler.step()
@@ -422,10 +425,12 @@ def saveVisualizeModelOutput(model:ISEFWINNER_BASE, dataset, imgFileName, seed =
     l = l.view(1, -1, 5)
     t = t.view(1, -1)
     ans = ans.view(1, -1, 3)
-    out = model(r, r_len, l, l_len, t).view(-1, 3)
-    ans = ans.view(-1, 3)
-    r = r.view(-1, 5)
-    l = l.view(-1, 5)
+    out = model(r, r_len, l, l_len, t).view(-1, 3).cpu()
+    ans = ans.view(-1, 3).cpu()
+    r = r.view(-1, 5).cpu()
+    l = l.view(-1, 5).cpu()
+    r_len = r_len.view(1).cpu()
+    l_len = l_len.view(1).cpu()
 
     loss = criterion(out, ans).item()
 
