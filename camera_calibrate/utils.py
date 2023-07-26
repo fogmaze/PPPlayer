@@ -41,12 +41,16 @@ def takePicture():
 def calculateCameraPosition(cameraMatrix:np.ndarray, frame, tagSize=APRILTAG_SIZE) :
     detector = Detector()
     try:
-        results = detector.detect(frame, estimate_tag_pose=True, camera_params=(cameraMatrix[0][0],cameraMatrix[1][1],cameraMatrix[0][2],cameraMatrix[1][2]), tag_size=tagSize)
+        results = detector.detect(frame, 
+                                  estimate_tag_pose=True, 
+                                  camera_params=(cameraMatrix[0][0],cameraMatrix[1][1],cameraMatrix[0][2],cameraMatrix[1][2]),
+                                  tag_size=tagSize)
         if len(results) == 1:
             res:Detection = results[0]
-            t = np.float128([res.pose_t[0][0], res.pose_t[1][0], res.pose_t[2][0]])
-            re = np.matmul(res.pose_R.T, t)
-            return equ.Point3d(-re[0], re[2], re[1])
+            position = np.matmul(np.linalg.inv(res.pose_R), -res.pose_t)
+            return equ.Point3d(position[0][0], -position[2][0], -position[1][0])
+        else:
+            return None
     except:
         return None
 
@@ -88,19 +92,16 @@ def runExerment() :
             writer.writerow(res_z)
             
 if __name__ == "__main__" :
-    im_hd = calib.load_calibration('calibration_hd')
-    print(im_hd)
-    getCameraPosition_realTime(im_hd)
     #runExerment()
-    #cameraMatrix = pickle.load(open('calibration1_old', 'rb'))
+    cameraMatrix = pickle.load(open('calibration', 'rb'))
     #takePicture()
-    #img = cv2.imread("718-2.jpg", cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread("718-2.jpg", cv2.IMREAD_GRAYSCALE)
     #dec = Detector()
     #d = dec.detect(img, estimate_tag_pose=True, camera_params=(cameraMatrix[0][0],cameraMatrix[1][1],cameraMatrix[0][2],cameraMatrix[1][2]), tag_size=29.8)
     #cv2.imshow('frame', img)
     #cv2.waitKey(0)
     
-    #print(calculateCameraPosition(cameraMatrix, img).to_str())
+    print(calculateCameraPosition(cameraMatrix, img).to_str())
 
 
     #getCameraPosition_realTime(cameraMatrix)
