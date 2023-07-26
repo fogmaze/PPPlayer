@@ -76,7 +76,6 @@ def loadLib():
     lib.putData_sync.argtypes = [c_char_p, c_int, DataStruct]
     lib.putData_sync.restype = None
 
-loadLib()
 
 class BallDataSet(torch.utils.data.Dataset) :
     def __init__(self, fileName, dataLength = None, device = "cuda:0"):
@@ -209,9 +208,8 @@ def testLoadData():
     print(a[1].curveTimestamps[1])
 if __name__ == "__main__":
     c.set2Fitting()
-    loadLib()
     lib.main()
-    ds = BallDataSet_sync("ball_simulate_v2/dataset/fit_tiny.train.bin")
+    ds = BallDataSet_sync("ball_simulate_v2/dataset/medium_fit.train.bin")
     a = ds[0]
     b = ds[1]
 
