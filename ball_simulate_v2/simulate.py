@@ -1,4 +1,5 @@
 import time
+import shutil
 import argparse
 import pybullet as p
 import tqdm
@@ -417,6 +418,14 @@ def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"
     print("simulate done")
 
 
+def merge(a, b, out) :
+    A = dfo.BallDataSet_sync(a, device="cpu")
+    B = dfo.BallDataSet_sync(b, device="cpu")
+    C = dfo.BallDataSet_sync(out, dataLength=A.length+B.length, device="cpu")
+    for i in tqdm.tqdm(range(A.length)):
+        C.putData(i, A[i])
+    for i in tqdm.tqdm(range(B.length)):
+        C.putData(A.length+i, B[i])
 
 if __name__ == "__main__":
     #print(calculateMeanStd("train.bin"))
@@ -427,9 +436,21 @@ if __name__ == "__main__":
     argparser.add_argument("--num_workers", default=6, type=int)
     argparser.add_argument("--fast", default=False, action="store_true")
     argparser.add_argument("--mode", default="ne", type=str)
+    argparser.add_argument("--merge", default=False, action="store_true")
+    argparser.add_argument("--merge_a", default="train.bin", type=str)
+    argparser.add_argument("--merge_b", default="train.bin", type=str)
 
     #fetch params
     args = argparser.parse_args()
+
+    if args.merge:
+        merge("ball_simulate_v2/dataset/{}.train.bin".format(args.merge_a),
+               "ball_simulate_v2/dataset/{}.train.bin".format(args.merge_b),
+               "ball_simulate_v2/dataset/{}.train.bin".format(args.n))
+        # copy valid using shutil.copyfile
+        shutil.copyfile("ball_simulate_v2/dataset/{}.valid.bin".format(args.merge_a),
+                        "ball_simulate_v2/dataset/{}.valid.bin".format(args.n))
+        exit()
 
     if args.mode != "default":
         if args.mode == "fit":
