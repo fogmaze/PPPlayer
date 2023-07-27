@@ -38,7 +38,7 @@ class ColorRange :
         self.lower = np.array([h_min, s_min, v_min])
 
 
-    def runColorRange(self, cam1, cam2) :
+    def runColorRange_video(self, cam) :
         cv2.namedWindow("ColorRangeSetting")
 
         cv2.createTrackbar("Hue Min", "ColorRangeSetting", self.lower[0], 179, empty)
@@ -49,28 +49,22 @@ class ColorRange :
         cv2.createTrackbar("Val Max", "ColorRangeSetting", self.upper[2], 255, empty)
 
         while True :
-            ret1, frame1 = cam1.read()
-            ret2, frame2 = cam2.read()
+            ret, frame = cam.read()
 
-            if ret1 and ret2:
+            if ret :
                 self.getParameters(self.lower[0], self.upper[0], self.lower[1], self.upper[1], self.lower[2], self.upper[2])
 
-                hsv1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2HSV)
-                hsv2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2HSV)
-                mask1 = cv2.inRange(hsv1, self.lower, self.upper)
-                mask2 = cv2.inRange(hsv2, self.lower, self.upper)
+                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                mask = cv2.inRange(hsv, self.lower, self.upper)
 
-                cv2.putText(frame1, "Camera 1", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 128, 255), 2)
-                cv2.putText(frame2, "Camera 2", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 128, 255), 2)
-                cv2.putText(mask1, "Mask Camera 1", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 239, 97), 2)
-                cv2.putText(mask2, "Mask Camera 2", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 239, 97), 2)
+                cv2.putText(frame, "Camera", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 128, 255), 2)
+                cv2.putText(mask, "Mask Camera", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 239, 97), 2)
             
 
-                combined1 = cv2.hconcat([frame1, frame2])
-                combined2 = cv2.hconcat([mask1, mask2])
+                combined = cv2.hconcat([frame, mask])
                 
-                cv2.imshow("ColorRangeSetting", combined2)
-                #cv2.imshow("ColorRangeMask", combined1)
+                cv2.imshow("ColorRangeSetting", combined)
+                #cv2.imshow("ColorRangeMask", combined)
             else :
                 break
 
@@ -80,13 +74,30 @@ class ColorRange :
             
         cv2.destroyAllWindows()
 
+    def runColorRange_image(self, img) :
+        self.getParameters(self.lower[0], self.upper[0], self.lower[1], self.upper[1], self.lower[2], self.upper[2])
+
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, self.lower, self.upper)
+
+        cv2.putText(img, "Image", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 128, 255), 2)
+        cv2.putText(mask, "Mask Image", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 239, 97), 2)
+            
+
+        combined = cv2.hconcat([img, mask])
+
+        cv2.imshow("ColorRangeSetting", combined)
+        if cv2.waitKey(0) == ord(" ") :
+            cv2.destroyAllWindows()
+
 
 
 if __name__ == "__main__" :
-    cam1 = cv2.VideoCapture(0)
-    cam2 = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(0)
+    #img = cv2.imread("ball_sample.jpg")
 
     cr = load("color_range")
     
-    cr.runColorRange(cam1, cam2)
+    cr.runColorRange_video(cam)
+    #cr.runColorRange_image(img)
     save("color_range", cr)
