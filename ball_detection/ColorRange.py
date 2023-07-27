@@ -57,10 +57,10 @@ class ColorRange :
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
                 mask = cv2.inRange(hsv, self.lower, self.upper)
 
-                cv2.putText(frame, "Camera", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 128, 255), 2)
-                cv2.putText(mask, "Mask Camera", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 239, 97), 2)
+                mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+                cv2.putText(mask, "Mask Camera", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                cv2.putText(frame, "Camera", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
             
-
                 combined = cv2.hconcat([frame, mask])
                 
                 cv2.imshow("ColorRangeSetting", combined)
@@ -75,29 +75,38 @@ class ColorRange :
         cv2.destroyAllWindows()
 
     def runColorRange_image(self, img) :
-        self.getParameters(self.lower[0], self.upper[0], self.lower[1], self.upper[1], self.lower[2], self.upper[2])
+        cv2.namedWindow("ColorRangeSetting")
 
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(hsv, self.lower, self.upper)
+        cv2.createTrackbar("Hue Min", "ColorRangeSetting", self.lower[0], 179, empty)
+        cv2.createTrackbar("Hue Max", "ColorRangeSetting", self.upper[0], 179, empty)
+        cv2.createTrackbar("Sat Min", "ColorRangeSetting", self.lower[1], 255, empty)
+        cv2.createTrackbar("Sat Max", "ColorRangeSetting", self.upper[1], 255, empty)
+        cv2.createTrackbar("Val Min", "ColorRangeSetting", self.lower[2], 255, empty)
+        cv2.createTrackbar("Val Max", "ColorRangeSetting", self.upper[2], 255, empty)
 
-        cv2.putText(img, "Image", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 128, 255), 2)
-        cv2.putText(mask, "Mask Image", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 239, 97), 2)
-            
+        while True :    
+            self.getParameters(self.lower[0], self.upper[0], self.lower[1], self.upper[1], self.lower[2], self.upper[2])
 
-        combined = cv2.hconcat([img, mask])
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            mask = cv2.inRange(hsv, self.lower, self.upper)
 
-        cv2.imshow("ColorRangeSetting", combined)
-        if cv2.waitKey(0) == ord(" ") :
-            cv2.destroyAllWindows()
+            mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+            cv2.putText(mask, "Mask Image", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            cv2.putText(img, "Image", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+            combined = cv2.hconcat([img, mask])
+
+            cv2.imshow("ColorRangeSetting", combined)
+            if cv2.waitKey(1) == ord(" ") :
+                break
 
 
 
 if __name__ == "__main__" :
-    cam = cv2.VideoCapture(0)
-    #img = cv2.imread("ball_sample.jpg")
+    #cam = cv2.VideoCapture(0)
+    img = cv2.imread("ball_sample.jpg")
 
     cr = load("color_range")
     
-    cr.runColorRange_video(cam)
-    #cr.runColorRange_image(img)
+    #cr.runColorRange_video(cam)
+    cr.runColorRange_image(img)
     save("color_range", cr)
