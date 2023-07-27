@@ -422,11 +422,11 @@ if __name__ == "__main__":
     #print(calculateMeanStd("train.bin"))
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--GUI", default=False, action="store_true")
-    argparser.add_argument("-l", default=10, type=int)
-    argparser.add_argument("-n", default="train.bin")
+    argparser.add_argument("-l", default=1000, type=int)
+    argparser.add_argument("-n", default="test")
     argparser.add_argument("--num_workers", default=6, type=int)
     argparser.add_argument("--fast", default=False, action="store_true")
-    argparser.add_argument("--mode", default="fit", type=str)
+    argparser.add_argument("--mode", default="ne", type=str)
 
     #fetch params
     args = argparser.parse_args()

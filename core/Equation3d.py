@@ -30,6 +30,8 @@ class Point3d :
         return [self.x,self.y,self.z]
     def to_str(self) :
         return "x:" + str(self.x) + ' y:' + str(self.y) + ' z:' + str(self.z) 
+    def to_tuple(self):
+        return (self.x,self.y,self.z)
 
 class LineEquation2d :
     a = None

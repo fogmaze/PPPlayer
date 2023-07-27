@@ -39,6 +39,8 @@ def set2NoError() :
     global INPUT_IGNORE_AREA_STD
     global INPUT_IGNORE_WIDTH_MEAN
     global INPUT_IGNORE_WIDTH_STD
+    global SIMULATE_INPUT_LEN
+    global SIMULATE_TEST_LEN
     global normer
 
     SHUTTER_RANDOM_ERROR_STD = 0
@@ -49,6 +51,8 @@ def set2NoError() :
     INPUT_IGNORE_AREA_STD = 0
     INPUT_IGNORE_WIDTH_MEAN = 0
     INPUT_IGNORE_WIDTH_STD = 0
+    SIMULATE_INPUT_LEN = 40
+    SIMULATE_TEST_LEN = 250
     normer = Normer()
 
 def set2Fitting() :

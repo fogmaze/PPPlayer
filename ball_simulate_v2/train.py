@@ -42,50 +42,38 @@ class ISEFWINNER_BASE(nn.Module):
         self.llstm_hidden_cell = (torch.zeros(self.lstm_num_layers, batch_size, self.lstm_out, device=self.device), torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device))
         self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers, batch_size, self.lstm_out, device=self.device), torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device))
 
-    #input shape:(batch_size, seq_len, input_size)
     def forward(self, X1:torch.Tensor, X1_len:torch.Tensor, X2:torch.Tensor, X2_len:torch.Tensor, T:torch.Tensor):
-            
         x1_batch_size = len(X1)
         x2_batch_size = len(X2)
-
+        # 輸入全連接層1 
         X1 = self.mlp1(X1.view(-1,self.input_size)).view(x1_batch_size, -1, self.mlp1_out)
         X2 = self.mlp1(X2.view(-1,self.input_size)).view(x2_batch_size, -1, self.mlp1_out)
-        #shape: (batch_size, seq_len, input_size)
 
+        # 輸入LSTM
         X1 = X1.transpose(0, 1)
         X2 = X2.transpose(0, 1)
-        #shape: (seq_len, batch_size, input_size)
-
         X1_seq, self.llstm_hidden_cell = self.lstm(X1, self.llstm_hidden_cell)
         X2_seq, self.rlstm_hidden_cell = self.lstm(X2, self.rlstm_hidden_cell)
-        #shape: (seq_len, batch_size, input_size)
 
+        # 擷取LSTM最後一次的輸出 
         X1_len_ind = X1_len - 1
         X2_len_ind = X2_len - 1
-
         X1_ind = X1_len_ind.view(1, x1_batch_size, 1).expand(1, x1_batch_size, self.lstm_out)
         X2_ind = X2_len_ind.view(1, x2_batch_size, 1).expand(1, x2_batch_size, self.lstm_out)
-
         X1 = X1_seq.gather(0, X1_ind).view(1, x1_batch_size, self.lstm_out)
         X2 = X2_seq.gather(0, X2_ind).view(1, x2_batch_size, self.lstm_out)
         
-        #shape: (1, batch_size, input_size)
+        # 合併前段模型輸出 
         X1 = X1.transpose(0, 1)
         X2 = X2.transpose(0, 1)
-        #shape: (batch_size, 1, input_size)
-
         X = torch.cat((X1, X2), 2)
 
-        #shape of T: batch_size, out_seq_len
+        # 合併的結果複製k份，k為輸入T的長度 
         X = X.repeat(1, T.shape[1], 1)
-        #shape: (batch_size, out_seq_len, input_size)
-
         X = torch.cat((X, T.view(x1_batch_size, T.shape[1], 1)), 2)
-        #shape: (batch_size, out_seq_len, input_size + 1)
 
+        # 輸入全連接層2
         res = self.mlp2(X.view(-1, self.lstm_out * 2 + 1)).view(x1_batch_size, T.shape[1], self.output_size)
-
-        # out shape : (batch_size, seq_len, output_size)
         return res
 
 class ISEFWINNER_SMALL(ISEFWINNER_BASE):
@@ -179,6 +167,56 @@ class ISEFWINNER_MEDIUM(ISEFWINNER_BASE):
             nn.Linear(mlp2_l4_out, self.output_size)
         )
 
+class ISEFWINNER_BIG(ISEFWINNER_BASE):
+    def __init__(self,device = "cuda:0"):
+        self.device = device
+
+        mlp1_l1_out = 140
+        mlp1_l2_out = 120
+        mlp1_l3_out = 100
+        mlp1_l4_out = 90
+
+        mlp2_l1_out = 90
+        mlp2_l2_out = 90
+        mlp2_l3_out = 90
+        mlp2_l4_out = 60
+        mlp2_l5_out = 60
+
+        self.mlp1_out = mlp1_l4_out
+        self.mlp2_out = self.output_size
+        self.lstm_out = 70
+        self.lstm_num_layers = 7
+
+        batch_size = 1
+        super().__init__()
+        self.mlp1 = nn.Sequential(
+            nn.Linear(self.input_size,mlp1_l1_out),
+            nn.ReLU(),
+            nn.Linear(mlp1_l1_out, mlp1_l2_out),
+            nn.Tanh(),
+            nn.Linear(mlp1_l2_out, mlp1_l3_out),
+            nn.Tanh(),
+            nn.Linear(mlp1_l3_out, mlp1_l4_out),
+        )
+        self.lstm = nn.LSTM(input_size = self.mlp1_out, hidden_size=self.lstm_out, num_layers = self.lstm_num_layers)
+
+        self.llstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
+        self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
+        
+        self.mlp2 = nn.Sequential(
+            nn.Linear(self.lstm_out * 2 + 1, mlp2_l1_out),
+            nn.ReLU(),
+            nn.Linear(mlp2_l1_out, mlp2_l2_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l2_out, mlp2_l3_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l3_out, mlp2_l4_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l4_out, mlp2_l5_out),
+            nn.Tanh(),
+            nn.Linear(mlp2_l5_out, self.output_size)
+        )
+
 class ISEFWINNER_LARGE(ISEFWINNER_BASE):
     def __init__(self,device = "cuda:0"):
         self.device = device
@@ -236,7 +274,6 @@ class ISEFWINNER_LARGE(ISEFWINNER_BASE):
 def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, dataset = "",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2):
     model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
     os.makedirs(model_save_dir)
-    torch.multiprocessing.set_start_method('spawn')
     train_logger = logging.getLogger('training')
     train_logger.setLevel(logging.DEBUG)
     console_handler = logging.StreamHandler()
@@ -366,22 +403,24 @@ def exportModel(model_name:str, weight:str):
     model_script.save('model_final.pth')
 
 
-def validModel(model_name, weight) :
-    model = MODEL_MAP[model_name](device='cuda:0')
+def validModel(model_name, weight, dataset, batch_size=64) :
+    model = MODEL_MAP[model_name](device='cpu')
     print("validating: " + weight)
-    model.cuda()
     model.load_state_dict(torch.load(weight))
     model.eval()
-    criterion = nn.MSELoss().cuda()
-    ball_datas = dfo.BallDataSet("ball_simulate_v2/medium.valid.bin",device='cuda:0')
-    loader = DataLoader(ball_datas,1)
+    criterion = nn.MSELoss()
+    ball_datas = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".valid.bin"), device='cpu')
+    loader = DataLoader(ball_datas, batch_size=batch_size)
     loss_sum = 0
-    for X1,x1_len,X2,x2_len,labels in tqdm.tqdm(loader):
-        model.reset_hidden_cell(batch_size=1)
-        out = model(X1,x1_len,X2,x2_len)
-        loss = criterion(out, labels.view(out.shape[0], -1))
+    i = 0
+    for r, r_len, l, l_len, t, ans in tqdm.tqdm(loader):
+        model.reset_hidden_cell(batch_size=t.shape[0])
+        out = model(r, r_len, l, l_len, t)
+        loss = criterion(out, ans)
         loss_sum += loss.item()
-    print("loss: " + str(loss_sum / len(ball_datas)))
+        i += 1
+    print("loss: " + str(loss_sum / i))
+    return loss_sum / i
 
 def configRoom(ax:Axes):
     lim = c.CAMERA_AREA_HALF_LENGTH
@@ -393,7 +432,7 @@ def configRoom(ax:Axes):
     ax.set_zlabel('z')
 
 def drawLine3d(axe:plt.Axes,line:equ.LineEquation3d, color="r", label=None):
-    points = [line.getPoint({'x':-c.BALL_AREA_HALF_LENGTH}),line.getPoint({'x':c.BALL_AREA_HALF_LENGTH})]
+    points = [line.getPoint({'x':-c.BALL_AREA_HALF_LENGTH*10}),line.getPoint({'x':c.BALL_AREA_HALF_LENGTH*10})]
     X = [points[0][0],points[1][0]]
     Y = [points[0][1],points[1][1]]
     Z = [points[0][2],points[1][2]]
@@ -414,6 +453,38 @@ def plotOutput(ax, out, color = 'r', label=None):
     for p in o:
         obj = ax.scatter(p[0].item(),p[1].item(),p[2].item(),c=color, label=label)
     return obj
+
+def saveVisualizeTrainData(dataset_name, imgFileName, seed=3) :
+    dataset = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset_name + ".valid.bin"))
+    r, r_len, l, l_len, t, ans = dataset[seed]
+    r = r.view(1, -1, 5)
+    l = l.view(1, -1, 5)
+    t = t.view(1, -1)
+    ans = ans.view(1, -1, 3)
+    ans = ans.view(-1, 3).cpu()
+    r = r.view(-1, 5).cpu()
+    l = l.view(-1, 5).cpu()
+    r_len = r_len.view(1).cpu()
+    l_len = l_len.view(1).cpu()
+
+
+    c.normer.unnorm_ans_tensor(ans)
+    c.normer.unorm_input_tensor(r)
+    c.normer.unorm_input_tensor(l)
+
+    ax = createRoom()
+    line_ans = plotOutput(ax, ans, color='b')
+
+    seq_r, = drawLineSeq(ax, r, r_len, color='g')
+    seq_l, = drawLineSeq(ax, l, l_len, color='y')
+
+    # add legend
+    ax.legend([line_ans, seq_r, seq_l], ["trajectory", "right", "left"])
+
+    #plt.savefig(imgFileName)
+    plt.show()
+    plt.close()
+    
 
 def saveVisualizeModelOutput(model:ISEFWINNER_BASE, dataset, imgFileName, seed = 3):
     model.eval()
@@ -462,7 +533,6 @@ def drawLineSeq(axe:plt.Axes, seq:torch.Tensor, seq_len:torch.Tensor, color="r")
         obj = drawLine3d(axe, line, color=color)
     return obj
 
-
 def visualizeModelOutput(model_name, weight, seed = 3):
     model = MODEL_MAP[model_name](device='cpu')
 
@@ -502,20 +572,50 @@ def visualizeModelOutput(model_name, weight, seed = 3):
 
     plt.show()
     
+def redrawTrainResult(dirname, model_name, dataset):
+    model = MODEL_MAP[model_name](device='cpu')
+    ball_datas = dfo.BallDataSet("ball_simulate_v2/dataset/" + dataset + ".valid.bin", device='cpu')
+    for i in tqdm.tqdm(range(0, 30)) :
+        model.load_state_dict(torch.load(dirname + "epoch_" + str(i) + "/weight.pt"))
+        saveVisualizeModelOutput(model, ball_datas, dirname + "epoch_" + str(i) + "/output1.png", seed=1)
+        saveVisualizeModelOutput(model, ball_datas, dirname + "epoch_" + str(i) + "/output2.png", seed=100)
+        saveVisualizeModelOutput(model, ball_datas, dirname + "epoch_" + str(i) + "/output3.png", seed=200)
+        saveVisualizeModelOutput(model, ball_datas, dirname + "epoch_" + str(i) + "/output4.png", seed=300)
+        saveVisualizeModelOutput(model, ball_datas, dirname + "epoch_" + str(i) + "/output5.png", seed=400)
+
 MODEL_MAP = {
     "small":ISEFWINNER_SMALL,
     "medium":ISEFWINNER_MEDIUM,
+    "big":ISEFWINNER_BIG,
     "large":ISEFWINNER_LARGE
 }
+
+def cross():
+    with open("ball_simulate_v2/cross.csv", "w") as f:
+        writer = csv.writer(f)
+        for d in ('fit', 'ne', 'predict') :
+            if d == 'fit':
+                c.set2Fitting()
+                dfo.loadLib()
+            elif d == 'ne':
+                c.set2NoError()
+                dfo.loadLib()
+            elif d == 'predict':
+                c.set2Predict()
+                dfo.loadLib()
+            res = []
+            for w in ('fit', 'ne', 'predict') :
+                res.append(validModel("medium", "ball_simulate_v2/model_saves/" + w  + "/epoch_29/weight.pt", d + "_medium"))
+            writer.writerow(res)
 
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
     argparser.add_argument('-lr', default=0.001, type=float)
-    argparser.add_argument('-b', default=64, type=int)
+    argparser.add_argument('-b', default=128, type=int)
     argparser.add_argument('-e', default=30, type=int)
-    argparser.add_argument('-m', default="medium", type=str)
-    argparser.add_argument('-d', default="medium_fit", type=str)
+    argparser.add_argument('-m', default="big", type=str)
+    argparser.add_argument('-d', default="fit_medium", type=str)
     argparser.add_argument('-s', default=8, type=int)
     argparser.add_argument('-w', default=None, type=str)
     argparser.add_argument('-n', default="default", type=str)
@@ -526,12 +626,6 @@ if __name__ == "__main__":
 
     args = argparser.parse_args()
     # if ball_simulate_v2/dataset not exested, then create
-    if not os.path.exists("ball_simulate_v2/dataset"):
-        os.mkdir("ball_simulate_v2/dataset")
-    if args.export:
-        exit(0)
-    if args.test:
-        exit(0)
 
     if args.mode != "default":
         if args.mode == "fit" :
@@ -545,5 +639,14 @@ if __name__ == "__main__":
             dfo.loadLib()
         else :
             raise Exception("mode error")
+
+    if not os.path.exists("ball_simulate_v2/dataset"):
+        os.mkdir("ball_simulate_v2/dataset")
+    if args.export:
+        exit(0)
+    if args.test:
+        validModel(args.m, args.w, args.d)
+        exit(0)
+        
     train(scheduler_step_size=args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w, name=args.n, num_workers=args.num_workers)
     pass
