@@ -178,7 +178,19 @@ void putData_sync(char* file_name, int index, Data data) {
     fclose(fp);
 }
 
-
+extern "C"
+void merge(char* a, char* b, char* new_file_name) {
+    int a_l = getFileDataLength_sync(a);
+    int b_l = getFileDataLength_sync(b);
+    int new_l = a_l + b_l;
+    createEmptyFile_sync(new_file_name, new_l);
+    for (int i = 0; i < a_l; i++) {
+        putData_sync(new_file_name, i, getFileData_sync(a, i));
+    }
+    for (int i = 0; i < b_l; i++) {
+        putData_sync(new_file_name, i + a_l, getFileData_sync(b, i));
+    }
+}
 
 extern "C"
 int main() {

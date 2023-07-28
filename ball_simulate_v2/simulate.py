@@ -418,15 +418,6 @@ def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"
     print("simulate done")
 
 
-def merge(a, b, out) :
-    A = dfo.BallDataSet_sync(a, device="cpu")
-    B = dfo.BallDataSet_sync(b, device="cpu")
-    C = dfo.BallDataSet_sync(out, dataLength=A.length+B.length, device="cpu")
-    for i in tqdm.tqdm(range(A.length)):
-        C.putData(i, A[i])
-    for i in tqdm.tqdm(range(B.length)):
-        C.putData(A.length+i, B[i])
-
 if __name__ == "__main__":
     #print(calculateMeanStd("train.bin"))
     argparser = argparse.ArgumentParser()
@@ -442,16 +433,6 @@ if __name__ == "__main__":
 
     #fetch params
     args = argparser.parse_args()
-
-    if args.merge:
-        merge("ball_simulate_v2/dataset/{}.train.bin".format(args.merge_a),
-               "ball_simulate_v2/dataset/{}.train.bin".format(args.merge_b),
-               "ball_simulate_v2/dataset/{}.train.bin".format(args.n))
-        # copy valid using shutil.copyfile
-        shutil.copyfile("ball_simulate_v2/dataset/{}.valid.bin".format(args.merge_a),
-                        "ball_simulate_v2/dataset/{}.valid.bin".format(args.n))
-        exit()
-
     if args.mode != "default":
         if args.mode == "fit":
             c.set2Fitting()
@@ -469,6 +450,17 @@ if __name__ == "__main__":
         simulate_fast(dataLength=args.l, num_workers=args.num_workers, outputFileName="ball_simulate_v2/dataset/{}.train.bin".format(args.n))
         simulate_fast(dataLength=10000, num_workers=args.num_workers, outputFileName="ball_simulate_v2/dataset/{}.valid.bin".format(args.n))
         exit()
+
+    if args.merge:
+        dfo.merge("ball_simulate_v2/dataset/{}.train.bin".format(args.merge_a),
+               "ball_simulate_v2/dataset/{}.train.bin".format(args.merge_b),
+               "ball_simulate_v2/dataset/{}.train.bin".format(args.n))
+        # copy valid using shutil.copyfile
+        shutil.copyfile("ball_simulate_v2/dataset/{}.valid.bin".format(args.merge_a),
+                        "ball_simulate_v2/dataset/{}.valid.bin".format(args.n))
+        exit()
+
+
 
     simulate(GUI=args.GUI, dataLength=args.l, outputFileName="ball_simulate_v2/dataset/{}.train.bin".format(args.n))
     simulate(GUI=args.GUI, dataLength=10000, outputFileName="ball_simulate_v2/dataset/{}.valid.bin".format(args.n))

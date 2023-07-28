@@ -75,56 +75,8 @@ def loadLib():
     lib.createEmptyFile_sync.restype = None
     lib.putData_sync.argtypes = [c_char_p, c_int, DataStruct]
     lib.putData_sync.restype = None
-
-
-class BallDataSet(torch.utils.data.Dataset) :
-    def __init__(self, fileName, dataLength = None, device = "cuda:0"):
-        if not os.path.exists(fileName):
-            #cerate file
-            print("create file")
-            if dataLength == None:
-                raise Exception("dataLength can't be None! or file not found")
-            self.data = lib.createHeader(dataLength)
-        elif dataLength != None:
-            print("create file")
-            self.data = lib.createHeader(dataLength)
-        else:
-            self.data = lib.loadFromFile(fileName.encode('utf-8'))
-        self.filename = fileName
-        if lib.loadIsSuccess(self.data):
-            self.length = lib.getFileDataLength(self.data)
-        else:
-            raise Exception("Load data failed!")
-        self.device = torch.device(device)
-
-    def __len__(self):
-        return self.length
-    
-    def __getitem__(self, index):
-        d_ori = DataStruct.from_address(lib.getFileData(self.data, index))
-        d_list_r = [None] * c.SIMULATE_INPUT_LEN
-        d_list_l = [None] * c.SIMULATE_INPUT_LEN
-        d_list_t = [None] * c.SIMULATE_TEST_LEN
-        d_list_ans = [None] * c.SIMULATE_TEST_LEN
-        for i in range(c.SIMULATE_INPUT_LEN):
-            d_list_r[i] = [d_ori.inputs[0].camera_x, d_ori.inputs[0].camera_y, d_ori.inputs[0].camera_z ,d_ori.inputs[0].line_rad_xy[i], d_ori.inputs[0].line_rad_xz[i]]
-            d_list_l[i] = [d_ori.inputs[1].camera_x, d_ori.inputs[1].camera_y, d_ori.inputs[1].camera_z ,d_ori.inputs[1].line_rad_xy[i], d_ori.inputs[1].line_rad_xz[i]]
-        
-        for i in range(c.SIMULATE_TEST_LEN):
-            d_list_ans[i] = [d_ori.curvePoints[i].x, d_ori.curvePoints[i].y, d_ori.curvePoints[i].z]
-            d_list_t[i] = d_ori.curveTimestamps[i]
-        
-        return torch.tensor(d_list_r, device=self.device), torch.tensor(d_ori.inputs[0].seq_len, device=self.device), torch.tensor(d_list_l, device=self.device), torch.tensor(d_ori.inputs[1].seq_len, device=self.device), torch.tensor(d_list_t, device=self.device), torch.tensor(d_list_ans, device=self.device)
-
-    def __del__(self):
-        lib.releaseData(self.data)
-        print("release data")
-
-    def putData(self, index:int, data:DataStruct):
-        return lib.putData(self.data, index, data)
-    
-    def saveToFile(self):
-        return lib.saveToFile(self.data, self.filename.encode('utf-8'))
+    lib.merge.argtypes = [c_char_p, c_char_p, c_char_p]
+    lib.merge.restype = None
 
 
 class BallDataSet_sync(torch.utils.data.Dataset) :
@@ -165,9 +117,11 @@ class BallDataSet_sync(torch.utils.data.Dataset) :
     def saveToFile(self):
         pass
 
+def merge(a, b, out) :
+    lib.merge(a.encode('utf-8'), b.encode('utf-8'), out.encode('utf-8'))
 
 def testPutData():
-    d = BallDataSet("t.bin", dataLength=2)
+    d = BallDataSet_sync("t.bin", dataLength=2)
     for i in range(2) :
         a = DataStruct()
         a.inputs[0].camera_x = i
@@ -198,7 +152,7 @@ def testPutData():
         d.putData(i, a)
 
 def testLoadData():
-    a = BallDataSet("t.bin")
+    a = BallDataSet_sync("t.bin")
     print("load success")
     print(len(a))
     print(a[0].inputs[0].camera_x)
