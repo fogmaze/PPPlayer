@@ -42,7 +42,10 @@ class Detection :
         self.video_writer_bad = None
         self.video_writer_tagged = None
         self.inmtx = calib.load_calibration(calibrationFile)
+        self.cam = None
         self.source = source
+        if source is not None :
+            self.cam = cv2.VideoCapture(source)
         if save_name is not None :
             if not os.path.exists("ball_detection/result/" + save_name) :
                 os.makedirs("ball_detection/result/" + save_name)
@@ -89,6 +92,7 @@ class Detection :
         return cv2.findContours(frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[0]
 
     def isBallFeature(self,area, h, w) :
+        return True
         r = math.sqrt(h*h + w*w) / 2
         a = math.pi * r * r
         rmin = 3.7178529388965496/2.0
@@ -101,9 +105,11 @@ class Detection :
         if not 0 < circle < 100 :
             return False
         return True
+
+    def getNextFrame(self) :
+        return self.cam.read()
    
     def runDetevtion(self, img) :
-        cam = cv2.VideoCapture(self.source)
         whetherTheFirstFrame = True
         startWriting = True
         startTime = time.perf_counter()
@@ -114,8 +120,7 @@ class Detection :
 
         while(True) :
             numberOfBall = 0
-            ret, frame = cam.read()
-
+            ret, frame = self.getNextFrame()
             if ret :
                 key = cv2.waitKey(1)
                 this_iter_time = time.perf_counter()
@@ -126,7 +131,6 @@ class Detection :
                 if whetherTheFirstFrame :
                     compare = frame
                     whetherTheFirstFrame = False
-                    continue
 
                 if self.homography_matrix is None and key == ord("u"):
                     self.homography_matrix = find_homography_matrix_to_apriltag(frame)
@@ -151,7 +155,7 @@ class Detection :
                 for contour in detected :
                     area = cv2.contourArea(contour)
                     x, y, w, h = cv2.boundingRect(contour)
-                    if True : #self.isBallFeature(area, h, w) :
+                    if self.isBallFeature(area, h, w) :
                         self.drawDirection(frame, x, y, h, w, numberOfBall+1)
 
                         numberOfBall += 1
@@ -160,10 +164,11 @@ class Detection :
                             projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
                             line = equ.LineEquation3d(self.camera_position, projection)
                             self.detection_csv_writer.writerow([iteration, numberOfBall, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
-                            print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
+                            #print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
                         else :
                             self.detection_csv_writer.writerow([iteration, numberOfBall, x, y, h, w, 0, 0, 0, 0, 0])
                 self.situation_csv_writer.writerow([iteration, this_iter_time - startTime, 1000/(this_iter_time-last_iter_time), numberOfBall])
+
 
                 if startWriting:
                     if not numberOfBall == 1 :
@@ -171,13 +176,24 @@ class Detection :
                     else:
                         self.video_writer_tagged.write(frame)
                 
-                window = "Camera " + str(self.source) 
+                window = "Source" + str(self.source) 
                 cv2.imshow(window, frame)
             else :
                 break
             iteration += 1
             last_iter_time = this_iter_time
 
+class Detection_img(Detection) :
+    def __init__(self, source, calibrationFile="calibration1_old",frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None) :
+        super().__init__(None, calibrationFile, frame_size, frame_rate, rangeFile, save_name)
+        self.source = source
+        self.frameIndex = 0
+    def getNextFrame(self):
+        img = cv2.imread(os.path.join(self.source, str(self.frameIndex).zfill(4) + ".jpg"))
+        if img is None :
+            return False, None
+        self.frameIndex += 1
+        return True, img
 
 
 def test_homography(img) :
@@ -224,7 +240,7 @@ def detectProcess(source, save_name) :
 if __name__ == "__main__" :
     img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
 
-    dect = Detection(source="ball_detection/result/20230718-2/all.mp4", save_name="718-2-1")
+    dect = Detection_img(source="/home/changer/Downloads/320_60_tagged/frames", save_name="320_60_detection")
     dect.runDetevtion(img)
 
 
