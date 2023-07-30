@@ -44,6 +44,8 @@ class Detection :
         self.inmtx = calib.load_calibration(calibrationFile)
         self.cam = None
         self.source = source
+        self.last_pos = None
+        self.last_pos_ind = None
         if source is not None :
             self.cam = cv2.VideoCapture(source)
         if save_name is not None :
@@ -152,21 +154,27 @@ class Detection :
                 c = self.compareFrames(frame, compare)
                 detected = self.detectContours(self.maskFrames(c))
                 cv2.imshow("mask", c)
+
+                qualified = []
                 for contour in detected :
                     area = cv2.contourArea(contour)
                     x, y, w, h = cv2.boundingRect(contour)
                     if self.isBallFeature(area, h, w) :
-                        self.drawDirection(frame, x, y, h, w, numberOfBall+1)
+                        qualified.append((area, x, y, w, h))
+                        #self.drawDirection(frame, x, y, h, w, numberOfBall+1)
 
-                        numberOfBall += 1
-                        if self.homography_matrix is not None and self.camera_position is not None:
-                            ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
-                            projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
-                            line = equ.LineEquation3d(self.camera_position, projection)
-                            self.detection_csv_writer.writerow([iteration, numberOfBall, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
-                            #print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
-                        else :
-                            self.detection_csv_writer.writerow([iteration, numberOfBall, x, y, h, w, 0, 0, 0, 0, 0])
+                        #numberOfBall += 1
+                        #if self.homography_matrix is not None and self.camera_position is not None:
+                            #ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
+                            #projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
+                            #line = equ.LineEquation3d(self.camera_position, projection)
+                            #self.detection_csv_writer.writerow([iteration, numberOfBall, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
+                            ##print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
+                        #else :
+                            #self.detection_csv_writer.writerow([iteration, numberOfBall, x, y, h, w, 0, 0, 0, 0, 0])
+                if len(qualified) > 0 :
+                    if self.last_pos_ind is None or self.last_pos_ind > 3 :
+                        pass
                 self.situation_csv_writer.writerow([iteration, this_iter_time - startTime, 1000/(this_iter_time-last_iter_time), numberOfBall])
 
 
