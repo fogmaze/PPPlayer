@@ -158,10 +158,11 @@ class Detection :
                 qualified = []
                 for contour in detected :
                     area = cv2.contourArea(contour)
+                    print(area)
                     x, y, w, h = cv2.boundingRect(contour)
                     if self.isBallFeature(area, h, w) :
                         qualified.append((area, x, y, w, h))
-                        #self.drawDirection(frame, x, y, h, w, numberOfBall+1)
+                        self.drawDirection(frame, x, y, h, w, numberOfBall+1)
 
                         #numberOfBall += 1
                         #if self.homography_matrix is not None and self.camera_position is not None:
@@ -246,6 +247,10 @@ def detectProcess(source, save_name) :
         
 
 if __name__ == "__main__" :
+    d = Detection(source="./ball_detection/result/20230718-1/all.mp4", save_name="test")
+    img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
+    d.runDetevtion(img)
+    exit()
     img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
 
     dect = Detection_img(source="/home/changer/Downloads/320_60_tagged/frames", save_name="320_60_detection")
