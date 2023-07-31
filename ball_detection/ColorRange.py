@@ -102,11 +102,11 @@ class ColorRange :
 
 
 if __name__ == "__main__" :
-    #cam = cv2.VideoCapture(0)
-    img = cv2.imread("ball_sample.jpg")
+    cam = cv2.VideoCapture("ball_detection/result/20230718-2/all.mp4")
+    #img = cv2.imread("ball_sample.jpg")
 
     cr = load("color_range")
     
-    #cr.runColorRange_video(cam)
-    cr.runColorRange_image(img)
+    cr.runColorRange_video(cam)
+    #cr.runColorRange_image(img)
     save("color_range", cr)
