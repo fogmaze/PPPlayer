@@ -13,6 +13,7 @@ from core.Constants import *
 import core.Equation3d as equ
 import camera_calibrate.utils as utils
 import camera_calibrate.Calibration as calib
+import xml.etree.ElementTree as ET
 
 
 def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
@@ -30,6 +31,11 @@ class Detection :
     #save test frames
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
+    MEAN_BALL_SIZE_DICT = {
+        "320" : 175.5024938405144,
+        "1080" : 1207.5162448113356,
+    }
+
     def __init__(self, source, calibrationFile="calibration1_old",frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None) :
         self.frame_size = frame_size
         self.frame_rate = frame_rate
@@ -46,6 +52,12 @@ class Detection :
         self.source = source
         self.last_pos = None
         self.last_pos_ind = None
+        if self.frame_size == (640,480) :
+            self.meanBallSize = self.MEAN_BALL_SIZE_DICT["320"]
+        if self.frame_size == (1920,1080) :
+            self.meanBallSize = self.MEAN_BALL_SIZE_DICT["1080"]
+        else :
+            raise Exception("frame size is not supported")
         if source is not None :
             self.cam = cv2.VideoCapture(source)
         if save_name is not None :
@@ -121,7 +133,6 @@ class Detection :
         self.homography_matrix = find_homography_matrix_to_apriltag(img)
 
         while(True) :
-            numberOfBall = 0
             ret, frame = self.getNextFrame()
             if ret :
                 key = cv2.waitKey(1)
@@ -153,17 +164,13 @@ class Detection :
 
                 c = self.compareFrames(frame, compare)
                 detected = self.detectContours(self.maskFrames(c))
-                cv2.imshow("mask", c)
-
                 qualified = []
                 for contour in detected :
-                    area = cv2.contourArea(contour)
-                    print(area)
+                    #area = cv2.contourArea(contour)
                     x, y, w, h = cv2.boundingRect(contour)
-                    if self.isBallFeature(area, h, w) :
-                        qualified.append((area, x, y, w, h))
-                        self.drawDirection(frame, x, y, h, w, numberOfBall+1)
-
+                    if True :# self.isBallFeature(area, h, w) :
+                        qualified.append((x, y, w, h))
+                        #self.drawDirection(frame, x, y, h, w, numberOfBall+1)
                         #numberOfBall += 1
                         #if self.homography_matrix is not None and self.camera_position is not None:
                             #ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
@@ -173,14 +180,46 @@ class Detection :
                             ##print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
                         #else :
                             #self.detection_csv_writer.writerow([iteration, numberOfBall, x, y, h, w, 0, 0, 0, 0, 0])
-                if len(qualified) > 0 :
-                    if self.last_pos_ind is None or self.last_pos_ind > 3 :
-                        pass
-                self.situation_csv_writer.writerow([iteration, this_iter_time - startTime, 1000/(this_iter_time-last_iter_time), numberOfBall])
+                #merged,w = cv2.groupRectangles(qualified, 1, 0.2)
+                merged = qualified#merge_rectangles(qualified)
+                if len(merged) == 1 :
+                    x, y, w, h = merged[0]
+                    self.last_pos == (x, y, w, h)
+                    self.last_pos_ind = 0
+                    self.drawDirection(frame, x, y, h, w, 1)
+                    if self.homography_matrix is not None and self.camera_position is not None:
+                        ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
+                        projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
+                        line = equ.LineEquation3d(self.camera_position, projection)
+                        self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
+                        #print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
+                    else :
+                        self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
+                elif len(merged) > 0 :
+                    min_Area_diff = 500000
+                    result = None
+                    for x, y, w, h in merged :
+                        area = w * h
+                        if abs(area - self.meanBallSize) < min_Area_diff :
+                            min_Area_diff = abs(area - self.meanBallSize)
+                            result = (x, y, w, h)
+                    x, y, w, h = result
+                    self.last_pos == (x, y, w, h)
+                    self.last_pos_ind = 0
+                    self.drawDirection(frame, x, y, h, w, 1)
+                    if self.homography_matrix is not None and self.camera_position is not None:
+                        ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
+                        projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
+                        line = equ.LineEquation3d(self.camera_position, projection)
+                        self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
+                        #print("({}, {})".format(ball_in_world[0], ball_in_world[1]))
+                    else :
+                        self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
 
+                self.situation_csv_writer.writerow([iteration, this_iter_time - startTime, 1000/(this_iter_time-last_iter_time), 1 if len(merged) > 0 else 0])
 
                 if startWriting:
-                    if not numberOfBall == 1 :
+                    if len(merged) == 0 :
                         self.video_writer_bad.write(frame)
                     else:
                         self.video_writer_tagged.write(frame)
@@ -193,17 +232,16 @@ class Detection :
             last_iter_time = this_iter_time
 
 class Detection_img(Detection) :
-    def __init__(self, source, calibrationFile="calibration1_old",frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None) :
+    def __init__(self, source, calibrationFile="calibration1_old",frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None, beg_ind = 0) :
         super().__init__(None, calibrationFile, frame_size, frame_rate, rangeFile, save_name)
         self.source = source
-        self.frameIndex = 0
+        self.frameIndex = beg_ind
     def getNextFrame(self):
         img = cv2.imread(os.path.join(self.source, str(self.frameIndex).zfill(4) + ".jpg"))
         if img is None :
             return False, None
         self.frameIndex += 1
         return True, img
-
 
 def test_homography(img) :
     homography_matrix = None
@@ -245,15 +283,41 @@ def detectProcess(source, save_name) :
     detector = Detection(source=source, save_name=save_name)
     detector.runDetevtion()
         
+def check_overlap(rect1, rect2):
+    x1, y1, w1, h1 = rect1
+    x2, y2, w2, h2 = rect2
+
+    if x1 + w1 < x2 or x2 + w2 < x1 or y1 + h1 < y2 or y2 + h2 < y1:
+        return False
+    return True
+
+def merge_rectangles(rectangles):
+    merged_rectangles = []
+
+    for rect in rectangles:
+        if len(merged_rectangles) == 0:
+            merged_rectangles.append(rect)
+        else:
+            merged = False
+            for i, merged_rect in enumerate(merged_rectangles):
+                if check_overlap(rect, merged_rect):
+                    x = min(rect[0], merged_rect[0])
+                    y = min(rect[1], merged_rect[1])
+                    w = max(rect[0] + rect[2], merged_rect[0] + merged_rect[2]) - x
+                    h = max(rect[1] + rect[3], merged_rect[1] + merged_rect[3]) - y
+                    merged_rectangles[i] = (x, y, w, h)
+                    merged = True
+                    break
+
+            if not merged:
+                merged_rectangles.append(rect)
+
+    return merged_rectangles
 
 if __name__ == "__main__" :
-    d = Detection(source="./ball_detection/result/20230718-1/all.mp4", save_name="test")
-    img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
-    d.runDetevtion(img)
-    exit()
     img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
 
-    dect = Detection_img(source="/home/changer/Downloads/320_60_tagged/frames", save_name="320_60_detection")
+    dect = Detection_img(source="/home/changer/Downloads/hd_60_tagged/frames", frame_size=(1920, 1080), save_name="hd_60_detection", beg_ind=1000)
     dect.runDetevtion(img)
 
 
