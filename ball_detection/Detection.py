@@ -36,11 +36,14 @@ class Detection :
         "1080" : 1207.5162448113356,
     }
 
-    def __init__(self, source, calibrationFile="calibration1_old",frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None) :
+    def __init__(self, source, calibrationFile="calibration1_old",frame_size=(640,480), frame_rate=30, color_range="color_range", save_name=None) :
         self.frame_size = frame_size
         self.frame_rate = frame_rate
         self.camera_position = None
-        self.range = load(rangeFile)
+        if type(color_range) == str :
+            self.range = load(color_range)
+        else :
+            self.range = color_range
         self.upper = self.range.upper
         self.lower = self.range.lower
         self.homography_matrix = None

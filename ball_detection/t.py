@@ -1,3 +1,4 @@
+import pickle
 import os
 import csv
 import cv2
@@ -101,7 +102,12 @@ def form(xml_dir ="/home/changer/Downloads/320_60_tagged/result/"):
             os.remove(os.path.join(xml_dir, fn))
             print(fn, "is deleted")
 
+def findRange():
+    cr = pickle.load("color_range")
+    print(cr)
+
 if __name__ == "__main__" :
-    cmpResult("/home/changer/Downloads/320_60_tagged/result/","ball_detection/result/320_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 0)
-    print("--------------------------------------------------")
-    cmpResult("/home/changer/Downloads/hd_60_tagged/result/","ball_detection/result/hd_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 1000)
+    findRange()
+    #cmpResult("/home/changer/Downloads/320_60_tagged/result/","ball_detection/result/320_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 0)
+    #print("--------------------------------------------------")
+    #cmpResult("/home/changer/Downloads/hd_60_tagged/result/","ball_detection/result/hd_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 1000)
