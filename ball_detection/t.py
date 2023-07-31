@@ -47,12 +47,17 @@ def cmpResult(xml_dir, res_dir, img_dir, img_start) :
         ind_marked = int(marked.split('.')[0]) - img_start
         if ind_marked in detection_result :
             detecteds.append(detection_result[ind_marked])
+            # delete detection_result[ind_marked]
+            del detection_result[ind_marked]
+            #detecteds.pop(ind_marked)
             corr_len += 1
         else :
             detecteds.append(None)
     print("corr_len", corr_len)
     print("corr_rate", corr_len / len(marked_xmls))
     distances = []
+    print('error_len', len(detection_result))
+    print('error_rate', len(detection_result) / len(marked_xmls))
     for i, mark in enumerate(marked_xmls) :
         detected = detecteds[i]
         if detected is None :
@@ -68,10 +73,14 @@ def cmpResult(xml_dir, res_dir, img_dir, img_start) :
         mid_marked = (xmin + xmax) / 2, (ymin + ymax) / 2
         distances.append(np.sqrt((mid_detected[0] - mid_marked[0]) ** 2 + (mid_detected[1] - mid_marked[1]) ** 2))
         #show img
-        if False :
+        if True:
             img = cv2.imread(os.path.join(img_dir, mark.split('.')[0] + '.jpg'))
-            cv2.circle(img, (int(mid_detected[0]), int(mid_detected[1])), 5, (0, 0, 255), -1)
-            cv2.circle(img, (int(mid_marked[0]), int(mid_marked[1])), 5, (0, 255, 0), -1)
+            # draw marked
+            cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
+            # draw detected
+            cv2.rectangle(img, (int(detected[1]), int(detected[2])), (int(detected[3]) + int(detected[1]), int(detected[4]) + int(detected[2])), (0, 0, 255), 1)
+            cv2.namedWindow("img", cv2.WINDOW_NORMAL)
+            cv2.resizeWindow("img", 1920,1080)
             cv2.imshow("img", img)
             cv2.waitKey(0)
     distances = np.array(distances)
@@ -93,5 +102,6 @@ def form(xml_dir ="/home/changer/Downloads/320_60_tagged/result/"):
             print(fn, "is deleted")
 
 if __name__ == "__main__" :
-    #cmpResult("/home/changer/Downloads/320_60_tagged/result/","ball_detection/result/320_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 0)
+    cmpResult("/home/changer/Downloads/320_60_tagged/result/","ball_detection/result/320_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 0)
+    print("--------------------------------------------------")
     cmpResult("/home/changer/Downloads/hd_60_tagged/result/","ball_detection/result/hd_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 1000)
