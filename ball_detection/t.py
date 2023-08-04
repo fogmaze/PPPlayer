@@ -1,9 +1,14 @@
 import pickle
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import csv
 import cv2
 import numpy as np
 import xml.etree.ElementTree as ET
+import ball_detection.Detection as Det
+import ball_detection.ColorRange as CR
+from ball_detection.ColorRange import ColorRange
 
 
 def calculateBallSize(xml_dir, max_len) :
@@ -54,11 +59,9 @@ def cmpResult(xml_dir, res_dir, img_dir, img_start) :
             corr_len += 1
         else :
             detecteds.append(None)
-    print("corr_len", corr_len)
-    print("corr_rate", corr_len / len(marked_xmls))
+    corr_rate = corr_len / len(marked_xmls)
     distances = []
-    print('error_len', len(detection_result))
-    print('error_rate', len(detection_result) / len(marked_xmls))
+    error_rate = len(detection_result) / len(marked_xmls)
     for i, mark in enumerate(marked_xmls) :
         detected = detecteds[i]
         if detected is None :
@@ -74,7 +77,7 @@ def cmpResult(xml_dir, res_dir, img_dir, img_start) :
         mid_marked = (xmin + xmax) / 2, (ymin + ymax) / 2
         distances.append(np.sqrt((mid_detected[0] - mid_marked[0]) ** 2 + (mid_detected[1] - mid_marked[1]) ** 2))
         #show img
-        if True:
+        if False and img_dir is not None:
             img = cv2.imread(os.path.join(img_dir, mark.split('.')[0] + '.jpg'))
             # draw marked
             cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
@@ -85,8 +88,7 @@ def cmpResult(xml_dir, res_dir, img_dir, img_start) :
             cv2.imshow("img", img)
             cv2.waitKey(0)
     distances = np.array(distances)
-    print("mean distance", distances.mean())
-    print("std distance", distances.std())
+    return corr_rate, error_rate, distances.mean(), distances.std()
 
 
 def getMiddleOfRect(x, y, w, h) :
@@ -102,12 +104,19 @@ def form(xml_dir ="/home/changer/Downloads/320_60_tagged/result/"):
             os.remove(os.path.join(xml_dir, fn))
             print(fn, "is deleted")
 
-def findRange():
-    cr = pickle.load("color_range")
-    print(cr)
+def findRange_hsv(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30):
+    detection = Det.Detection(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, save_name="cacu/{}{}{}{}{}{}".format(
+        color_range[0][0], color_range[0][1], color_range[1][0], color_range[1][1], color_range[2][0], color_range[2][1]
+    ), save_video=False)
+    detection.runDetevtion()
+    cmpResult(xml_dir, "cacu/{}{}{}{}{}{}".format(
+        color_range[0][0], color_range[0][1], color_range[1][0], color_range[1][1], color_range[2][0], color_range[2][1]
+    ), None, 0)
 
 if __name__ == "__main__" :
-    findRange()
+    with open("color_range", "rb") as f :
+        c = pickle.load(f)
+    print(findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (320, 60), 30))
     #cmpResult("/home/changer/Downloads/320_60_tagged/result/","ball_detection/result/320_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 0)
     #print("--------------------------------------------------")
     #cmpResult("/home/changer/Downloads/hd_60_tagged/result/","ball_detection/result/hd_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 1000)
