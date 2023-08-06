@@ -17,7 +17,7 @@ import xml.etree.ElementTree as ET
 
 
 def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
-    tag_len   = APRILTAG_SIZE #set tag length (m)
+    tag_len   = APRILTAG_SIZE 
     detector  = Detector()
     detection = detector.detect(img_gray)
     if len(detection) == 0 :
@@ -36,7 +36,7 @@ class Detection :
         "1080" : 1207.5162448113356,
     }
 
-    def __init__(self, source, calibrationFile="calibration",frame_size=(640,480), frame_rate=30, color_range="color_range", save_name="default", save_video=True) :
+    def __init__(self, source, calibrationFile="calibration",frame_size=(640,480), frame_rate=30, color_range="color_range", save_name="default", mode="analysis") :
         self.frame_size = frame_size
         self.frame_rate = frame_rate
         self.camera_position = None
@@ -53,42 +53,42 @@ class Detection :
         self.inmtx = calib.load_calibration(calibrationFile)
         self.cam = None
         self.source = source
-        self.last_pos = None
-        self.last_pos_ind = None
+        self.data = []
         if self.frame_size == (640,480) :
             self.meanBallSize = self.MEAN_BALL_SIZE_DICT["320"]
-        if self.frame_size == (1920,1080) :
+        elif self.frame_size == (1920,1080) :
             self.meanBallSize = self.MEAN_BALL_SIZE_DICT["1080"]
         else :
             raise Exception("frame size is not supported")
         if source is not None :
             self.cam = cv2.VideoCapture(source)
 
-        if not os.path.exists("ball_detection/result/" + save_name) :
-            os.makedirs("ball_detection/result/" + save_name)
-        self.save_video = save_video
-        if save_video :
+        self.mode = mode
+        if self.mode == "analysis" :
+            if not os.path.exists("ball_detection/result/" + save_name) :
+                os.makedirs("ball_detection/result/" + save_name)
             self.video_writer_all = cv2.VideoWriter("ball_detection/result/" + save_name + "/all.mp4", self.fourcc, self.frame_rate, self.frame_size)
             self.video_writer_bad = cv2.VideoWriter("ball_detection/result/" + save_name + "/bad.mp4", self.fourcc, self.frame_rate, self.frame_size)
             self.video_writer_tagged = cv2.VideoWriter("ball_detection/result/" + save_name + "/tagged.mp4", self.fourcc, self.frame_rate, self.frame_size)
-        self.detection_csv = open("ball_detection/result/" + save_name + "/detection.csv", "w", newline='')
-        self.situation_csv = open("ball_detection/result/" + save_name + "/situation.csv", "w", newline='')
-        self.detection_csv_writer = csv.writer(self.detection_csv)
-        self.situation_csv_writer = csv.writer(self.situation_csv)
-        self.detection_csv_writer.writerow(["iter", "id", "x", "y", "h", "w", "cam_x", "cam_y", "cam_z","rxy", "rxz"])
-        self.situation_csv_writer.writerow(["iter", "time", "fps", "numOfBall"])
+            self.detection_csv = open("ball_detection/result/" + save_name + "/detection.csv", "w", newline='')
+            self.situation_csv = open("ball_detection/result/" + save_name + "/situation.csv", "w", newline='')
+            self.detection_csv_writer = csv.writer(self.detection_csv)
+            self.situation_csv_writer = csv.writer(self.situation_csv)
+            self.detection_csv_writer.writerow(["iter", "id", "x", "y", "h", "w", "cam_x", "cam_y", "cam_z","rxy", "rxz"])
+            self.situation_csv_writer.writerow(["iter", "time", "fps", "numOfBall"])
     
     def __del__(self) :
-        if self.video_writer_all is not None :
-            self.video_writer_all.release()
-        if self.video_writer_bad is not None :
-            self.video_writer_bad.release()
-        if self.video_writer_tagged is not None :
-            self.video_writer_tagged.release()
-        if self.detection_csv is not None :
-            self.detection_csv.close()
-        if self.situation_csv is not None :
-            self.situation_csv.close()
+        if self.mode == "analysis" :
+            if self.video_writer_all is not None :
+                self.video_writer_all.release()
+            if self.video_writer_bad is not None :
+                self.video_writer_bad.release()
+            if self.video_writer_tagged is not None :
+                self.video_writer_tagged.release()
+            if self.detection_csv is not None :
+                self.detection_csv.close()
+            if self.situation_csv is not None :
+                self.situation_csv.close()
         cv2.destroyAllWindows()
 
             
@@ -128,13 +128,14 @@ class Detection :
     def getNextFrame(self) :
         return self.cam.read()
    
-    def runDetevtion(self, img) :
+    def runDetection(self, img=None) :
         whetherTheFirstFrame = True
         startTime = time.perf_counter()
         last_iter_time = startTime
         iteration = 0
-        self.camera_position = utils.calculateCameraPosition(self.inmtx, img)
-        self.homography_matrix = find_homography_matrix_to_apriltag(img)
+        if img is not None :
+            self.camera_position = utils.calculateCameraPosition(self.inmtx, img)
+            self.homography_matrix = find_homography_matrix_to_apriltag(img)
 
         while(True) :
             ret, frame = self.getNextFrame()
@@ -142,7 +143,7 @@ class Detection :
                 key = cv2.waitKey(1)
                 this_iter_time = time.perf_counter()
 
-                if self.save_video :
+                if self.mode == "analysis":
                     self.video_writer_all.write(frame)
 
                 if whetherTheFirstFrame :
@@ -174,16 +175,22 @@ class Detection :
                 merged = merge_rectangles(qualified)
                 if len(merged) == 1 :
                     x, y, w, h = merged[0]
-                    self.last_pos == (x, y, w, h)
-                    self.last_pos_ind = 0
                     self.drawDirection(frame, x, y, h, w, 1)
+                    # handle result
                     if self.homography_matrix is not None and self.camera_position is not None:
                         ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
                         projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
                         line = equ.LineEquation3d(self.camera_position, projection)
-                        self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
+
+                        if self.mode == "analysis":
+                            self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
+                        elif self.mode == "compute":
+                            self.data.append([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
                     else :
-                        self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
+                        if self.mode == "analysis":
+                            self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
+                        elif self.mode == "compute":
+                            self.data.append([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
                 elif len(merged) > 0 :
                     min_Area_diff = 500000
                     result = None
@@ -193,27 +200,32 @@ class Detection :
                             min_Area_diff = abs(area - self.meanBallSize)
                             result = (x, y, w, h)
                     x, y, w, h = result
-                    self.last_pos == (x, y, w, h)
-                    self.last_pos_ind = 0
                     self.drawDirection(frame, x, y, h, w, 1)
+                    # handle result
                     if self.homography_matrix is not None and self.camera_position is not None:
                         ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
                         projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
                         line = equ.LineEquation3d(self.camera_position, projection)
-                        self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
+
+                        if self.mode == "analysis":
+                            self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
+                        elif self.mode == "compute":
+                            self.data.append([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
                     else :
-                        self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
+                        if self.mode == "analysis":
+                            self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
+                        elif self.mode == "compute":
+                            self.data.append([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
 
-                self.situation_csv_writer.writerow([iteration, this_iter_time - startTime, 1000/(this_iter_time-last_iter_time), 1 if len(merged) > 0 else 0])
-
-                if self.save_video :
+                if self.mode == "analysis":
+                    self.situation_csv_writer.writerow([iteration, this_iter_time - startTime, 1000/(this_iter_time-last_iter_time), 1 if len(merged) > 0 else 0])
                     if len(merged) == 0 :
                         self.video_writer_bad.write(frame)
                     else:
                         self.video_writer_tagged.write(frame)
                 
                 window = "Source" + str(self.source) 
-                if self.save_video :
+                if self.mode == "analysis" :
                     cv2.imshow(window, frame)
             else :
                 break
@@ -221,8 +233,8 @@ class Detection :
             last_iter_time = this_iter_time
 
 class Detection_img(Detection) :
-    def __init__(self, source, calibrationFile="calibration1_old",frame_size=(640,480), frame_rate=30, rangeFile="color_range", save_name=None, beg_ind = 0) :
-        super().__init__(None, calibrationFile, frame_size, frame_rate, rangeFile, save_name)
+    def __init__(self, source, calibrationFile="calibration",frame_size=(640,480), frame_rate=30, color_range="color_range", save_name="default", mode="analysis", beg_ind=0) :
+        super().__init__(None, calibrationFile, frame_size, frame_rate, color_range, save_name, mode=mode)
         self.source = source
         self.frameIndex = beg_ind
     def getNextFrame(self):
@@ -270,7 +282,7 @@ def test_homography(img) :
 
 def detectProcess(source, save_name) :
     detector = Detection(source=source, save_name=save_name)
-    detector.runDetevtion()
+    detector.runDetection()
         
 def check_overlap(rect1, rect2):
     x1, y1, w1, h1 = rect1
@@ -307,7 +319,7 @@ if __name__ == "__main__" :
     img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
 
     dect = Detection_img(source="/home/changer/Downloads/hd_60_tagged/frames", frame_size=(1920, 1080), save_name="hd_60_detection", beg_ind=1000)
-    dect.runDetevtion(img)
+    dect.runDetection(img)
 
 
     exit()

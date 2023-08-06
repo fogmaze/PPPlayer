@@ -35,19 +35,13 @@ def calculateBallSize(xml_dir, max_len) :
     hs = np.array(hs)
     print(ws.mean() * hs.mean())
     
-def cmpResult(xml_dir, res_dir, img_dir, img_start) :
+def cmpResult(xml_dir, res_data, img_dir, img_start) :
     # list all xml files in xml_dir
     marked_xmls = os.listdir(xml_dir)
     detecteds = []
     detection_result = {}
-    with open(os.path.join(res_dir, "detection.csv"), 'r') as f :
-        reader = csv.reader(f)
-        i = 0
-        for row in reader :
-            if i == 0 :
-                i += 1
-                continue
-            detection_result[int(row[0])] = row[1:]
+    for data in res_data :
+        detection_result[int(data[0])] = data[1:]
     corr_len = 0
     for marked in marked_xmls:
         ind_marked = int(marked.split('.')[0]) - img_start
@@ -59,9 +53,9 @@ def cmpResult(xml_dir, res_dir, img_dir, img_start) :
             corr_len += 1
         else :
             detecteds.append(None)
-    corr_rate = corr_len / len(marked_xmls)
+    corr_rate = corr_len / len(marked_xmls) * 100
     distances = []
-    error_rate = len(detection_result) / len(marked_xmls)
+    error_rate = len(detection_result) / len(marked_xmls) * 100
     for i, mark in enumerate(marked_xmls) :
         detected = detecteds[i]
         if detected is None :
@@ -104,19 +98,24 @@ def form(xml_dir ="/home/changer/Downloads/320_60_tagged/result/"):
             os.remove(os.path.join(xml_dir, fn))
             print(fn, "is deleted")
 
+def findRange_hsv_img(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30, beg = 0):
+    detection = Det.Detection_img(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, mode="compute", beg_ind = beg)
+    detection.runDetection()
+    return cmpResult(xml_dir, detection.data, None, img_start=beg)
+
 def findRange_hsv(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30):
-    detection = Det.Detection(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, save_name="cacu/{}{}{}{}{}{}".format(
-        color_range[0][0], color_range[0][1], color_range[1][0], color_range[1][1], color_range[2][0], color_range[2][1]
-    ), save_video=False)
-    detection.runDetevtion()
-    cmpResult(xml_dir, "cacu/{}{}{}{}{}{}".format(
-        color_range[0][0], color_range[0][1], color_range[1][0], color_range[1][1], color_range[2][0], color_range[2][1]
-    ), None, 0)
+    detection = Det.Detection(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, mode="compute")
+    detection.runDetection()
+    return cmpResult(xml_dir, detection.data, None, 0)
 
 if __name__ == "__main__" :
     with open("color_range", "rb") as f :
         c = pickle.load(f)
-    print(findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (320, 60), 30))
+    print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
+    print("--------------------------------------------------")
+    print(findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
+    print("--------------------------------------------------")
+    print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/all_frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30, beg=1))
     #cmpResult("/home/changer/Downloads/320_60_tagged/result/","ball_detection/result/320_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 0)
     #print("--------------------------------------------------")
     #cmpResult("/home/changer/Downloads/hd_60_tagged/result/","ball_detection/result/hd_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 1000)
