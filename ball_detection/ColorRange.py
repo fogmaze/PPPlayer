@@ -21,9 +21,9 @@ class ColorRange :
     upper:np.ndarray
     lower:np.ndarray
 
-    def __init__(self) :
-        self.upper = np.array([179, 255, 255])
-        self.lower = np.array([0, 0, 0])
+    def __init__(self, upper = [179, 255, 255], lower = [0, 0, 0]) :
+        self.upper = np.array(upper)
+        self.lower = np.array(lower)
 
 
     def getParameters(self, h_min, h_max, s_min, s_max, v_min, v_max) :

@@ -1,3 +1,5 @@
+import time
+import tqdm
 import pickle
 import os
 import sys
@@ -108,14 +110,32 @@ def findRange_hsv(color_range:np.ndarray, source, xml_dir, frame_size, frame_rat
     detection.runDetection()
     return cmpResult(xml_dir, detection.data, None, 0)
 
+def caculateBestColorRange() :
+    las_t = time.perf_counter()
+    for hh in tqdm.tqdm(range(20, 40)) :
+        for hs in range(235, 256) :
+            for hv in range(235, 256) :
+                for lh in range(2,22) :
+                    for ls in range(77, 97) :
+                        for lv in range(229, 249) :
+                            if hh < lh and hs < ls and hv < lv :
+                                continue
+                            c = ColorRange([hh,hs,hv], [lh,ls,lv])
+                            loss = findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30)
+                            print(time.perf_counter() - las_t)
+                            las_t = time.perf_counter()
+
+
 if __name__ == "__main__" :
+    caculateBestColorRange()
+    exit(0)
     with open("color_range", "rb") as f :
         c = pickle.load(f)
+        print(c.upper)
+        print(c.lower)
     print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
     print("--------------------------------------------------")
     print(findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
-    print("--------------------------------------------------")
-    print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/all_frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30, beg=1))
     #cmpResult("/home/changer/Downloads/320_60_tagged/result/","ball_detection/result/320_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 0)
     #print("--------------------------------------------------")
     #cmpResult("/home/changer/Downloads/hd_60_tagged/result/","ball_detection/result/hd_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 1000)

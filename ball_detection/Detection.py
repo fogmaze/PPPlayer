@@ -128,7 +128,7 @@ class Detection :
     def getNextFrame(self) :
         return self.cam.read()
    
-    def runDetection(self, img=None) :
+    def runDetection(self, img=None, fromFrameIndex=0) :
         whetherTheFirstFrame = True
         startTime = time.perf_counter()
         last_iter_time = startTime
@@ -136,7 +136,8 @@ class Detection :
         if img is not None :
             self.camera_position = utils.calculateCameraPosition(self.inmtx, img)
             self.homography_matrix = find_homography_matrix_to_apriltag(img)
-
+        for i in range(fromFrameIndex) :
+            self.getNextFrame()
         while(True) :
             ret, frame = self.getNextFrame()
             if ret :
@@ -162,7 +163,6 @@ class Detection :
                 
                 if key == ord(' ') :
                     break
-                    
 
                 c = self.compareFrames(frame, compare)
                 detected = self.detectContours(self.maskFrames(c))
