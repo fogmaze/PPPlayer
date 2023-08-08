@@ -52,9 +52,11 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
 
     criterion = nn.MSELoss().cuda()
     model.to(device=device)
-    optimizer = torch.optim.Adam(model.parameters(), lr = LR)
+    #optimizer = torch.optim.Adam(model.parameters(), lr = LR)
+    optimizer = torch.optim.RAdam(model.parameters(), lr = LR)
     #optimizer = torch.optim.SGD(model.parameters(), lr = LR, momentum=0.9)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
+    scheduler = None
+    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
     ball_datas_train = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".train.bin"), device=device)
     dataloader_train = DataLoader(dataset=ball_datas_train, batch_size=batch_size,shuffle=True, num_workers=num_workers)
@@ -122,7 +124,8 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
                 pass
             model.reset_hidden_cell(batch_size=batch_size)
 
-            scheduler.step()
+            if scheduler != None:
+                scheduler.step()
         except KeyboardInterrupt:
             c_exit = input("exit?[Y/n]")
             if c_exit == "Y" or c_exit == "y" or c_exit == chr(13) :
@@ -348,13 +351,10 @@ def cross():
         for d in ('fit', 'ne', 'predict') :
             if d == 'fit':
                 c.set2Fitting()
-                dfo.loadLib()
             elif d == 'ne':
                 c.set2NoError()
-                dfo.loadLib()
             elif d == 'predict':
                 c.set2Predict()
-                dfo.loadLib()
             res = []
             for w in ('fit', 'ne', 'predict') :
                 res.append(validModel("medium", "ball_simulate_v2/model_saves/" + w  + "/epoch_29/weight.pt", d + "_medium"))
