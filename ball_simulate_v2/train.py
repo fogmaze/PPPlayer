@@ -1,3 +1,4 @@
+import numpy as np
 import random
 import sys
 import os
@@ -20,9 +21,16 @@ from typing import List,Tuple
 import tqdm
 import csv
 
-def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, dataset = "",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2):
+def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, dataset = "",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2):
     torch.multiprocessing.set_start_method('spawn')
-    model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
+    #model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
+    model_save_dir = "./ball_simulate_v2/model_saves/" + name + "/"
+    if os.path.isdir(model_save_dir):
+        old_new_name = "./ball_simulate_v2/model_saves/" + name + "_" + str(random.randint(0,1000)) + "/"
+        while os.path.isdir(old_new_name):
+            old_new_name = "./ball_simulate_v2/model_saves/" + name + "_" + str(random.randint(0,1000)) + "/"
+        os.rename(model_save_dir, old_new_name)
+        print("model save dir exists, change the old one into " + old_new_name)
     os.makedirs(model_save_dir)
     train_logger = logging.getLogger('training')
     train_logger.setLevel(logging.DEBUG)
@@ -55,8 +63,10 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
     #optimizer = torch.optim.Adam(model.parameters(), lr = LR)
     optimizer = torch.optim.RAdam(model.parameters(), lr = LR)
     #optimizer = torch.optim.SGD(model.parameters(), lr = LR, momentum=0.9)
-    scheduler = None
-    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
+    if scheduler_step_size == None:
+        scheduler = None
+    else :
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
     ball_datas_train = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".train.bin"), device=device)
     dataloader_train = DataLoader(dataset=ball_datas_train, batch_size=batch_size,shuffle=True, num_workers=num_workers)
@@ -120,6 +130,11 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=7, LR = 0.0001, datas
                 saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output3.png", seed=200)
                 saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output4.png", seed=300)
                 saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output5.png", seed=400)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output6.png", seed=500)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output7.png", seed=600)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output8.png", seed=700)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output9.png", seed=800)
+                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output10.png", seed=900)
             except:
                 pass
             model.reset_hidden_cell(batch_size=batch_size)
@@ -360,6 +375,10 @@ def cross():
                 res.append(validModel("medium", "ball_simulate_v2/model_saves/" + w  + "/epoch_29/weight.pt", d + "_medium"))
             writer.writerow(res)
 
+def LRRTest(bs = 64,range = np.arange(0.001,0.01,0.00125)) :
+    c.set2Normal()
+    for lr in range :
+        train(epochs=15, batch_size=bs, LR=lr, dataset="normal_medium", model_name="medium", name="lr_test_" + str(lr), num_workers=0)
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
@@ -368,16 +387,21 @@ if __name__ == "__main__":
     argparser.add_argument('-e', default=30, type=int)
     argparser.add_argument('-m', default="big", type=str)
     argparser.add_argument('-d', default="fit_medium", type=str)
-    argparser.add_argument('-s', default=8, type=int)
+    argparser.add_argument('-s', default=0, type=int)
     argparser.add_argument('-w', default=None, type=str)
     argparser.add_argument('-n', default="default", type=str)
     argparser.add_argument('--num_workers', default=0, type=int)
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
     argparser.add_argument('--test', dest='test', action='store_true', default=False)
     argparser.add_argument('--mode', default="fit", type=str)
+    argparser.add_argument('--LRRTest', dest='LRRTest', action='store_true', default=False)
 
     args = argparser.parse_args()
     # if ball_simulate_v2/dataset not exested, then create
+
+    if args.LRRTest :
+        LRRTest()
+        exit(0)
 
     if args.mode != "default":
         if args.mode == "fit" :
@@ -399,5 +423,5 @@ if __name__ == "__main__":
         validModel(args.m, args.w, args.d)
         exit(0)
         
-    train(scheduler_step_size=args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w, name=args.n, num_workers=args.num_workers)
+    train(scheduler_step_size=None if args.s == 0 else args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w, name=args.n, num_workers=args.num_workers)
     pass
