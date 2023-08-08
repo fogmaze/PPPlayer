@@ -21,8 +21,10 @@ from typing import List,Tuple
 import tqdm
 import csv
 
+torch.multiprocessing.set_start_method('spawn')
+
 def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, dataset = "",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2):
-    torch.multiprocessing.set_start_method('spawn')
+
     #model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
     model_save_dir = "./ball_simulate_v2/model_saves/" + name + "/"
     if os.path.isdir(model_save_dir):
