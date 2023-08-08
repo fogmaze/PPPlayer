@@ -219,7 +219,7 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
         cam2_ign = randomInpIdxs()
         # save data
         for j in range(SINGLE_SIMULATE_SAMPLE_LEN) :
-            dataStruct = dfo.DataStruct()
+            dataStruct = dataset.DataStruct()
             cam1_end = random.randint(3, len(cam1_data))
             cam2_end = min(random.randint(cam1_end-2, cam1_end+2), len(cam2_data))
             dataStruct.inputs[0].camera_x = cam1_pos.x
@@ -436,13 +436,12 @@ if __name__ == "__main__":
     if args.mode != "default":
         if args.mode == "fit":
             c.set2Fitting()
-            dfo.loadLib()
         elif args.mode == "ne":
             c.set2NoError()
-            dfo.loadLib()
         elif args.mode == "predict":
             c.set2Predict()
-            dfo.loadLib()
+        elif args.mode == "normal":
+            c.set2Normal()
         else:
             raise Exception("mode error")
 

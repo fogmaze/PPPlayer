@@ -9,97 +9,93 @@ sys.path.append(os.getcwd())
 import core.Constants as c
 import threading
 
-Data_Point = None
-Data_Input = None
-DataStruct = None
-
-lib = None
-
-def loadLib():
-    global lib, Data_Point, Data_Input, DataStruct
-    libname = "dataFileOperatorV2-{}-{}".format(c.SIMULATE_INPUT_LEN, c.SIMULATE_TEST_LEN)
-    print("load lib {}".format(libname))
-    lib = CDLL("build/lib{}.so".format(libname))
-
-    class Data_Point_(Structure):
-        _fields_ = [
-            ("x",c_double),
-            ("y",c_double),
-            ("z",c_double)
-        ]
-    Data_Point = Data_Point_
-
-    class Data_Input_(Structure):
-        _fields_ = [
-            ("camera_x", c_double),
-            ("camera_y", c_double),
-            ("camera_z", c_double),
-            ("line_rad_xy", c_double * c.SIMULATE_INPUT_LEN),
-            ("line_rad_xz", c_double * c.SIMULATE_INPUT_LEN),
-            ("timestamps", c_double * c.SIMULATE_INPUT_LEN),
-            ("seq_len", c_int)
-        ]
-    Data_Input = Data_Input_
-
-    class DataStruct_(Structure):
-        _fields_ = [
-            ("inputs", Data_Input * 2),
-            ("curvePoints", Data_Point * c.SIMULATE_TEST_LEN),
-            ("curveTimestamps", c_double * c.SIMULATE_TEST_LEN)
-        ]
-    DataStruct = DataStruct_
-
-    lib.main.argtypes = []
-    lib.main.restype = c_int
-    lib.loadFromFile.argtypes = [c_char_p]
-    lib.loadFromFile.restype = c_void_p
-    lib.releaseData.argtypes = [c_void_p]
-    lib.releaseData.restype = None
-    lib.loadIsSuccess.argtypes = [c_void_p]
-    lib.loadIsSuccess.restype = c_bool
-    lib.getFileDataLength.argtypes = [c_void_p]
-    lib.getFileDataLength.restype = c_int
-    lib.getFileData.argtypes = [c_void_p, c_int]
-    lib.getFileData.restype = c_void_p
-    lib.createHeader.argtypes = [c_int]
-    lib.createHeader.restype = c_void_p
-    lib.putData.argtypes = [c_void_p, c_int, DataStruct]
-    lib.putData.restype = c_bool
-    lib.saveToFile.argtypes = [c_void_p, c_char_p]
-    lib.saveToFile.restype = c_bool
-    lib.getFileData_sync.argtypes = [c_char_p, c_int]
-    lib.getFileData_sync.restype = DataStruct
-    lib.getFileDataLength_sync.argtypes = [c_char_p]
-    lib.getFileDataLength_sync.restype = c_int
-    lib.createEmptyFile_sync.argtypes = [c_char_p, c_int]
-    lib.createEmptyFile_sync.restype = None
-    lib.putData_sync.argtypes = [c_char_p, c_int, DataStruct]
-    lib.putData_sync.restype = None
-    lib.merge.argtypes = [c_char_p, c_char_p, c_char_p]
-    lib.merge.restype = None
-
 
 class BallDataSet_sync(torch.utils.data.Dataset) :
+    def loadLib(self):
+        libname = "dataFileOperatorV2-{}-{}".format(c.SIMULATE_INPUT_LEN, c.SIMULATE_TEST_LEN)
+        print("load lib {}".format(libname))
+        self.lib = CDLL("build/lib{}.so".format(libname))
+
+        class Data_Point_(Structure):
+            _fields_ = [
+                ("x",c_double),
+                ("y",c_double),
+                ("z",c_double)
+            ]
+        self.Data_Point = Data_Point_
+
+        class Data_Input_(Structure):
+            _fields_ = [
+                ("camera_x", c_double),
+                ("camera_y", c_double),
+                ("camera_z", c_double),
+                ("line_rad_xy", c_double * c.SIMULATE_INPUT_LEN),
+                ("line_rad_xz", c_double * c.SIMULATE_INPUT_LEN),
+                ("timestamps", c_double * c.SIMULATE_INPUT_LEN),
+                ("seq_len", c_int)
+            ]
+        self.Data_Input = Data_Input_
+
+        class DataStruct_(Structure):
+            _fields_ = [
+                ("inputs", self.Data_Input * 2),
+                ("curvePoints", self.Data_Point * c.SIMULATE_TEST_LEN),
+                ("curveTimestamps", c_double * c.SIMULATE_TEST_LEN)
+            ]
+        self.DataStruct = DataStruct_
+
+        self.lib.main.argtypes = []
+        self.lib.main.restype = c_int
+        self.lib.loadFromFile.argtypes = [c_char_p]
+        self.lib.loadFromFile.restype = c_void_p
+        self.lib.releaseData.argtypes = [c_void_p]
+        self.lib.releaseData.restype = None
+        self.lib.loadIsSuccess.argtypes = [c_void_p]
+        self.lib.loadIsSuccess.restype = c_bool
+        self.lib.getFileDataLength.argtypes = [c_void_p]
+        self.lib.getFileDataLength.restype = c_int
+        self.lib.getFileData.argtypes = [c_void_p, c_int]
+        self.lib.getFileData.restype = c_void_p
+        self.lib.createHeader.argtypes = [c_int]
+        self.lib.createHeader.restype = c_void_p
+        self.lib.putData.argtypes = [c_void_p, c_int, self.DataStruct]
+        self.lib.putData.restype = c_bool
+        self.lib.saveToFile.argtypes = [c_void_p, c_char_p]
+        self.lib.saveToFile.restype = c_bool
+        self.lib.getFileData_sync.argtypes = [c_char_p, c_int]
+        self.lib.getFileData_sync.restype = self.DataStruct
+        self.lib.getFileDataLength_sync.argtypes = [c_char_p]
+        self.lib.getFileDataLength_sync.restype = c_int
+        self.lib.createEmptyFile_sync.argtypes = [c_char_p, c_int]
+        self.lib.createEmptyFile_sync.restype = None
+        self.lib.putData_sync.argtypes = [c_char_p, c_int, self.DataStruct]
+        self.lib.putData_sync.restype = None
+        self.lib.merge.argtypes = [c_char_p, c_char_p, c_char_p]
+        self.lib.merge.restype = None
+
+
     def __init__(self, fileName, dataLength = None, device = "cuda:0"):
+        self.loadLib()
+
         self.fileName = fileName
         self.device = torch.device(device)
 
         if dataLength != None:
-            lib.createEmptyFile_sync(self.fileName.encode('utf-8'), dataLength)
+            self.lib.createEmptyFile_sync(self.fileName.encode('utf-8'), dataLength)
         
         if not os.path.exists(fileName) :
             raise Exception("file not found")
-        self.length = lib.getFileDataLength_sync(self.fileName.encode('utf-8'))
+        self.length = self.lib.getFileDataLength_sync(self.fileName.encode('utf-8'))
         pass
     
     def __len__(self):
         return self.length
     
-    def putData(self, index:int, data:DataStruct):
-        return lib.putData_sync(self.fileName.encode('utf-8'), index, data)
+    def putData(self, index:int, data):
+        return self.lib.putData_sync(self.fileName.encode('utf-8'), index, data)
 
     def __getitem__(self, index):
-        d_ori = lib.getFileData_sync(self.fileName.encode('utf-8'), index)
+        d_ori = self.lib.getFileData_sync(self.fileName.encode('utf-8'), index)
         d_list_r = [None] * c.SIMULATE_INPUT_LEN
         d_list_l = [None] * c.SIMULATE_INPUT_LEN
         d_list_t = [None] * c.SIMULATE_TEST_LEN
@@ -118,12 +114,13 @@ class BallDataSet_sync(torch.utils.data.Dataset) :
         pass
 
 def merge(a, b, out) :
-    lib.merge(a.encode('utf-8'), b.encode('utf-8'), out.encode('utf-8'))
+    #lib.merge(a.encode('utf-8'), b.encode('utf-8'), out.encode('utf-8'))
+    pass
 
 def testPutData():
     d = BallDataSet_sync("t.bin", dataLength=2)
     for i in range(2) :
-        a = DataStruct()
+        a = d.DataStruct()
         a.inputs[0].camera_x = i
         a.inputs[0].camera_y = 2
         a.inputs[0].camera_z = 3
@@ -162,7 +159,6 @@ def testLoadData():
     print(a[1].curveTimestamps[1])
 if __name__ == "__main__":
     c.set2Fitting()
-    lib.main()
     ds = BallDataSet_sync("ball_simulate_v2/dataset/medium_fit.train.bin")
     a = ds[0]
     b = ds[1]
