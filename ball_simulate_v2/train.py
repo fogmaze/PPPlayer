@@ -23,8 +23,7 @@ import csv
 
 torch.multiprocessing.set_start_method('spawn')
 
-def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, dataset = "",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2):
-
+def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, dataset = "", opt="adam",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2):
     #model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
     model_save_dir = "./ball_simulate_v2/model_saves/" + name + "/"
     if os.path.isdir(model_save_dir):
@@ -48,7 +47,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, da
 
     training_params = 'epochs:{}, batch_size:{}, scheduler_step_size:{}, LR:{}, dataset:{}, model_name:{}, weight:{}, device:{}'.format(epochs,batch_size,scheduler_step_size,LR,dataset,model_name,weight,device)
     train_logger.info('start training with args: epochs:{}, batch_size:{}, scheduler_step_size:{}, LR:{}, dataset:{}, model_name:{}, weight:{}, device:{}'.format(epochs,batch_size,scheduler_step_size,LR,dataset,model_name,weight,device))
-    
+
     if (MODEL_MAP.get(model_name) == None):
         raise Exception("model name not found")
     model = MODEL_MAP[model_name](device=device)
@@ -63,8 +62,10 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, da
     criterion = nn.MSELoss().cuda()
     model.to(device=device)
     #optimizer = torch.optim.Adam(model.parameters(), lr = LR)
-    optimizer = torch.optim.RAdam(model.parameters(), lr = LR)
-    #optimizer = torch.optim.SGD(model.parameters(), lr = LR, momentum=0.9)
+    if opt == "adam":
+        optimizer = torch.optim.RAdam(model.parameters(), lr = LR)
+    elif opt == "sgdm":
+        optimizer = torch.optim.SGD(model.parameters(), lr = LR, momentum=0.4)
     if scheduler_step_size == None:
         scheduler = None
     else :
@@ -163,6 +164,9 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, da
         # write the data
         for i in range(len(train_loss_history)):
             writer.writerow([i, train_loss_history[i], valid_loss_history[i]])
+    train_logger.info("training finished")
+    train_logger.removeHandler(file_handler)
+    train_logger.removeHandler(console_handler)
 
 
 def exportModel(model_name:str, weight:str):
@@ -377,10 +381,10 @@ def cross():
                 res.append(validModel("medium", "ball_simulate_v2/model_saves/" + w  + "/epoch_29/weight.pt", d + "_medium"))
             writer.writerow(res)
 
-def LRRTest(bs = 64,range = np.arange(0.001,0.01,0.00125)) :
+def LRRTest(name, bs = 64, lr_range = (0.001, 0.5), opt = "adam") :
     c.set2Normal()
-    for lr in range :
-        train(epochs=15, batch_size=bs, LR=lr, dataset="normal_medium", model_name="medium", name="lr_test_" + str(lr), num_workers=0)
+    for lr in  np.arange(lr_range[0], lr_range[1], (lr_range[1]-lr_range[0])/8 ):
+        train(epochs=10, batch_size=bs, LR=lr, dataset="normal_medium", opt=opt, model_name="medium", name=name + "_lr_test_" + str(lr), num_workers=0)
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
@@ -392,6 +396,7 @@ if __name__ == "__main__":
     argparser.add_argument('-s', default=0, type=int)
     argparser.add_argument('-w', default=None, type=str)
     argparser.add_argument('-n', default="default", type=str)
+    argparser.add_argument('-o', default="adam")
     argparser.add_argument('--num_workers', default=0, type=int)
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
     argparser.add_argument('--test', dest='test', action='store_true', default=False)
@@ -402,7 +407,7 @@ if __name__ == "__main__":
     # if ball_simulate_v2/dataset not exested, then create
 
     if args.LRRTest :
-        LRRTest()
+        LRRTest(bs=args.b, name=args.n, opt=args.o)
         exit(0)
 
     if args.mode != "default":

@@ -38,10 +38,10 @@ def takePicture():
     cap.release()
     cv2.destroyAllWindows()
 
-def calculateCameraPosition(cameraMatrix:np.ndarray, frame, tagSize=APRILTAG_SIZE) :
+def calculateCameraPosition(cameraMatrix:np.ndarray, frame_gray, tagSize=APRILTAG_SIZE) :
     detector = Detector()
     try:
-        results = detector.detect(frame, 
+        results = detector.detect(frame_gray, 
                                   estimate_tag_pose=True, 
                                   camera_params=(cameraMatrix[0][0],cameraMatrix[1][1],cameraMatrix[0][2],cameraMatrix[1][2]),
                                   tag_size=tagSize)
