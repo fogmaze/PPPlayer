@@ -46,8 +46,7 @@ def get_cam_pos_and_homo(path) :
 
 def predict(
         calibrationFile = "calibration",
-        source1         = 0,
-        source2         = 1,
+        source         = (0, 1),
         frame_size      = (640,480), 
         frame_rate      = 30, 
         color_range     = "color_range", 
@@ -57,6 +56,8 @@ def predict(
         weight          = None 
         ) :
 
+    SPEED_UP = False
+
     # load model
     model:models.ISEFWINNER_BASE = train.MODEL_MAP[model_name](device="cuda:0")
     model.cuda()
@@ -65,11 +66,15 @@ def predict(
     
     common.replaceDir(os.path.join("ball_detection/result/", save_name))
     queue = mp.Queue()
-    if type(source1) == int :
+    if type(source) == int :
         cam1_pos, cam1_homo = Detection.setup_camera(0, calibrationFile=calibrationFile)
         cam2_pos, cam2_homo = Detection.setup_camera(1, calibrationFile=calibrationFile)
-    elif type(source1) == str :
-        pass
+        source1 = source[0]
+        source2 = source[1]
+    elif type(source) == str :
+        source1 = os.path.join("ball_detection/result", source + "/cam1"),
+        source2 = os.path.join("ball_detection/result", source + "/cam2")
+
     cam1_kwargs = {
         "calibrationFile" : calibrationFile,
         "frame_size":frame_size, 
@@ -86,14 +91,14 @@ def predict(
         "frame_size":frame_size, 
         "frame_rate":frame_rate, 
         "color_range":color_range, 
-        "save_name":save_name + "/cam1", 
+        "save_name":save_name + "/cam2", 
         "mode":"dual_analysis",
         "cam_pos":cam2_pos, 
         "homography_matrix":cam2_homo,
         "queue":queue
     }
-    p1 = mp.Process(target=Detection.detectProcess, args=(0), kwargs=cam1_kwargs)
-    p2 = mp.Process(target=Detection.detectProcess, args=(1), kwargs=cam2_kwargs)
+    p1 = mp.Process(target=Detection.detectProcess, args=(source1), kwargs=cam1_kwargs)
+    p2 = mp.Process(target=Detection.detectProcess, args=(source2), kwargs=cam2_kwargs)
     lines1 = LineCollector_hor()
     lines2 = LineCollector_hor()
 
@@ -107,7 +112,10 @@ def predict(
                 isHit = not lines1.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
             elif new_data[0] == p2.pid:
                 isHit = not lines2.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
-            if not isHit :
+            if SPEED_UP :
+                pass
+            else :
+                
                 pass
     except KeyboardInterrupt:
         pass
