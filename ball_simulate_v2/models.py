@@ -16,11 +16,15 @@ class ISEFWINNER_BASE(nn.Module):
     llstm_hidden_cell:tuple
     rlstm_hidden_cell:tuple
     mlp2:nn.Sequential
+    llstm_last:torch.Tensor = None
+    rlstm_last:torch.Tensor = None
 
     @torch.jit.export
     def reset_hidden_cell(self, batch_size:int):
         self.llstm_hidden_cell = (torch.zeros(self.lstm_num_layers, batch_size, self.lstm_out, device=self.device), torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device))
         self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers, batch_size, self.lstm_out, device=self.device), torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=self.device))
+        self.llstm_last = None
+        self.rlstm_last = None
 
     def forward(self, X1:torch.Tensor, X1_len:torch.Tensor, X2:torch.Tensor, X2_len:torch.Tensor, T:torch.Tensor):
         x1_batch_size = len(X1)
@@ -42,11 +46,11 @@ class ISEFWINNER_BASE(nn.Module):
         X2_ind = X2_len_ind.view(1, x2_batch_size, 1).expand(1, x2_batch_size, self.lstm_out)
         X1 = X1.gather(0, X1_ind).view(1, x1_batch_size, self.lstm_out)
         X2 = X2.gather(0, X2_ind).view(1, x2_batch_size, self.lstm_out)
+        self.llstm_last = X1.transpose(0, 1)
+        self.rlstm_last= X2.transpose(0, 1)
         
-        # 合併前段模型輸出 
-        X1 = X1.transpose(0, 1)
-        X2 = X2.transpose(0, 1)
-        X1 = torch.cat((X1, X2), 2)
+        # 合併前段模型輸出
+        X1 = torch.cat((self.llstm_last, self.rlstm_last), 2)
 
         # 合併的結果複製k份，k為輸入T的長度 
         X1 = X1.repeat(1, T.shape[1], 1)
@@ -54,6 +58,30 @@ class ISEFWINNER_BASE(nn.Module):
 
         # 輸入全連接層2
         res = self.mlp2(X1.view(-1, self.lstm_out * 2 + 1)).view(x1_batch_size, T.shape[1], self.output_size)
+        return res
+
+    def forward_left_update(self, X:torch.Tensor) :
+        batch_size = len(X)
+        X = self.mlp1(X.view(-1,self.input_size)).view(batch_size, 1, self.mlp1_out)
+        X = X.transpose(0, 1)
+        X, self.llstm_hidden_cell = self.lstm(X, self.llstm_hidden_cell)
+        self.llstm_last = X.transpose(0, 1)
+
+    def forward_right_update(self, X:torch.Tensor) :
+        batch_size = len(X)
+        X = self.mlp1(X.view(-1,self.input_size)).view(batch_size, 1, self.mlp1_out)
+        X = X.transpose(0, 1)
+        X, self.rlstm_hidden_cell = self.lstm(X, self.rlstm_hidden_cell)
+        self.rlstm_last = X.transpose(0, 1)
+
+    def forward_predict(self, T:torch.Tensor) :
+        if self.llstm_last is None or self.rlstm_last is None:
+            return None
+        batch_size = len(T)
+        X = torch.cat((self.llstm_last, self.rlstm_last), 2)
+        X = X.repeat(1, T.shape[1], 1)
+        X = torch.cat((X, T.view(batch_size, T.shape[1], 1)), 2)
+        res = self.mlp2(X.view(-1, self.lstm_out * 2 + 1)).view(batch_size, T.shape[1], self.output_size)
         return res
 
 class ISEFWINNER_SMALL(ISEFWINNER_BASE):

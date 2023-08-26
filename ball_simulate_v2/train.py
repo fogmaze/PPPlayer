@@ -17,7 +17,7 @@ import core
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import core.Equation3d as equ
-from typing import List,Tuple
+from typing import List,Tuple,Dict
 import tqdm
 import csv
 
@@ -358,7 +358,7 @@ def redrawTrainResult(dirname, model_name, dataset):
         saveVisualizeModelOutput(model, ball_datas, dirname + "epoch_" + str(i) + "/output4.png", seed=300)
         saveVisualizeModelOutput(model, ball_datas, dirname + "epoch_" + str(i) + "/output5.png", seed=400)
 
-MODEL_MAP = {
+MODEL_MAP:Dict[str, models.ISEFWINNER_BASE] = {
     "small":models.ISEFWINNER_SMALL,
     "medium":models.ISEFWINNER_MEDIUM,
     "medium_var":models.ISEFWINNER_MEDIUM_VARIOUS,

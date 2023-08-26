@@ -3,6 +3,8 @@ import os
 import sys
 sys.path.append(os.getcwd())
 import ball_detection.Detection as Detection
+import ball_simulate_v2.train as train
+import ball_simulate_v2.models as models
 import core.common as common
 from typing import List, Tuple
 
@@ -11,10 +13,12 @@ class LineCollector:
     def put(self, x, y, z, rxy, rxz) :
         if self.checkHit(x, y, z, rxy, rxz) :
             self.lines.clear()
+            return False
         else :
             if len(self.lines) > 50:
                 self.lines.pop(0)
             self.lines.append((x, y, z, rxy, rxz))
+            return True
     def checkHit(self, x, y, z, rxy, rxz) :
         pass
 
@@ -37,23 +41,35 @@ class LineCollector_hor(LineCollector) :
         self.last_rxy = rxy
         return True
 
+def get_cam_pos_and_homo(path) :
+    pass
 
 def predict(
-        calibrationFile="calibration",
-        frame_size=(640,480), 
-        frame_rate=30, 
-        color_range="color_range", 
-        save_name="dual_default", 
-        mode="analysis",
-        model=None) :
+        calibrationFile = "calibration",
+        source1         = 0,
+        source2         = 1,
+        frame_size      = (640,480), 
+        frame_rate      = 30, 
+        color_range     = "color_range", 
+        save_name       = "dual_default", 
+        mode            = "analysis",
+        model_name:str  = None,
+        weight          = None 
+        ) :
 
     # load model
-    
+    model:models.ISEFWINNER_BASE = train.MODEL_MAP[model_name](device="cuda:0")
+    model.cuda()
+    model.load_state_dict(weight)
+    model.eval()
     
     common.replaceDir(os.path.join("ball_detection/result/", save_name))
     queue = mp.Queue()
-    cam1_pos, cam1_homo = Detection.setup_camera(0, calibrationFile=calibrationFile)
-    cam2_pos, cam2_homo = Detection.setup_camera(1, calibrationFile=calibrationFile)
+    if type(source1) == int :
+        cam1_pos, cam1_homo = Detection.setup_camera(0, calibrationFile=calibrationFile)
+        cam2_pos, cam2_homo = Detection.setup_camera(1, calibrationFile=calibrationFile)
+    elif type(source1) == str :
+        pass
     cam1_kwargs = {
         "calibrationFile" : calibrationFile,
         "frame_size":frame_size, 
@@ -86,11 +102,13 @@ def predict(
     try :
         while True :
             new_data = queue.get()
+            isHit = None
             if new_data[0] == p1.pid:
-                lines1.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
+                isHit = not lines1.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
             elif new_data[0] == p2.pid:
-                lines2.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
-            
+                isHit = not lines2.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
+            if not isHit :
+                pass
     except KeyboardInterrupt:
         pass
 
