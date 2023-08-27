@@ -44,18 +44,15 @@ class LineCollector_hor(LineCollector) :
         self.last_rxy = rxy
         return True
 
-def get_cam_pos_and_homo(path) :
-    pass
-
-def prepareModelInput(ll, rl) :
-    l = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE)
-    r = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE)
+def prepareModelInput(ll, rl, device="cuda:0") :
+    l = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
+    r = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
     l[:len(ll)] = ll
     r[:len(rl)] = rl
     l = l.view(1, Constants.SIMULATE_INPUT_LEN, Constants.MODEL_INPUT_SIZE)
     r = r.view(1, Constants.SIMULATE_INPUT_LEN, Constants.MODEL_INPUT_SIZE)
-    l_len = torch.tensor([len(ll)]).view(1,1)
-    r_len = torch.tensor([len(rl)]).view(1,1)
+    l_len = torch.tensor([len(ll)]).view(1,1).to(device)
+    r_len = torch.tensor([len(rl)]).view(1,1).to(device)
     return l, l_len, r, r_len
 
 def predict(
