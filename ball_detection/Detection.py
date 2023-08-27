@@ -87,6 +87,12 @@ class Detection :
             self.situation_csv_writer = csv.writer(self.situation_csv)
             self.detection_csv_writer.writerow(["iter", "id", "x", "y", "h", "w", "cam_x", "cam_y", "cam_z","rxy", "rxz"])
             self.situation_csv_writer.writerow(["iter", "time", "fps", "numOfBall"])
+            # pickle camera position and homography matrix
+            if self.camera_position is not None and self.homography_matrix is not None:
+                with open("ball_detection/result/" + save_name + "/camera_position", "wb") as f :
+                    pickle.dump(self.camera_position, f)
+                with open("ball_detection/result/" + save_name + "/homography_matrix", "wb") as f :
+                    pickle.dump(self.homography_matrix, f)
         if self.mode == "dual_analysis":
             if queue is None or cam_pos is None or homography_matrix is None:
                 raise Exception("dual_analysis mode need pipe, cam_pos and homography_matrix")

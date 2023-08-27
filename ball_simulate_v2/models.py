@@ -1,12 +1,16 @@
 import torch
 import torch.nn as nn
+import sys
+import os
+sys.path.append(os.getcwd())
+import core.Constants as Constants
 
 class ISEFWINNER_BASE(nn.Module):
     #input:  [cam_x, cam_y, cam_z, rad_xy, rad_xz] * 2 , [time]
     #output: [x, y, z]
     device = "cuda:0"
-    input_size:int = 5
-    output_size:int = 3
+    input_size:int = Constants.MODEL_INPUT_SIZE
+    output_size:int = Constants.MODEL_OUTPUT_SIZE
     mlp1_out:int
     mlp2_out:int
     lstm_out:int

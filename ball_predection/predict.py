@@ -1,12 +1,15 @@
+import torch
 import multiprocessing as mp
 import os
 import sys
+import pickle
+from typing import List, Tuple
 sys.path.append(os.getcwd())
+import core.Constants as Constants
 import ball_detection.Detection as Detection
 import ball_simulate_v2.train as train
 import ball_simulate_v2.models as models
 import core.common as common
-from typing import List, Tuple
 
 class LineCollector:
     lines:List[Tuple[int, int, int, int, int]]
@@ -44,16 +47,27 @@ class LineCollector_hor(LineCollector) :
 def get_cam_pos_and_homo(path) :
     pass
 
+def prepareModelInput(ll, rl) :
+    l = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE)
+    r = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE)
+    l[:len(ll)] = ll
+    r[:len(rl)] = rl
+    l = l.view(1, Constants.SIMULATE_INPUT_LEN, Constants.MODEL_INPUT_SIZE)
+    r = r.view(1, Constants.SIMULATE_INPUT_LEN, Constants.MODEL_INPUT_SIZE)
+    l_len = torch.tensor([len(ll)]).view(1,1)
+    r_len = torch.tensor([len(rl)]).view(1,1)
+    return l, l_len, r, r_len
+
 def predict(
+        model_name:str,
+        weight,
         calibrationFile = "calibration",
-        source         = (0, 1),
+        source          = (0, 1),
         frame_size      = (640,480), 
         frame_rate      = 30, 
         color_range     = "color_range", 
         save_name       = "dual_default", 
-        mode            = "analysis",
-        model_name:str  = None,
-        weight          = None 
+        mode            = "analysis"
         ) :
 
     SPEED_UP = False
@@ -72,33 +86,35 @@ def predict(
         source1 = source[0]
         source2 = source[1]
     elif type(source) == str :
-        source1 = os.path.join("ball_detection/result", source + "/cam1"),
-        source2 = os.path.join("ball_detection/result", source + "/cam2")
+        source1 = os.path.join("ball_detection/result", source + "/cam1/all.mp4"),
+        source2 = os.path.join("ball_detection/result", source + "/cam2/all.mp4")
+        with open(os.path.join("ball_detection/result", source + "/cam1/camera_position"), "rb") as f:
+            cam1_pos = pickle.load(f)
+        with open(os.path.join("ball_detection/result", source + "/cam2/camera_position"), "rb") as f:
+            cam2_pos = pickle.load(f)
+        with open(os.path.join("ball_detection/result", source + "/cam1/homography_matrix"), "rb") as f:
+            cam1_homo = pickle.load(f)
+        with open(os.path.join("ball_detection/result", source + "/cam2/homography_matrix"), "rb") as f:
+            cam2_homo = pickle.load(f)
+        
+    def runDec(s, sub_name, cp, h, q) :
+        dec = Detection.Detection(
+            source = s,
+            calibrationFile = calibrationFile,
+            frame_size = frame_size, 
+            frame_rate = frame_rate, 
+            color_range = color_range, 
+            save_name = save_name + sub_name, 
+            mode = "dual_analysis",
+            cam_pos = cp, 
+            homography_matrix = h,
+            queue = q
+        )
+        dec.runDetection()
 
-    cam1_kwargs = {
-        "calibrationFile" : calibrationFile,
-        "frame_size":frame_size, 
-        "frame_rate":frame_rate, 
-        "color_range":color_range, 
-        "save_name":save_name + "/cam1", 
-        "mode":"dual_analysis",
-        "cam_pos":cam1_pos, 
-        "homography_matrix":cam1_homo,
-        "queue":queue
-    }
-    cam2_kwargs = {
-        "calibrationFile" : calibrationFile,
-        "frame_size":frame_size, 
-        "frame_rate":frame_rate, 
-        "color_range":color_range, 
-        "save_name":save_name + "/cam2", 
-        "mode":"dual_analysis",
-        "cam_pos":cam2_pos, 
-        "homography_matrix":cam2_homo,
-        "queue":queue
-    }
-    p1 = mp.Process(target=Detection.detectProcess, args=(source1), kwargs=cam1_kwargs)
-    p2 = mp.Process(target=Detection.detectProcess, args=(source2), kwargs=cam2_kwargs)
+    p1 = mp.Process(target=runDec, args=(source1, "/cam1", cam1_pos, cam1_homo, queue))
+    p2 = mp.Process(target=runDec, args=(source2, "/cam2", cam2_pos, cam2_homo, queue))
+
     lines1 = LineCollector_hor()
     lines2 = LineCollector_hor()
 
@@ -115,7 +131,8 @@ def predict(
             if SPEED_UP :
                 pass
             else :
-                
+                model.reset_hidden_cell(1)
+                l, l_len, r, r_len = prepareModelInput(lines1.lines, lines2.lines)
                 pass
     except KeyboardInterrupt:
         pass
