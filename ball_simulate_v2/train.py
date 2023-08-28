@@ -7,13 +7,11 @@ import ball_simulate_v2.dataFileOperator as dfo
 import ball_simulate_v2.models as models
 from argparse import ArgumentParser
 import logging
-import time
 import torch
 import torch.nn as nn
 import torch
 from torch.utils.data import DataLoader
 import core.Constants as c
-import core
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import core.Equation3d as equ
@@ -21,7 +19,7 @@ from typing import List,Tuple,Dict
 import tqdm
 import csv
 
-torch.multiprocessing.set_start_method('spawn')
+# torch.multiprocessing.set_start_method('spawn')
 
 def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, dataset = "", opt="adam",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2):
     #model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
@@ -386,7 +384,7 @@ def LRRTest(name, bs = 64, lr_range = (0.001, 0.5), opt = "adam") :
     for lr in  np.arange(lr_range[0], lr_range[1], (lr_range[1]-lr_range[0])/8 ):
         train(epochs=10, batch_size=bs, LR=lr, dataset="normal_medium", opt=opt, model_name="medium", name=name + "_lr_test_" + str(lr), num_workers=0)
 
-if __name__ == "__main__":
+if __name__ == "__main__" :
     argparser = ArgumentParser()
     argparser.add_argument('-lr', default=0.001, type=float)
     argparser.add_argument('-b', default=128, type=int)

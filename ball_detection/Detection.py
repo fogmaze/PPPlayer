@@ -3,11 +3,12 @@ import cv2
 import numpy as np
 import math
 import multiprocessing as mp
-from ColorRange import *
 from pupil_apriltags import Detector
 import csv
 import sys
+import os
 sys.path.append(os.getcwd())
+from ball_detection.ColorRange import *
 import core.common as common
 from camera_calibrate.utils import *
 from core.Constants import *
@@ -38,20 +39,25 @@ class Detection :
 
     def __init__(self, 
                 source, 
-                calibrationFile="calibration",
-                frame_size=(640,480), 
-                frame_rate=30, 
-                color_range="color_range", 
-                save_name="default", 
-                mode="analysis", 
-                cam_pos=None, 
-                homography_matrix=None,
-                queue:mp.Queue=None) :
+                calibrationFile    = "calibration",
+                frame_size         = (640,480), 
+                frame_rate         = 30, 
+                color_range        = "color_range", 
+                save_name          = "default", 
+                mode               ="analysis", 
+                cam_pos            = None, 
+                homography_matrix  = None,
+                queue              = None,
+                conn               = None
+                ) :
 
         self.pid = os.getpid()
         self.frame_size = frame_size
         self.frame_rate = frame_rate
-        self.camera_position = cam_pos
+        if type(cam_pos) == np.ndarray :
+            self.camera_position = equ.Point3d(cam_pos[0], cam_pos[1], cam_pos[2])
+        else :
+            self.camera_position = cam_pos
         if type(color_range) == str :
             self.range = load(color_range)
         else :
@@ -66,6 +72,7 @@ class Detection :
         self.cam = None
         self.source = source
         self.data = []
+        self.conn = None
         if self.frame_size == (640,480) :
             self.meanBallSize = self.MEAN_BALL_SIZE_DICT["320"]
         elif self.frame_size == (1920,1080) :
@@ -97,6 +104,7 @@ class Detection :
             if queue is None or cam_pos is None or homography_matrix is None:
                 raise Exception("dual_analysis mode need pipe, cam_pos and homography_matrix")
             self.queue = queue
+            self.conn = conn
 
     def __del__(self) :
         if self.mode == "analysis" :
@@ -192,26 +200,27 @@ class Detection :
                     if abs(area - self.meanBallSize) < min_Area_diff :
                         min_Area_diff = abs(area - self.meanBallSize)
                         result = (x, y, w, h)
-                x, y, w, h = result
-                self.drawDirection(frame, x, y, h, w, 1)
-                if self.homography_matrix is not None and self.camera_position is not None:
-                    ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
-                    projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
-                    line = equ.LineEquation3d(self.camera_position, projection)
+                if result is not None :
+                    x, y, w, h = result
+                    self.drawDirection(frame, x, y, h, w, 1)
+                    if self.homography_matrix is not None and self.camera_position is not None:
+                        ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
+                        projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
+                        line = equ.LineEquation3d(self.camera_position, projection)
 
-                    # save line data
-                    if self.mode == "analysis" or self.mode == "dual_analysis":
-                        self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
-                    elif self.mode == "compute":
-                        self.data.append([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
-                    if self.mode == "dual_analysis":
-                        self.queue.put([self.pid, iteration, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
-                else :
-                    # save pos data
-                    if self.mode == "analysis" or self.mode == "dual_analysis":
-                        self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
-                    elif self.mode == "compute":
-                        self.data.append([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
+                        # save line data
+                        if self.mode == "analysis" or self.mode == "dual_analysis":
+                            self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
+                        elif self.mode == "compute":
+                            self.data.append([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
+                        if self.mode == "dual_analysis":
+                            self.queue.put([self.pid, iteration, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
+                    else :
+                        # save pos data
+                        if self.mode == "analysis" or self.mode == "dual_analysis":
+                            self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
+                        elif self.mode == "compute":
+                            self.data.append([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
 
                 #save situation data and video
                 if self.mode == "analysis" or self.mode == "dual_analysis":
@@ -225,9 +234,21 @@ class Detection :
                 if self.mode == "analysis" or self.mode == "dual_analysis":
                     cv2.imshow(window, frame)
             else :
+                # send stop signal to main process
+                if self.mode == "dual_analysis":
+                    self.conn.send("stop")
                 break
+            # check conn from main process
+            if self.mode == "dual_analysis":
+                if self.conn.poll() :
+                    msg = self.conn.recv()
+                    if msg == "stop" :
+                        break
             iteration += 1
             last_iter_time = this_iter_time
+        
+        if self.mode == "dual_analysis":
+            self.conn.send("stop")
 
 
 class Detection_img(Detection) :

@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 class Point :
     x = 0.0
@@ -86,12 +87,17 @@ def  SolveEquation_3d( line1,  line2,  res) :
 class LineEquation3d :
     line_xy = None
     line_xz = None
-    def __init__(self, point1:Point3d,  point2:Point3d):
-        if point1 == None or point2 == None:
+    def __init__(self, point1:Point3d|np.ndarray,  point2:Point3d|np.ndarray):
+        if point1 is None or point2 is None:
             self.line_xy = LineEquation2d(None, None)
             self.line_xz = LineEquation2d(None, None)
             self.poi_buf = Point()
             return
+        if type(point1) == np.ndarray:
+            point1 = Point3d(point1[0],point1[1],point1[2])
+        if type(point2) == np.ndarray:
+            point2 = Point3d(point2[0],point2[1],point2[2])
+            
         self.line_xy = LineEquation2d(Point(point1.x, point1.y), Point(point2.x, point2.y))
         self.line_xz = LineEquation2d(Point(point1.x, point1.z), Point(point2.x, point2.z))
         self.poi_buf = Point()
