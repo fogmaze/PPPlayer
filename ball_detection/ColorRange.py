@@ -3,9 +3,6 @@ import numpy as np
 import pickle
 import os
 
-def empty(a) :
-    pass
-
 def save(path, object) :
     with open(path, "wb") as f :
         pickle.dump(object, f)
@@ -38,7 +35,7 @@ class ColorRange :
         self.lower = np.array([h_min, s_min, v_min])
 
 
-    def runColorRange_video(self, cam) :
+    def runColorRange_video(self, source, recursive = False, save_file_name = None) :
         cv2.namedWindow("ColorRangeSetting")
 
         cv2.createTrackbar("Hue Min", "ColorRangeSetting", self.lower[0], 179, empty)
@@ -48,7 +45,10 @@ class ColorRange :
         cv2.createTrackbar("Val Min", "ColorRangeSetting", self.lower[2], 255, empty)
         cv2.createTrackbar("Val Max", "ColorRangeSetting", self.upper[2], 255, empty)
 
+        cam = cv2.VideoCapture(source)
+        i = 0
         while True :
+            i += 1
             ret, frame = cam.read()
 
             if ret :
@@ -66,8 +66,14 @@ class ColorRange :
                 cv2.imshow("ColorRangeSetting", combined)
                 #cv2.imshow("ColorRangeMask", combined)
             else :
-                break
+                if recursive :
+                    cam = cv2.VideoCapture(source)
+                else :
+                    break
 
+            if i % 30 == 0 :
+                if save_file_name is not None :
+                    save(save_file_name, self)
             key = cv2.waitKey(20)
             if key == ord(" ") :
                 break
@@ -99,14 +105,12 @@ class ColorRange :
             if cv2.waitKey(1) == ord(" ") :
                 break
 
+cr = None
 
+def empty(a) :
+    if cr is not None:
+        save("color_range_1", cr)
 
 if __name__ == "__main__" :
-    cam = cv2.VideoCapture("ball_detection/result/20230718-1/all.mp4")
-    #img = cv2.imread("ball_sample.jpg")
-
-    cr = load("color_range")
-    
-    cr.runColorRange_video(cam)
-    #cr.runColorRange_image(img)
-    save("color_range", cr)
+    cr = load("color_range_1")
+    cr.runColorRange_video("ball_detection/result/camera1/all.mp4", recursive=True)

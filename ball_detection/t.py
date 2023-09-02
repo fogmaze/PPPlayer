@@ -3,6 +3,7 @@ import tqdm
 import pickle
 import os
 import sys
+import multiprocessing as mp
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import csv
 import cv2
@@ -10,7 +11,7 @@ import numpy as np
 import xml.etree.ElementTree as ET
 import ball_detection.Detection as Det
 import ball_detection.ColorRange as CR
-from ball_detection.ColorRange import ColorRange
+from ball_detection.ColorRange import ColorRange, load, save
 
 
 def calculateBallSize(xml_dir, max_len) :
@@ -84,7 +85,7 @@ def cmpResult(xml_dir, res_data, img_dir, img_start) :
             cv2.imshow("img", img)
             cv2.waitKey(0)
     distances = np.array(distances)
-    return corr_rate, error_rate, distances.mean(), distances.std()
+    return "%.2f" % round(corr_rate, 2), "%.2f" % round(error_rate, 2), "%.2f" %  round(distances.mean(), 2), "%.2f" %  round(distances.std(), 2)
 
 
 def getMiddleOfRect(x, y, w, h) :
@@ -125,17 +126,31 @@ def caculateBestColorRange() :
                             print(time.perf_counter() - las_t)
                             las_t = time.perf_counter()
 
+def findColorRange() :
+    def recur_print_result() :
+        while True:
+            with open("color_range_1", "rb") as f :
+                c = pickle.load(f)
+            print(findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
+    p = mp.Process(target=recur_print_result)
+    p.start()
+    with open("color_range_1", "rb") as f :
+        cr = pickle.load(f)
+    cr.runColorRange_video("ball_detection/result/camera1/all.mp4", recursive=True, save_file_name="color_range_1")
+    p.terminate()
+    p.join()
 
 if __name__ == "__main__" :
-    caculateBestColorRange()
-    exit(0)
-    with open("color_range", "rb") as f :
+    findColorRange()
+
+    exit()
+    with open("color_range_1", "rb") as f :
         c = pickle.load(f)
         print(c.upper)
         print(c.lower)
     print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
     print("--------------------------------------------------")
     print(findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
-    #cmpResult("/home/changer/Downloads/320_60_tagged/result/","ball_detection/result/320_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 0)
+
     #print("--------------------------------------------------")
     #cmpResult("/home/changer/Downloads/hd_60_tagged/result/","ball_detection/result/hd_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 1000)
