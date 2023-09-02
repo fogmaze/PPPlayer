@@ -105,9 +105,9 @@ def predict(
     queue = mp.Queue()
     c12d, c12s = mp.Pipe()
     c22d, c22s = mp.Pipe()
-    if type(source) == int :
-        cam1_pos, cam1_homo = Detection.setup_camera(0, calibrationFile=calibrationFile)
-        cam2_pos, cam2_homo = Detection.setup_camera(1, calibrationFile=calibrationFile)
+    if type(source) == tuple and len(source) == 2 :
+        cam1_pos, cam1_homo = Detection.setup_camera(source[0], calibrationFile=calibrationFile)
+        cam2_pos, cam2_homo = Detection.setup_camera(source[1], calibrationFile=calibrationFile)
         source1 = source[0]
         source2 = source[1]
     elif type(source) == str :
@@ -131,13 +131,31 @@ def predict(
 
     process_time = 0
     process_time_iter = 0
+    tra_time = 0
+    tra_iter = 0
 
     p1.start()
     p2.start()
+
+    while True :
+        if c12d.poll() :
+            msg = c12d.recv()
+            if msg == "ready":
+                break
+    while True :
+        if c22d.poll() :
+            msg = c22d.recv()
+            if msg == "ready":
+                break
+    c12d.send("start")
+    c22d.send("start")
+
     try :
         while True :
             if not queue.empty() :
                 new_data = queue.get()
+                tra_time += time.time() - new_data[7]
+                tra_iter += 1
 
                 nowT = time.time()
                 isHit = None
@@ -159,35 +177,27 @@ def predict(
                     process_time += time.time() - nowT
                     process_time_iter += 1
                     pfw.writerow([which, new_data[1]] + out.tolist())
-                    pass
             if c12d.poll() :
                 recv = c12d.recv()
                 if recv == "stop" :
                     c22d.send("stop")
-                    p1.join()
-                    p2.join()
-                    print("mean process time:", process_time / process_time_iter, "; it/s:", process_time_iter / process_time)
-                    return
-                break
+                    break
             if c22d.poll() :
                 recv = c22d.recv()
                 if recv == "stop" :
                     c12d.send("stop")
-                    p1.join()
-                    p2.join()
-                    print("mean process time:", process_time / process_time_iter, "; it/s:", process_time_iter / process_time)
-                    return
-                break
+                    break
     except KeyboardInterrupt:
         c12d.send("stop")
         c22d.send("stop")
-        p1.join()
-        p2.join()
-        print("mean process time:", process_time / process_time_iter, "; it/s:", process_time_iter / process_time)
-        return
+    
+    p1.join()
+    p2.join()
     process_time /= process_time_iter
     print("mean process time:", process_time, "; it/s:", process_time_iter / process_time)
+    print("mean tra time:", tra_time / tra_iter, "; it/s:", tra_iter / tra_time)
     pf.close()
 
 if __name__ == "__main__" :
     predict("medium", "ball_simulate_v2/model_saves/predict/epoch_29/weight.pt", source="dual_test")
+    #predict("medium", "ball_simulate_v2/model_saves/predict/epoch_29/weight.pt", source=(0, 1))

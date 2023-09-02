@@ -167,6 +167,15 @@ class Detection :
             self.homography_matrix = find_homography_matrix_to_apriltag(img)
         for i in range(fromFrameIndex) :
             self.getNextFrame()
+        
+        if self.mode == "dual_analysis":
+            self.conn.send("ready")
+            # wait for main process to send start signal
+            while True :
+                if self.conn.poll() :
+                    msg = self.conn.recv()
+                    if msg == "start" :
+                        break
         while(True) :
             ret, frame = self.getNextFrame()
             if ret :
@@ -214,7 +223,7 @@ class Detection :
                         elif self.mode == "compute":
                             self.data.append([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
                         if self.mode == "dual_analysis":
-                            self.queue.put([self.pid, iteration, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
+                            self.queue.put([self.pid, iteration, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg(), time.time()])
                     else :
                         # save pos data
                         if self.mode == "analysis" or self.mode == "dual_analysis":
