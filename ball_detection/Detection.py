@@ -363,7 +363,7 @@ def merge_rectangles(rectangles):
 if __name__ == "__main__" :
     img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
 
-    dect = Detection_img(source="/home/changer/Downloads/hd_60_tagged/frames", frame_size=(1920, 1080), save_name="hd_60_detection", beg_ind=1000)
+    dect = Detection_img(source="/home/changer/Downloads/hd_60_tagged/frames", color_range="color_range_2", frame_size=(1920, 1080), save_name="hd_60_detection_r2", beg_ind=1000)
     dect.runDetection(img)
 
 

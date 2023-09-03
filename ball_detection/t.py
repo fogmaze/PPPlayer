@@ -129,14 +129,15 @@ def caculateBestColorRange() :
 def findColorRange() :
     def recur_print_result() :
         while True:
-            with open("color_range_1", "rb") as f :
+            with open("color_range_2", "rb") as f :
                 c = pickle.load(f)
-            print(findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
+            print("30fps:", findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
+            print("60fps:", findRange_hsv_img(c, "/home/changer/Downloads/hd_60_tagged/frames", "/home/changer/Downloads/hd_60_tagged/result/", (1920, 1080), 60, beg=1000))
     p = mp.Process(target=recur_print_result)
-    p.start()
-    with open("color_range_1", "rb") as f :
+    with open("color_range_2", "rb") as f :
         cr = pickle.load(f)
-    cr.runColorRange_video("ball_detection/result/camera1/all.mp4", recursive=True, save_file_name="color_range_1")
+    p.start()
+    cr.runColorRange_video("ball_detection/result/hd_60_detection_r2/all.mp4", recursive=True, save_file_name="color_range_2")
     p.terminate()
     p.join()
 

@@ -113,4 +113,4 @@ def empty(a) :
 
 if __name__ == "__main__" :
     cr = load("color_range_1")
-    cr.runColorRange_video("ball_detection/result/camera1/all.mp4", recursive=True)
+    cr.runColorRange_video("ball_detection/result/hd_60_detection_r2/bad.mp4", recursive=True)
