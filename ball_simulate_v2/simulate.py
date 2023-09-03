@@ -463,8 +463,6 @@ if __name__ == "__main__":
                         "ball_simulate_v2/dataset/{}.valid.bin".format(args.n))
         exit()
 
-
-
     simulate(GUI=args.GUI, dataLength=args.l, outputFileName="ball_simulate_v2/dataset/{}.train.bin".format(args.n))
     simulate(GUI=args.GUI, dataLength=10000, outputFileName="ball_simulate_v2/dataset/{}.valid.bin".format(args.n))
     pass

@@ -20,7 +20,7 @@ from typing import List,Tuple,Dict
 import tqdm
 import csv
 
-# torch.multiprocessing.set_start_method('spawn')
+torch.multiprocessing.set_start_method('spawn')
 
 def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, dataset = "", opt="adam",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2):
     #model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
@@ -381,13 +381,13 @@ def LRRTest(name, bs = 64, lr_range = (0.001, 0.5), opt = "adam") :
 if __name__ == "__main__" :
     argparser = ArgumentParser()
     argparser.add_argument('-lr', default=0.001, type=float)
-    argparser.add_argument('-b', default=128, type=int)
+    argparser.add_argument('-b', default=64, type=int)
     argparser.add_argument('-e', default=30, type=int)
-    argparser.add_argument('-m', default="big", type=str)
-    argparser.add_argument('-d', default="fit_medium", type=str)
+    argparser.add_argument('-m', default="medium", type=str)
+    argparser.add_argument('-d', default="normalB", type=str)
     argparser.add_argument('-s', default=0, type=int)
     argparser.add_argument('-w', default=None, type=str)
-    argparser.add_argument('-n', default="default", type=str)
+    argparser.add_argument('-n', default="normalB", type=str)
     argparser.add_argument('-o', default="adam")
     argparser.add_argument('--num_workers', default=0, type=int)
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
