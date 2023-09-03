@@ -5,6 +5,7 @@ import os
 sys.path.append(os.getcwd())
 import ball_simulate_v2.dataFileOperator as dfo
 import ball_simulate_v2.models as models
+from ball_simulate_v2.models import MODEL_MAP
 from argparse import ArgumentParser
 import logging
 import torch
@@ -356,13 +357,6 @@ def redrawTrainResult(dirname, model_name, dataset):
         saveVisualizeModelOutput(model, ball_datas, dirname + "epoch_" + str(i) + "/output4.png", seed=300)
         saveVisualizeModelOutput(model, ball_datas, dirname + "epoch_" + str(i) + "/output5.png", seed=400)
 
-MODEL_MAP:Dict[str, models.ISEFWINNER_BASE] = {
-    "small":models.ISEFWINNER_SMALL,
-    "medium":models.ISEFWINNER_MEDIUM,
-    "medium_var":models.ISEFWINNER_MEDIUM_VARIOUS,
-    "big":models.ISEFWINNER_BIG,
-    "large":models.ISEFWINNER_LARGE
-}
 
 def cross():
     with open("ball_simulate_v2/cross.csv", "w") as f:
@@ -417,6 +411,10 @@ if __name__ == "__main__" :
             c.set2Predict()
         elif args.mode == "normal" :
             c.set2Normal()
+        elif args.mode == "normalB" :
+            c.set2NormalB()
+        elif args.mode == "normalB60" :
+            c.set2NormalB60()
         else :
             raise Exception("mode error")
 

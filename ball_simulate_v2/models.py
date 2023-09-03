@@ -1,3 +1,4 @@
+from typing import Dict
 import torch
 import torch.nn as nn
 import sys
@@ -331,3 +332,11 @@ class ISEFWINNER_LARGE(ISEFWINNER_BASE):
             nn.Linear(mlp2_l5_out, self.output_size)
         )
 
+
+MODEL_MAP:Dict[str, ISEFWINNER_BASE] = {
+    "small":ISEFWINNER_SMALL,
+    "medium":ISEFWINNER_MEDIUM,
+    "medium_var":ISEFWINNER_MEDIUM_VARIOUS,
+    "big":ISEFWINNER_BIG,
+    "large":ISEFWINNER_LARGE
+}

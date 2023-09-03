@@ -442,6 +442,10 @@ if __name__ == "__main__":
             c.set2Predict()
         elif args.mode == "normal":
             c.set2Normal()
+        elif args.mode == "normalB" :
+            c.set2NormalB()
+        elif args.mode == "normalB60" :
+            c.set2NormalB60()
         else:
             raise Exception("mode error")
 
