@@ -384,15 +384,15 @@ if __name__ == "__main__" :
     argparser.add_argument('-b', default=64, type=int)
     argparser.add_argument('-e', default=30, type=int)
     argparser.add_argument('-m', default="medium", type=str)
-    argparser.add_argument('-d', default="normalB", type=str)
+    argparser.add_argument('-d', default="normalB60", type=str)
     argparser.add_argument('-s', default=0, type=int)
     argparser.add_argument('-w', default=None, type=str)
-    argparser.add_argument('-n', default="normalB", type=str)
+    argparser.add_argument('-n', default="normalB60", type=str)
     argparser.add_argument('-o', default="adam")
     argparser.add_argument('--num_workers', default=0, type=int)
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
     argparser.add_argument('--test', dest='test', action='store_true', default=False)
-    argparser.add_argument('--mode', default="fit", type=str)
+    argparser.add_argument('--mode', default="normalB60", type=str)
     argparser.add_argument('--LRRTest', dest='LRRTest', action='store_true', default=False)
 
     args = argparser.parse_args()
@@ -412,6 +412,7 @@ if __name__ == "__main__" :
         elif args.mode == "normal" :
             c.set2Normal()
         elif args.mode == "normalB" :
+            print('a')
             c.set2NormalB()
         elif args.mode == "normalB60" :
             c.set2NormalB60()

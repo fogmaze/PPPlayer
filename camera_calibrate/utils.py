@@ -92,6 +92,7 @@ def runExerment() :
             writer.writerow(res_z)
             
 if __name__ == "__main__" :
+    takePicture()
     #runExerment()
     cameraMatrix = pickle.load(open('calibration', 'rb'))
     #takePicture()

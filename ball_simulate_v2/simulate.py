@@ -81,8 +81,10 @@ def randomInpIdxs() -> List[int]:
         for j in range(beg, beg + round(random.gauss(c.INPUT_IGNORE_WIDTH_MEAN, c.INPUT_IGNORE_WIDTH_STD))):
             if j < c.SIMULATE_INPUT_LEN:
                 all[j] = 0
-    return [i for i in range(c.SIMULATE_INPUT_LEN) if all[i] == 1]
-
+    res = [i for i in range(c.SIMULATE_INPUT_LEN) if all[i] == 1]
+    if len(res) < 3 :
+        return randomInpIdxs()
+    return res
 
 def configRoom(ax:Axes):
     lim = c.CAMERA_AREA_HALF_LENGTH
@@ -423,10 +425,10 @@ if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--GUI", default=False, action="store_true")
     argparser.add_argument("-l", default=1000, type=int)
-    argparser.add_argument("-n", default="test")
+    argparser.add_argument("-n", default="nb60test")
     argparser.add_argument("--num_workers", default=6, type=int)
     argparser.add_argument("--fast", default=False, action="store_true")
-    argparser.add_argument("--mode", default="ne", type=str)
+    argparser.add_argument("--mode", default="normalB60", type=str)
     argparser.add_argument("--merge", default=False, action="store_true")
     argparser.add_argument("--merge_a", default="train.bin", type=str)
     argparser.add_argument("--merge_b", default="train.bin", type=str)

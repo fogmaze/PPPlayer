@@ -67,7 +67,8 @@ def predict(
         frame_rate      = 30, 
         color_range     = "color_range", 
         save_name       = "dual_default", 
-        mode            = "analysis"
+        mode            = "analysis",
+        visualization   = True
         ) :
 
     def runDec(s, sub_name, cp, h, q, c2s) :
@@ -198,6 +199,11 @@ def predict(
     print("mean tra time:", tra_time / tra_iter, "; it/s:", tra_iter / tra_time)
     pf.close()
 
+    # display
+    if visualization :
+        import ball_predection.display as display
+        display.visualizePrediction(os.path.join("ball_detection/result", save_name), fps=frame_rate)
+
 if __name__ == "__main__" :
-    predict("medium", "ball_simulate_v2/model_saves/predict/epoch_29/weight.pt", source="dual_test")
+    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", source="dual_test", visualization=True)
     #predict("medium", "ball_simulate_v2/model_saves/predict/epoch_29/weight.pt", source=(0, 1))

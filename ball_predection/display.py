@@ -13,8 +13,6 @@ sys.path.append(os.getcwd())
 import core.Constants as Constants
 import core.Equation3d as equ
 import ball_predection.predict as pred
-import ball_simulate_v2.models as models
-from ball_simulate_v2.train import MODEL_MAP
 
 def prepareModelInput(ll:list, rl:list, device="cuda:0") :
     l = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
