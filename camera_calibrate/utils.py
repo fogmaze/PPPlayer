@@ -14,13 +14,14 @@ import pickle
 
 def takePicture():
     t = time.time()
-    cap = cv2.VideoCapture(0)
-    #cap.set(cv2.CAP_PROP_FPS, 60)
+    cap = cv2.VideoCapture(1)
+    cap.set(cv2.CAP_PROP_FPS, 60)
+    #lprint(cap.get(cv2.CAP_PROP_FPS))
     a = False
     i = 0
     while True :
         ret, frame = cap.read()
-        print(1/(time.time() - t))
+        #print(1/(time.time() - t))
         t = time.time()
         if ret :
             cv2.imshow('frame', frame)

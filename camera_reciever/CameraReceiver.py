@@ -1,3 +1,4 @@
+import time
 import socket
 import cv2
 import numpy as np
@@ -8,6 +9,7 @@ class CameraReceiver:
         self.port = 7439
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((ip, self.port))
+        self.t = 0
         
     def read(self) :
         img_str = b''
@@ -23,22 +25,30 @@ class CameraReceiver:
                 img_str += data
                 if len(data) < 1024 :
                     break
-            return
-        print('size : ', size, len(img_str))
+            return False
         while exact_size < size :
             data = self.socket.recv(1024)
             img_str += data
             exact_size += len(data)
         nparr = np.frombuffer(img_str, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        cv2.imshow('frame', img)
-        cv2.waitKey(1)
-        
+        return img
 
+        
     def close(self):
         self.socket.close()
 
 if __name__ == "__main__" :
     receiver = CameraReceiver('192.168.66.30')
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    writer = cv2.VideoWriter('output.mp4', fourcc, 30.0, (1920, 1080))
     while True :
-        receiver.read()
+        img = receiver.read()
+        if img is False :
+            continue
+        cv2.imshow('img', img)
+        writer.write(img)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    receiver.close()
+    writer.release()
