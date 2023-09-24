@@ -8,7 +8,10 @@ class CameraReceiver:
         self.ip = ip
         self.port = 7439
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((ip, self.port))
+        # self.socket.connect((self.ip, self.port))
+        
+    def connect(self) :
+        self.socket.connect((self.ip, self.port))
         
     def read(self) :
         img_str = b''
@@ -24,16 +27,18 @@ class CameraReceiver:
                 img_str += data
                 if len(data) < 1024 :
                     break
-            return False
+            return False, None
         while exact_size < size :
             data = self.socket.recv(1024)
             img_str += data
             exact_size += len(data)
         nparr = np.frombuffer(img_str, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        return img
-
+        return True, img
         
+    def __del__(self):
+        self.close()
+
     def close(self):
         self.socket.close()
 

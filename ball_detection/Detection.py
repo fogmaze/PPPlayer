@@ -15,7 +15,7 @@ from core.Constants import *
 import core.Equation3d as equ
 import camera_calibrate.utils as utils
 import camera_calibrate.Calibration as calib
-import camera_reciever.CameraReceiver as CameraReceiver
+from camera_reciever.CameraReceiver import CameraReceiver
 
 
 def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
@@ -28,6 +28,11 @@ def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
     tar    = np.float32([[0, 0], [tag_len, 0], [tag_len, tag_len], [0, tag_len]])
     homography = cv2.findHomography(coners, tar)[0]
     return homography
+
+def getBallProjectionPoint(homography_matrix, frame_size, x, y, w, h) :
+    ball_in_world = np.matmul(homography_matrix, np.array([frame_size[0] - (x+w//2), y+h//2, 1]))
+    projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
+    return projection
 
 class Detection :
     #save test frames
@@ -80,8 +85,10 @@ class Detection :
             self.meanBallSize = self.MEAN_BALL_SIZE_DICT["1080"]
         else :
             raise Exception("frame size is not supported")
-        if source is not None :
+        if type(source) == str or type(source) == int:
             self.cam = cv2.VideoCapture(source)
+        elif type(source) == CameraReceiver:
+            self.cam = source
 
         self.mode = mode
         if self.mode == "analysis" or self.mode == "dual_analysis":
@@ -101,14 +108,14 @@ class Detection :
                     pickle.dump(self.camera_position, f)
                 with open("ball_detection/result/" + save_name + "/homography_matrix", "wb") as f :
                     pickle.dump(self.homography_matrix, f)
-        if self.mode == "dual_analysis":
+        if self.mode == "dual_analysis" or self.mode == "dual_run":
             if queue is None or cam_pos is None or homography_matrix is None:
                 raise Exception("dual_analysis mode need pipe, cam_pos and homography_matrix")
             self.queue = queue
             self.conn = conn
 
     def __del__(self) :
-        if self.mode == "analysis" :
+        if self.mode == "analysis" or self.mode == "dual_analysis":
             if self.video_writer_all is not None :
                 self.video_writer_all.release()
             if self.video_writer_bad is not None :
@@ -169,7 +176,7 @@ class Detection :
         for i in range(fromFrameIndex) :
             self.getNextFrame()
         
-        if self.mode == "dual_analysis":
+        if self.mode == "dual_analysis" or self.mode == "dual_run" :
             self.conn.send("ready")
             # wait for main process to send start signal
             while True :
@@ -177,6 +184,9 @@ class Detection :
                     msg = self.conn.recv()
                     if msg == "start" :
                         break
+        
+        if type(self.cam) == CameraReceiver :
+            self.cam.connect()
         while(True) :
             ret, frame = self.getNextFrame()
             if ret :
@@ -223,7 +233,7 @@ class Detection :
                             self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
                         elif self.mode == "compute":
                             self.data.append([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
-                        if self.mode == "dual_analysis":
+                        if self.mode == "dual_analysis" or self.mode == "dual_run":
                             self.queue.put([self.pid, iteration, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg(), time.time()])
                     else :
                         # save pos data
@@ -241,15 +251,15 @@ class Detection :
                         self.video_writer_tagged.write(frame)
                 
                 window = "Source" + str(self.source) 
-                if self.mode == "analysis" or self.mode == "dual_analysis":
+                if self.mode == "analysis" or self.mode == "dual_analysis" or self.mode == "dual_run":
                     cv2.imshow(window, frame)
             else :
                 # send stop signal to main process
-                if self.mode == "dual_analysis":
+                if self.mode == "dual_analysis" or self.mode == "dual_run":
                     self.conn.send("stop")
                 break
             # check conn from main process
-            if self.mode == "dual_analysis":
+            if self.mode == "dual_analysis" or self.mode == "dual_run":
                 if self.conn.poll() :
                     msg = self.conn.recv()
                     if msg == "stop" :
@@ -257,32 +267,11 @@ class Detection :
             iteration += 1
             last_iter_time = this_iter_time
         
-        if self.mode == "dual_analysis":
+        if type(self.cam) == CameraReceiver :
+            self.cam.close()
+        
+        if self.mode == "dual_analysis" or self.mode == "dual_run":
             self.conn.send("stop")
-
-
-class Detection_android(Detection) :
-    def __init__(self, 
-                ip, 
-                calibrationFile    = "calibration",
-                frame_size         = (640,480), 
-                frame_rate         = 30, 
-                color_range        = "color_range", 
-                save_name          = "default", 
-                mode               ="analysis", 
-                cam_pos            = None, 
-                homography_matrix  = None,
-                queue              = None,
-                conn               = None
-                ) :
-        super().__init__(None, calibrationFile, frame_size, frame_rate, color_range, save_name, mode, cam_pos, homography_matrix, queue, conn)
-        self.receiver = CameraReceiver.CameraReceiver(ip)
-    
-    def getNextFrame(self):
-        ret = self.receiver.read()
-        if ret is False :
-            return False, None
-        return True, ret
 
 class Detection_img(Detection) :
     def __init__(self, source, calibrationFile="calibration",frame_size=(640,480), frame_rate=30, color_range="color_range", save_name="default", mode="analysis", beg_ind=0) :
@@ -312,6 +301,30 @@ def setup_camera(source, calibrationFile="calibration") :
                 print(pos.to_str)
                 break
     return pos, homo
+
+def setup_camera_android(source, calibrationFile="calibration") :
+    pos = None
+    homo = None
+    if type(source) == "str" :
+        cam = CameraReceiver(source)
+    else :
+        cam = source
+    
+    cam.connect()
+    while True :
+        ret, frame = cam.read()
+        if ret :
+            k = cv2.waitKey(1)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            if k == ord(' ') :
+                pos = utils.calculateCameraPosition(calib.load_calibration(calibrationFile), gray)
+                homo = find_homography_matrix_to_apriltag(gray)
+                print("camera pos")
+                print(pos.to_str)
+                break
+    cam.close()
+    return pos, homo
+
 
 def test_homography(img) :
     homography_matrix = None

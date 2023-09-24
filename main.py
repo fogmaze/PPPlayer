@@ -14,56 +14,34 @@ import ball_simulate_v2.models as models
 import core.common as common
 from ball_detection.ColorRange import *
 from camera_reciever.CameraReceiver import CameraReceiver
+from ball_predection.predict import LineCollector_hor, prepareModelInput
+from robot_controll.controller import Robot
 
-class LineCollector:
-    bounceTimestamp = 0
-    lines:List[Tuple[int, int, int, int, int]] = []
-    def put(self, x, y, z, rxy, rxz) :
-        if self.checkHit(x, y, z, rxy, rxz) :
-            self.lines.clear()
-            return False
+
+def getHitPointInformation(_traj:torch.Tensor) :
+    traj = _traj.view(-1, 3)
+    if not traj[0][0] < 2.74 < traj[-1][0] :
+        return None, None
+    l = 0
+    r = traj.shape[0] - 1
+    while l < r :
+        mid = (l + r) // 2
+        if traj[mid][0] < 2.74 :
+            l = mid + 1
         else :
-            if len(self.lines) == 0 :
-                self.bounceTimestamp = time.time()
-            if len(self.lines) > 50:
-                self.lines.pop(0)
-            self.lines.append((x, y, z, rxy, rxz))
-            return True
-    def checkHit(self, x, y, z, rxy, rxz) :
-        pass
+            r = mid
+    l = l - 1
+    w = (2.74 - traj[l][0]) / (traj[l+1][0] - traj[l][0])
+    hit_point = traj[l] * (1 - w) + traj[l+1] * w
+    return hit_point, (l * (1 - w) + (l+1) * w) * Constants.CURVE_SHOWING_GAP
 
-class LineCollector_hor(LineCollector) :
-    movement = None
-    last_rxy = None
-    def checkHit(self, x, y, z, rxy, rxz):
-        if self.movement == 1:
-            if rxy - self.last_rxy < 0:
-                self.movement = None
-                self.last_rxy = None
-                return True
-        elif self.movement == -1 :
-            if rxy - self.last_rxy > 0:
-                self.movement = None
-                self.last_rxy = None
-                return True
-        elif self.movement == None and self.last_rxy is not None:
-            self.movement = 1 if rxy - self.last_rxy > 0 else -1
-        self.last_rxy = rxy
-        return False
 
-def prepareModelInput(ll:list, rl:list, device="cuda:0") :
-    l = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
-    r = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
-    l[:len(ll)] = torch.tensor(ll, device=device)
-    r[:len(rl)] = torch.tensor(rl, device=device)
-    l = l.view(1, Constants.SIMULATE_INPUT_LEN, Constants.MODEL_INPUT_SIZE)
-    r = r.view(1, Constants.SIMULATE_INPUT_LEN, Constants.MODEL_INPUT_SIZE)
-    l_len = torch.tensor([len(ll)]).view(1,1).to(device)
-    r_len = torch.tensor([len(rl)]).view(1,1).to(device)
-    return l, l_len, r, r_len
 
-def predict(
+
+def main(
+        robot_ip,
         model_name:str,
+        mode,
         weight,
         calibrationFile = "calibration",
         source          = (0, 1),
@@ -71,8 +49,6 @@ def predict(
         frame_rate      = 30, 
         color_range     = "color_range", 
         save_name       = "dual_default", 
-        mode            = "analysis",
-        visualization   = True
         ) :
 
     def runDec(s, sub_name, cp, h, q, c2s) :
@@ -83,24 +59,40 @@ def predict(
             frame_rate = frame_rate, 
             color_range = color_range, 
             save_name = save_name + sub_name, 
-            mode = "dual_analysis",
+            mode = "dual_analysis",# dual_main
             cam_pos = cp, 
             homography_matrix = h,
             queue = q,
             conn=c2s
         )
         dec.runDetection()
-    
-    
-    SPEED_UP = False
 
+    SPEED_UP = False
+    HITTING_TIME = 0.1
+    RBcontroller = Robot(robot_ip)
     # load model
+    if mode != "default":
+        if mode == "fit" :
+            Constants.set2Fitting()
+        elif mode == "ne" :
+            Constants.set2NoError()
+        elif mode == "prediConstantst" :
+            Constants.set2Predict()
+        elif mode == "normal" :
+            Constants.set2Normal()
+        elif mode == "normalB" :
+            print('a')
+            Constants.set2NormalB()
+        elif mode == "normalB60" :
+            Constants.set2NormalB60()
+        else :
+            raise Exception("mode error")
+    PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)
+
     model:models.ISEFWINNER_BASE = MODEL_MAP[model_name](device="cuda:0")
     model.cuda()
     model.load_state_dict(torch.load(weight))
     model.eval()
-    Constants.set2Normal()
-    PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)
     
     common.replaceDir("ball_detection/result/", save_name)
     pf = open("ball_detection/result/" + save_name + "/pred.csv", "w")
@@ -121,19 +113,8 @@ def predict(
             source2 = CameraReceiver(source[1])
             cam1_pos, cam1_homo = Detection.setup_camera_android(source[0], calibrationFile=calibrationFile)
             cam2_pos, cam2_homo = Detection.setup_camera_android(source[1], calibrationFile=calibrationFile)
-
-    elif type(source) == str :
-        source1 = os.path.join("ball_detection/result", source + "/cam1/all.mp4")
-        source2 = os.path.join("ball_detection/result", source + "/cam2/all.mp4")
-        with open(os.path.join("ball_detection/result", source + "/cam1/camera_position"), "rb") as f:
-            cam1_pos = pickle.load(f)
-        with open(os.path.join("ball_detection/result", source + "/cam2/camera_position"), "rb") as f:
-            cam2_pos = pickle.load(f)
-        with open(os.path.join("ball_detection/result", source + "/cam1/homography_matrix"), "rb") as f:
-            cam1_homo = pickle.load(f)
-        with open(os.path.join("ball_detection/result", source + "/cam2/homography_matrix"), "rb") as f:
-            cam2_homo = pickle.load(f)
-        
+    else :
+        raise Exception("source type error")
 
     p1 = mp.Process(target=runDec, args=(source1, "/cam1", cam1_pos, cam1_homo, queue, c12s))
     p2 = mp.Process(target=runDec, args=(source2, "/cam2", cam2_pos, cam2_homo, queue, c22s))
@@ -186,6 +167,14 @@ def predict(
                     model.reset_hidden_cell(1)
                     l, l_len, r, r_len = prepareModelInput(lines1.lines, lines2.lines)
                     out:torch.Tensor = model(l, l_len, r, r_len, PREDICT_T).view(-1)
+                    out = Constants.normer.unnorm_ans_tensor(out)
+
+                    hitPoint, t = getHitPointInformation(out)
+                    if hitPoint is not None :
+                        RBcontroller.move(hitPoint[1], hitPoint[2])
+                        if abs(t-time.time()) < HITTING_TIME :
+                            RBcontroller.hit()
+                    
                     process_time += time.time() - nowT
                     process_time_iter += 1
                     pfw.writerow([which, new_data[1]] + out.tolist())
@@ -206,15 +195,10 @@ def predict(
     p1.join()
     p2.join()
     process_time /= process_time_iter
-    print("mean process time:", process_time, "; it/s:", process_time_iter / process_time)
-    print("mean tra time:", tra_time / tra_iter, "; it/s:", tra_iter / tra_time)
+    print("mean process time: ", process_time, "; it/s: ", process_time_iter / process_time)
+    print("mean tra time: ", tra_time / tra_iter, "; it/s: ", tra_iter / tra_time)
     pf.close()
 
-    # display
-    if visualization :
-        import ball_predection.display as display
-        display.visualizePrediction(os.path.join("ball_detection/result", save_name), fps=frame_rate)
 
 if __name__ == "__main__" :
-    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", source="dual_test", visualization=True)
-    #predict("medium", "ball_simulate_v2/model_saves/predict/epoch_29/weight.pt", source=(0, 1))
+    main("medium", "normalB", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt")
