@@ -15,6 +15,7 @@ from core.Constants import *
 import core.Equation3d as equ
 import camera_calibrate.utils as utils
 import camera_calibrate.Calibration as calib
+import camera_reciever.CameraReceiver as CameraReceiver
 
 
 def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
@@ -259,6 +260,29 @@ class Detection :
         if self.mode == "dual_analysis":
             self.conn.send("stop")
 
+
+class Detection_android(Detection) :
+    def __init__(self, 
+                ip, 
+                calibrationFile    = "calibration",
+                frame_size         = (640,480), 
+                frame_rate         = 30, 
+                color_range        = "color_range", 
+                save_name          = "default", 
+                mode               ="analysis", 
+                cam_pos            = None, 
+                homography_matrix  = None,
+                queue              = None,
+                conn               = None
+                ) :
+        super().__init__(None, calibrationFile, frame_size, frame_rate, color_range, save_name, mode, cam_pos, homography_matrix, queue, conn)
+        self.receiver = CameraReceiver.CameraReceiver(ip)
+    
+    def getNextFrame(self):
+        ret = self.receiver.read()
+        if ret is False :
+            return False, None
+        return True, ret
 
 class Detection_img(Detection) :
     def __init__(self, source, calibrationFile="calibration",frame_size=(640,480), frame_rate=30, color_range="color_range", save_name="default", mode="analysis", beg_ind=0) :

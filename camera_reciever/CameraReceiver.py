@@ -9,7 +9,6 @@ class CameraReceiver:
         self.port = 7439
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((ip, self.port))
-        self.t = 0
         
     def read(self) :
         img_str = b''
