@@ -27,7 +27,7 @@ class CameraReceiver:
                 img_str += data
                 if len(data) < 1024 :
                     break
-            return False, None
+            return self.read()
         while exact_size < size :
             data = self.socket.recv(1024)
             img_str += data

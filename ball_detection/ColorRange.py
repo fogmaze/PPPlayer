@@ -2,6 +2,9 @@ import cv2
 import numpy as np
 import pickle
 import os
+import sys
+sys.path.append(os.getcwd())
+from camera_reciever.CameraReceiver import CameraReceiver
 
 def save(path, object) :
     with open(path, "wb") as f :
@@ -45,7 +48,11 @@ class ColorRange :
         cv2.createTrackbar("Val Min", "ColorRangeSetting", self.lower[2], 255, empty)
         cv2.createTrackbar("Val Max", "ColorRangeSetting", self.upper[2], 255, empty)
 
-        cam = cv2.VideoCapture(source)
+        if type(source) == str and source.replace(".", "").isdigit() :
+            cam = CameraReceiver(source)
+            cam.connect()
+        else :
+            cam = cv2.VideoCapture(source)
         i = 0
         while True :
             i += 1
@@ -77,7 +84,9 @@ class ColorRange :
             key = cv2.waitKey(20)
             if key == ord(" ") :
                 break
-            
+        
+        if type(source) == str and source.replace(".", "").isdigit() :
+            cam.close()
         cv2.destroyAllWindows()
 
     def runColorRange_image(self, img) :
@@ -112,5 +121,8 @@ def empty(a) :
         save("color_range_1", cr)
 
 if __name__ == "__main__" :
-    cr = load("color_range_1")
-    cr.runColorRange_video("ball_detection/result/hd_60_detection_r2/bad.mp4", recursive=True)
+    #cr = load("color_range_1")
+    cr = ColorRange()
+    cr.runColorRange_video("192.168.66.38")
+    save("cr_a50", cr)
+    #cr.runColorRange_video("ball_detection/result/hd_60_detection_r2/bad.mp4", recursive=True)

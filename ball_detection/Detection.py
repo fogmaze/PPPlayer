@@ -83,12 +83,14 @@ class Detection :
             self.meanBallSize = self.MEAN_BALL_SIZE_DICT["320"]
         elif self.frame_size == (1920,1080) :
             self.meanBallSize = self.MEAN_BALL_SIZE_DICT["1080"]
+        elif self.frame_size == (1280,720) :
+            self.meanBallSize = self.MEAN_BALL_SIZE_DICT["320"] ################################
         else :
             raise Exception("frame size is not supported")
-        if type(source) == str or type(source) == int:
+        if type(source) == str and source.replace(".", "").isdigit() :
+            self.cam = CameraReceiver(source)
+        elif type(source) == str or type(source) == int:
             self.cam = cv2.VideoCapture(source)
-        elif type(source) == CameraReceiver:
-            self.cam = source
 
         self.mode = mode
         if self.mode == "analysis" or self.mode == "dual_analysis":
@@ -256,6 +258,7 @@ class Detection :
             else :
                 # send stop signal to main process
                 if self.mode == "dual_analysis" or self.mode == "dual_run":
+                    print("send stop signal")
                     self.conn.send("stop")
                 break
             # check conn from main process
@@ -263,7 +266,13 @@ class Detection :
                 if self.conn.poll() :
                     msg = self.conn.recv()
                     if msg == "stop" :
+                        print("stop signal received")
                         break
+            key = cv2.waitKey(1)
+            if key == ord('q') :
+                if self.mode == "dual_analysis" or self.mode == "dual_run":
+                    self.conn.send("stop")
+                break
             iteration += 1
             last_iter_time = this_iter_time
         
@@ -298,14 +307,14 @@ def setup_camera(source, calibrationFile="calibration") :
                 pos = utils.calculateCameraPosition(calib.load_calibration(calibrationFile), gray)
                 homo = find_homography_matrix_to_apriltag(gray)
                 print("camera pos")
-                print(pos.to_str)
+                print(pos.to_str())
                 break
     return pos, homo
 
 def setup_camera_android(source, calibrationFile="calibration") :
     pos = None
     homo = None
-    if type(source) == "str" :
+    if type(source) == str :
         cam = CameraReceiver(source)
     else :
         cam = source
@@ -314,13 +323,14 @@ def setup_camera_android(source, calibrationFile="calibration") :
     while True :
         ret, frame = cam.read()
         if ret :
-            k = cv2.waitKey(1)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            cv2.imshow("setup camera", gray)
+            k = cv2.waitKey(1)
             if k == ord(' ') :
                 pos = utils.calculateCameraPosition(calib.load_calibration(calibrationFile), gray)
                 homo = find_homography_matrix_to_apriltag(gray)
                 print("camera pos")
-                print(pos.to_str)
+                print(pos.to_str())
                 break
     cam.close()
     return pos, homo

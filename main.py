@@ -14,29 +14,8 @@ import ball_simulate_v2.models as models
 import core.common as common
 from ball_detection.ColorRange import *
 from camera_reciever.CameraReceiver import CameraReceiver
-from ball_predection.predict import LineCollector_hor, prepareModelInput
+from ball_predection.predict import LineCollector_hor, prepareModelInput, getHitPointInformation
 from robot_controll.controller import Robot
-
-
-def getHitPointInformation(_traj:torch.Tensor) :
-    traj = _traj.view(-1, 3)
-    if not traj[0][0] < 2.74 < traj[-1][0] :
-        return None, None
-    l = 0
-    r = traj.shape[0] - 1
-    while l < r :
-        mid = (l + r) // 2
-        if traj[mid][0] < 2.74 :
-            l = mid + 1
-        else :
-            r = mid
-    l = l - 1
-    w = (2.74 - traj[l][0]) / (traj[l+1][0] - traj[l][0])
-    hit_point = traj[l] * (1 - w) + traj[l+1] * w
-    return hit_point, (l * (1 - w) + (l+1) * w) * Constants.CURVE_SHOWING_GAP
-
-
-
 
 def main(
         robot_ip,

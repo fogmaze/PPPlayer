@@ -14,6 +14,24 @@ import ball_simulate_v2.models as models
 import core.common as common
 from ball_detection.ColorRange import *
 from camera_reciever.CameraReceiver import CameraReceiver
+import core.Equation3d as equ
+
+def getHitPointInformation(_traj:torch.Tensor) :
+    traj = _traj.view(-1, 3)
+    if not traj[0][0] < 2.74 < traj[-1][0] :
+        return None, None
+    l = 0
+    r = traj.shape[0] - 1
+    while l < r :
+        mid = (l + r) // 2
+        if traj[mid][0] < 2.74 :
+            l = mid + 1
+        else :
+            r = mid
+    l = l - 1
+    w = (2.74 - traj[l][0]) / (traj[l+1][0] - traj[l][0])
+    hit_point = traj[l] * (1 - w) + traj[l+1] * w
+    return hit_point, (l * (1 - w) + (l+1) * w) * Constants.CURVE_SHOWING_GAP
 
 class LineCollector:
     bounceTimestamp = 0
@@ -62,37 +80,59 @@ def prepareModelInput(ll:list, rl:list, device="cuda:0") :
     r_len = torch.tensor([len(rl)]).view(1,1).to(device)
     return l, l_len, r, r_len
 
+def runDec(s, sub_name, cp, h, q, c2s, calibrationFile, frame_size, frame_rate, color_range, save_name) :
+    dec = Detection.Detection(
+        source = s,
+        calibrationFile = calibrationFile,
+        frame_size = frame_size, 
+        frame_rate = frame_rate, 
+        color_range = color_range, 
+        save_name = save_name + sub_name, 
+        mode = "dual_analysis",
+        cam_pos = cp, 
+        homography_matrix = h,
+        queue = q,
+        conn=c2s
+    )
+    print("start")
+    dec.runDetection()
+    
+    
 def predict(
         model_name:str,
         weight,
-        calibrationFile = "calibration",
+        calibrationFiles = "calibration",
         source          = (0, 1),
-        frame_size      = (640,480), 
+        frame_size      = (1280, 720), 
         frame_rate      = 30, 
         color_range     = "color_range", 
         save_name       = "dual_default", 
-        mode            = "analysis",
+        mode            = "normalB",
         visualization   = True
         ) :
 
-    def runDec(s, sub_name, cp, h, q, c2s) :
-        dec = Detection.Detection(
-            source = s,
-            calibrationFile = calibrationFile,
-            frame_size = frame_size, 
-            frame_rate = frame_rate, 
-            color_range = color_range, 
-            save_name = save_name + sub_name, 
-            mode = "dual_analysis",
-            cam_pos = cp, 
-            homography_matrix = h,
-            queue = q,
-            conn=c2s
-        )
-        dec.runDetection()
-    
-    
+    if type(calibrationFiles) == str :
+        calibrationFile = (calibrationFiles, calibrationFiles)
+    else :
+        calibrationFile = calibrationFiles
+
     SPEED_UP = False
+    if mode != "default":
+        if mode == "fit" :
+            Constants.set2Fitting()
+        elif mode == "ne" :
+            Constants.set2NoError()
+        elif mode == "prediConstantst" :
+            Constants.set2Predict()
+        elif mode == "normal" :
+            Constants.set2Normal()
+        elif mode == "normalB" :
+            print('a')
+            Constants.set2NormalB()
+        elif mode == "normalB60" :
+            Constants.set2NormalB60()
+        else :
+            raise Exception("mode error")
 
     # load model
     model:models.ISEFWINNER_BASE = MODEL_MAP[model_name](device="cuda:0")
@@ -105,22 +145,28 @@ def predict(
     common.replaceDir("ball_detection/result/", save_name)
     pf = open("ball_detection/result/" + save_name + "/pred.csv", "w")
     pfw = csv.writer(pf)
-    pfw.writerow(["which camera", "frame", "x", "y", "z"])
+    pfw.writerow(["which camera", "frame", "hp_x", "hp_y", "hp_z", "hp_t", "x", "y", "z"])
 
     queue = mp.Queue()
     c12d, c12s = mp.Pipe()
     c22d, c22s = mp.Pipe()
-    if type(source) == tuple and len(source) == 2 :
+    if True:
+        cam1_pos, cam1_homo = equ.Point3d(1,1,1), np.array([[1,1,1],[1,1,1],[1,1,1]])
+        cam2_pos, cam2_homo = equ.Point3d(1,1,1), np.array([[1,1,1],[1,1,1],[1,1,1]])
+        source1 = source[0]
+        source2 = source[1]
+
+    elif type(source) == tuple and len(source) == 2 :
         if type(source[0]) == int :
-            cam1_pos, cam1_homo = Detection.setup_camera(source[0], calibrationFile=calibrationFile)
-            cam2_pos, cam2_homo = Detection.setup_camera(source[1], calibrationFile=calibrationFile)
+            cam1_pos, cam1_homo = Detection.setup_camera(source[0], calibrationFile=calibrationFile[0])
+            cam2_pos, cam2_homo = Detection.setup_camera(source[1], calibrationFile=calibrationFile[1])
             source1 = source[0]
             source2 = source[1]
         else :
             source1 = CameraReceiver(source[0])
             source2 = CameraReceiver(source[1])
-            cam1_pos, cam1_homo = Detection.setup_camera_android(source[0], calibrationFile=calibrationFile)
-            cam2_pos, cam2_homo = Detection.setup_camera_android(source[1], calibrationFile=calibrationFile)
+            cam1_pos, cam1_homo = Detection.setup_camera_android(source[0], calibrationFile=calibrationFile[0])
+            cam2_pos, cam2_homo = Detection.setup_camera_android(source[1], calibrationFile=calibrationFile[1])
 
     elif type(source) == str :
         source1 = os.path.join("ball_detection/result", source + "/cam1/all.mp4")
@@ -135,8 +181,8 @@ def predict(
             cam2_homo = pickle.load(f)
         
 
-    p1 = mp.Process(target=runDec, args=(source1, "/cam1", cam1_pos, cam1_homo, queue, c12s))
-    p2 = mp.Process(target=runDec, args=(source2, "/cam2", cam2_pos, cam2_homo, queue, c22s))
+    p1 = mp.Process(target=runDec, args=(source1, "/cam1", cam1_pos, cam1_homo, queue, c12s, calibrationFile[0], frame_size, frame_rate, color_range, save_name))
+    p2 = mp.Process(target=runDec, args=(source2, "/cam2", cam2_pos, cam2_homo, queue, c22s, calibrationFile[1], frame_size, frame_rate, color_range, save_name))
 
     lines1 = LineCollector_hor()
     lines2 = LineCollector_hor()
@@ -162,52 +208,54 @@ def predict(
     c12d.send("start")
     c22d.send("start")
 
-    try :
-        while True :
-            if not queue.empty() :
-                new_data = queue.get()
-                tra_time += time.time() - new_data[7]
-                tra_iter += 1
+    while True :
+        if not queue.empty() :
+            new_data = queue.get()
+            tra_time += time.time() - new_data[7]
+            tra_iter += 1
 
-                nowT = time.time()
-                isHit = None
-                if new_data[0] == p1.pid:
-                    isHit = not lines1.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
-                    which = 1
-                elif new_data[0] == p2.pid:
-                    isHit = not lines2.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
-                    which = 2
-                # send to model
-                if isHit:
-                    pass
-                elif SPEED_UP :
-                    pass
-                else :
-                    model.reset_hidden_cell(1)
-                    l, l_len, r, r_len = prepareModelInput(lines1.lines, lines2.lines)
-                    out:torch.Tensor = model(l, l_len, r, r_len, PREDICT_T).view(-1)
-                    process_time += time.time() - nowT
-                    process_time_iter += 1
-                    pfw.writerow([which, new_data[1]] + out.tolist())
-            if c12d.poll() :
-                recv = c12d.recv()
-                if recv == "stop" :
-                    c22d.send("stop")
-                    break
-            if c22d.poll() :
-                recv = c22d.recv()
-                if recv == "stop" :
-                    c12d.send("stop")
-                    break
-    except KeyboardInterrupt:
-        c12d.send("stop")
-        c22d.send("stop")
+            nowT = time.time()
+            isHit = None
+            if new_data[0] == p1.pid:
+                isHit = not lines1.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
+                which = 1
+            elif new_data[0] == p2.pid:
+                isHit = not lines2.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
+                which = 2
+            # send to model
+            if isHit:
+                pass
+            elif SPEED_UP :
+                pass
+            else :
+                model.reset_hidden_cell(1)
+                l, l_len, r, r_len = prepareModelInput(lines1.lines, lines2.lines)
+                out:torch.Tensor = model(l, l_len, r, r_len, PREDICT_T).view(-1)
+                out = Constants.normer.unnorm_ans_tensor(out)
+                hp, t = getHitPointInformation(out)
+                print("hit point:", hp, "time:", t)
+                process_time += time.time() - nowT
+                process_time_iter += 1
+                pfw.writerow([which, new_data[1], hp[0], hp[1], hp[2], t] + out.tolist())
+        if c12d.poll() :
+            recv = c12d.recv()
+            if recv == "stop" :
+                c22d.send("stop")
+                break
+        if c22d.poll() :
+            recv = c22d.recv()
+            if recv == "stop" :
+                c12d.send("stop")
+                break
+    c12d.send("stop")
+    c22d.send("stop")
     
     p1.join()
     p2.join()
-    process_time /= process_time_iter
-    print("mean process time:", process_time, "; it/s:", process_time_iter / process_time)
-    print("mean tra time:", tra_time / tra_iter, "; it/s:", tra_iter / tra_time)
+    if not process_time_iter == 0 :
+        process_time /= process_time_iter
+        print("mean process time:", process_time, "; it/s:", process_time_iter / process_time)
+        print("mean tra time:", tra_time / tra_iter, "; it/s:", tra_iter / tra_time)
     pf.close()
 
     # display
@@ -216,5 +264,5 @@ def predict(
         display.visualizePrediction(os.path.join("ball_detection/result", save_name), fps=frame_rate)
 
 if __name__ == "__main__" :
-    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", source="dual_test", visualization=True)
+    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", calibrationFiles=("cr_k52", "cr_a50"), source=("192.168.66.37", "192.168.66.38"), visualization=False)
     #predict("medium", "ball_simulate_v2/model_saves/predict/epoch_29/weight.pt", source=(0, 1))

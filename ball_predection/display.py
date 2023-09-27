@@ -70,7 +70,7 @@ def visualizePrediction(root, fps=30) :
         if isHit :
             pass
         else :
-            out:torch.Tensor = torch.tensor(pred_data[2:]).view(-1,3)
+            out:torch.Tensor = torch.tensor(pred_data[6:]).view(-1,3)
             o = plotOutput(axe, out, color='r', label=None)
             l1, = displayLines(axe, lines1, color='b', label=None)
             l2, = displayLines(axe, lines2, color='g', label=None)
