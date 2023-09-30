@@ -108,7 +108,7 @@ def findRange_hsv_img(color_range:np.ndarray, source, xml_dir, frame_size, frame
 
 def findRange_hsv(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30):
     detection = Det.Detection(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, mode="compute")
-    detection.runDetection()
+    detection.runDetection(debugging=False)
     return cmpResult(xml_dir, detection.data, None, 0)
 
 def caculateBestColorRange() :
@@ -142,16 +142,15 @@ def findColorRange() :
     p.join()
 
 if __name__ == "__main__" :
-    findColorRange()
+    #findColorRange()
 
-    exit()
-    with open("color_range_1", "rb") as f :
+    with open("color_range_2", "rb") as f :
         c = pickle.load(f)
         print(c.upper)
         print(c.lower)
-    print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
+    #print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
     print("--------------------------------------------------")
-    print(findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
-
+    #print(findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
+    print(findRange_hsv_img(c, "/home/changer/Downloads/hd_60_tagged/frames", "/home/changer/Downloads/hd_60_tagged/result/", (1920, 1080), 60, beg=1000))
     #print("--------------------------------------------------")
-    #cmpResult("/home/changer/Downloads/hd_60_tagged/result/","ball_detection/result/hd_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 1000)
+    #print(cmpResult("/home/changer/Downloads/hd_60_tagged/result/","ball_detection/result/hd_60_detection/","/home/changer/Downloads/320_60_tagged/frames/", 1000))

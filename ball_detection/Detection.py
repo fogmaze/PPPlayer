@@ -40,6 +40,7 @@ class Detection :
 
     MEAN_BALL_SIZE_DICT = {
         "320" : 175.5024938405144,
+        "720" : 536.6738865832444,
         "1080" : 1207.5162448113356,
     }
 
@@ -84,7 +85,7 @@ class Detection :
         elif self.frame_size == (1920,1080) :
             self.meanBallSize = self.MEAN_BALL_SIZE_DICT["1080"]
         elif self.frame_size == (1280,720) :
-            self.meanBallSize = self.MEAN_BALL_SIZE_DICT["320"] ################################
+            self.meanBallSize = self.MEAN_BALL_SIZE_DICT["720"] ################################
         else :
             raise Exception("frame size is not supported")
         if type(source) == str and source.replace(".", "").isdigit() :
@@ -139,8 +140,9 @@ class Detection :
         cv2.putText(frame, ("x : {} y : {}".format(xCenter, yCenter)), (10, 40*i), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
 
     def compareFrames(self, frame, compare) :
+        return frame
         move = cv2.bitwise_xor(frame, compare)
-        color = cv2.inRange(move, np.array([50, 50, 50]), np.array([255, 255, 255]))
+        color = cv2.inRange(move, np.array([10, 10, 10]), np.array([255, 255, 255]))
         return cv2.bitwise_and(frame, cv2.cvtColor(color, cv2.COLOR_GRAY2BGR))
     
     def maskFrames(self, frame) :
@@ -154,23 +156,28 @@ class Detection :
         r = math.sqrt(h*h + w*w) / 2
         a = math.pi * r * r
         rmin = 3.7178529388965496/2.0
-        rmax = 18.589264694482747/2.0
+        rmax = 80.589264694482747/2.0
         circle = area / a
         if not rmin < r < rmax:
             return False
         if not math.pi * rmin * rmin < area < math.pi * rmax * rmax:
             return False
-        if not 0 < circle < 100 :
+        if not 0.7 < circle < 1 :
             return False
         return True
 
     def getNextFrame(self) :
         return self.cam.read()
    
-    def runDetection(self, img=None, fromFrameIndex=0) :
+    def runDetection(self, img=None, fromFrameIndex=0, realTime=True, debugging=False) :
+        BG_CONSIDERED_FRAMES = 60
+        MAX_BALL_DISTANCE = 100
         whetherTheFirstFrame = True
         startTime = time.perf_counter()
         last_iter_time = startTime
+        last_map = []
+        last_result = None
+        pt = 0
         iteration = 0
         if img is not None :
             self.camera_position = utils.calculateCameraPosition(self.inmtx, img)
@@ -192,21 +199,26 @@ class Detection :
         while(True) :
             ret, frame = self.getNextFrame()
             if ret :
-                key = cv2.waitKey(1)
                 this_iter_time = time.perf_counter()
 
                 if self.mode == "analysis" or self.mode == "dual_analysis":
                     self.video_writer_all.write(frame)
+                    pass
 
                 if whetherTheFirstFrame :
                     compare = frame
                     whetherTheFirstFrame = False
                 
-                if key == ord(' ') :
-                    break
-
                 c = self.compareFrames(frame, compare)
-                detected = self.detectContours(self.maskFrames(c))
+                m = self.maskFrames(c)
+                detected = self.detectContours(m)
+                # draw contours
+
+                if debugging:
+                    cv2.drawContours(frame, detected, -1, (0, 255, 255), 2)
+                    cv2.drawContours(c, detected, -1, (0, 255, 255), 2)
+                    #frame = cv2.hconcat([frame, m])
+                    cv2.imshow("mask", m)
                 qualified = []
                 for contour in detected :
                     #area = cv2.contourArea(contour)
@@ -215,18 +227,48 @@ class Detection :
                         qualified.append((x, y, w, h))
                 merged = merge_rectangles(qualified)
 
-                min_Area_diff = 500000
-                result = None
+                f1 = []
                 for x, y, w, h in merged :
-                    area = w * h
-                    if abs(area - self.meanBallSize) < min_Area_diff :
-                        min_Area_diff = abs(area - self.meanBallSize)
-                        result = (x, y, w, h)
+                    q = True
+                    for l in last_map:
+                        for x1, y1, w1, h1 in l :
+                            if abs(x - x1) < 5 and abs(y - y1) < 5 :
+                                q = False
+                                break
+                    if q :
+                        f1.append((x, y, w, h))
+
+                last_map.append(merged)
+                if len(last_map) > 60 :
+                    last_map.pop(0)
+
+                f2 = []
+                for x, y, w, h in f1 :
+                    if self.meanBallSize * 0.05 < w * h < self.meanBallSize * 2:
+                        f2.append((x, y, w, h))
+                result = None
+                if last_result is not None :
+                    min_dist = 10000000
+                    for x, y, w, h in f2 :
+                        dis = math.sqrt(abs(x - last_result[0])**2 + abs(y - last_result[1])**2)
+                        if dis < min_dist:
+                            result = (x, y, w, h)
+                            min_dist = dis
+                else :
+                    min_area_diff = 10000000
+                    for x, y, w, h in f2 :
+                        area = w * h
+                        area_diff = abs(area - self.meanBallSize)
+                        if area_diff < min_area_diff:
+                            result = (x, y, w, h)
+                            min_area_diff = area_diff
+
+                last_result = result
                 if result is not None :
                     x, y, w, h = result
                     self.drawDirection(frame, x, y, h, w, 1)
                     if self.homography_matrix is not None and self.camera_position is not None:
-                        ball_in_world = np.matmul(self.homography_matrix, np.array([frame.shape[0] - (x+w//2), y+h//2, 1]))
+                        ball_in_world = np.matmul(self.homography_matrix, np.array([x+w//2, y+h//2, 1]))
                         projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
                         line = equ.LineEquation3d(self.camera_position, projection)
 
@@ -246,8 +288,8 @@ class Detection :
 
                 #save situation data and video
                 if self.mode == "analysis" or self.mode == "dual_analysis":
-                    self.situation_csv_writer.writerow([iteration, this_iter_time - startTime, 1000/(this_iter_time-last_iter_time), 1 if len(merged) > 0 else 0])
-                    if len(merged) == 0 :
+                    self.situation_csv_writer.writerow([iteration, this_iter_time - startTime, 1/(this_iter_time-last_iter_time), 1 if len(merged) > 0 else 0])
+                    if result is None :
                         self.video_writer_bad.write(frame)
                     else:
                         self.video_writer_tagged.write(frame)
@@ -268,19 +310,31 @@ class Detection :
                     if msg == "stop" :
                         print("stop signal received")
                         break
-            key = cv2.waitKey(1)
+            key = cv2.waitKey(1 if not debugging else 0)
             if key == ord('q') :
                 if self.mode == "dual_analysis" or self.mode == "dual_run":
                     self.conn.send("stop")
                 break
             iteration += 1
+            print("pid : {} process time : {}".format(self.pid, time.perf_counter() - this_iter_time))
+            pt += time.perf_counter() - this_iter_time
+
+
+            # wait to match frame rate
+            if self.frame_rate != 0 and realTime:
+                while time.perf_counter() - this_iter_time < 1/self.frame_rate :
+                    pass
+            
             last_iter_time = this_iter_time
         
         if type(self.cam) == CameraReceiver :
             self.cam.close()
         
+        
         if self.mode == "dual_analysis" or self.mode == "dual_run":
             self.conn.send("stop")
+
+        print("pid : {} avg process time : {} ".format(self.pid, pt/iteration))
 
 class Detection_img(Detection) :
     def __init__(self, source, calibrationFile="calibration",frame_size=(640,480), frame_rate=30, color_range="color_range", save_name="default", mode="analysis", beg_ind=0) :
@@ -328,6 +382,9 @@ def setup_camera_android(source, calibrationFile="calibration") :
             k = cv2.waitKey(1)
             if k == ord(' ') :
                 pos = utils.calculateCameraPosition(calib.load_calibration(calibrationFile), gray)
+                if pos is None :
+                    print("pos not find")
+                    continue
                 homo = find_homography_matrix_to_apriltag(gray)
                 print("camera pos")
                 print(pos.to_str())
@@ -335,42 +392,6 @@ def setup_camera_android(source, calibrationFile="calibration") :
     cam.close()
     return pos, homo
 
-
-def test_homography(img) :
-    homography_matrix = None
-    homography_matrix_inv = None
-    while True :
-
-        cv2.imshow("frame", img)
-        if homography_matrix is None :
-            print("No homography matrix press u to update")
-        key = cv2.waitKey(10)
-        if key == ord('u') :
-            detector = Detector()
-            detections = detector.detect(img)
-            if len(detections) == 1 :
-                homography_matrix = detections[0].homography
-                homography_matrix_inv = np.linalg.inv(detections[0].homography)
-            #homography_matrix = find_homography_matrix_to_apriltag(img)
-            if homography_matrix is None :
-                print("No tag detected")
-        elif key == ord('t') :
-            inp = input("input pixel point : ").split()
-            if len(inp) == 2 and homography_matrix is not None:
-                pxp = np.float128([float(inp[0]), float(inp[1]), 1])
-                pxp = np.matmul(homography_matrix, pxp)
-                pxp = np.float64([pxp[0]/pxp[2], pxp[1]/pxp[2]])
-                print(pxp)
-        elif key == ord('r') :
-            inp = input("input pixel point : ").split()
-            if len(inp) == 2 and homography_matrix is not None:
-                pxp = np.float128([float(inp[0]), float(inp[1]), 1])
-                pxp = np.matmul(homography_matrix_inv, pxp)
-                pxp = np.float64([pxp[0]/pxp[2], pxp[1]/pxp[2]])
-                print(pxp)
-        elif key == ord('q') :
-            break
-    cv2.destroyAllWindows()
 
 def detectProcess(source, save_name) :
     detector = Detection(source=source, save_name=save_name)
@@ -384,16 +405,21 @@ def check_overlap(rect1, rect2):
         return False
     return True
 
+def pad(rect, value) :
+    return (rect[0]-value, rect[1]-value, rect[2] + 2 * value, rect[3] + 2 * value)
+
 def merge_rectangles(rectangles):
     merged_rectangles = []
+    value=3
 
     for rect in rectangles:
+        padded_rect = pad(rect, value)
         if len(merged_rectangles) == 0:
             merged_rectangles.append(rect)
         else:
             merged = False
             for i, merged_rect in enumerate(merged_rectangles):
-                if check_overlap(rect, merged_rect):
+                if check_overlap(padded_rect, pad(merged_rect, value)):
                     x = min(rect[0], merged_rect[0])
                     y = min(rect[1], merged_rect[1])
                     w = max(rect[0] + rect[2], merged_rect[0] + merged_rect[2]) - x
@@ -408,10 +434,8 @@ def merge_rectangles(rectangles):
     return merged_rectangles
 
 if __name__ == "__main__" :
-    img = cv2.imread("718.jpg", cv2.IMREAD_GRAYSCALE)
-
-    dect = Detection_img(source="/home/changer/Downloads/hd_60_tagged/frames", color_range="color_range_2", frame_size=(1920, 1080), save_name="hd_60_detection_r2", beg_ind=1000)
-    dect.runDetection(img)
+    dect = Detection(source="ball_detection/result/dual_and/cam2/all.mp4", color_range="cr_k520", frame_size=(1280, 720), save_name="c1")
+    dect.runDetection(realTime=False, debugging=True)
 
 
     exit()

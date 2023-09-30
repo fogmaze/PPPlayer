@@ -44,20 +44,23 @@ def takePicture():
     cv2.destroyAllWindows()
 
 def calculateCameraPosition(cameraMatrix:np.ndarray, frame_gray, tagSize=APRILTAG_SIZE) :
-    detector = Detector()
-    try:
+    try :
+        detector = Detector()
         results = detector.detect(frame_gray, 
-                                  estimate_tag_pose=True, 
-                                  camera_params=(cameraMatrix[0][0],cameraMatrix[1][1],cameraMatrix[0][2],cameraMatrix[1][2]),
-                                  tag_size=tagSize)
+                                    estimate_tag_pose=True, 
+                                    camera_params=(cameraMatrix[0][0],cameraMatrix[1][1],cameraMatrix[0][2],cameraMatrix[1][2]),
+                                    tag_size=tagSize)
         if len(results) == 1:
             res:Detection = results[0]
             position = np.matmul(np.linalg.inv(res.pose_R), -res.pose_t)
             return equ.Point3d(position[0][0] + (tagSize/2) - 2.74/2, -position[2][0] - 1.525/2, -position[1][0] + (tagSize/2))
         else:
+            print(1)
             return None
-    except:
+    except Exception as e:
+        print(e)
         return None
+    
 
 def getCameraPosition_realTime(cameraMatrix) :
     cap = cv2.VideoCapture(0)

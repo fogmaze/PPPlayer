@@ -38,7 +38,7 @@ class ColorRange :
         self.lower = np.array([h_min, s_min, v_min])
 
 
-    def runColorRange_video(self, source, recursive = False, save_file_name = None) :
+    def runColorRange_video(self, source, recursive = False, save_file_name = None, f2f = False) :
         cv2.namedWindow("ColorRangeSetting")
 
         cv2.createTrackbar("Hue Min", "ColorRangeSetting", self.lower[0], 179, empty)
@@ -54,9 +54,11 @@ class ColorRange :
         else :
             cam = cv2.VideoCapture(source)
         i = 0
+        read = True
         while True :
             i += 1
-            ret, frame = cam.read()
+            if read :
+                ret, frame = cam.read()
 
             if ret :
                 self.getParameters(self.lower[0], self.upper[0], self.lower[1], self.upper[1], self.lower[2], self.upper[2])
@@ -81,9 +83,15 @@ class ColorRange :
             if i % 30 == 0 :
                 if save_file_name is not None :
                     save(save_file_name, self)
-            key = cv2.waitKey(20)
+            # wait to match the fps of the video
+            key = cv2.waitKey(round(1/30 * 1000) if not f2f else 1)
             if key == ord(" ") :
                 break
+            elif f2f :
+                if key == ord("n") :
+                    read = True
+                else :
+                    read = False
         
         if type(source) == str and source.replace(".", "").isdigit() :
             cam.close()
@@ -121,8 +129,7 @@ def empty(a) :
         save("color_range_1", cr)
 
 if __name__ == "__main__" :
-    #cr = load("color_range_1")
-    cr = ColorRange()
-    cr.runColorRange_video("192.168.66.38")
-    save("cr_a50", cr)
+    cr = load("cr_k52")
+    cr.runColorRange_video("ball_detection/result/c1/tagged.mp4", recursive=True, f2f=True)
+    save("cr_k520", cr)
     #cr.runColorRange_video("ball_detection/result/hd_60_detection_r2/bad.mp4", recursive=True)
