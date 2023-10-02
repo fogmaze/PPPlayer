@@ -64,7 +64,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, da
     if opt == "adam":
         optimizer = torch.optim.RAdam(model.parameters(), lr = LR)
     elif opt == "sgdm":
-        optimizer = torch.optim.SGD(model.parameters(), lr = LR, momentum=0.4)
+        optimizer = torch.optim.SGD(model.parameters(), lr = LR, momentum=0.01)
     if scheduler_step_size == None:
         scheduler = None
     else :

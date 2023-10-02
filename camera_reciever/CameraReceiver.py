@@ -15,6 +15,7 @@ class CameraReceiver:
         
     def read(self) :
         img_str = b''
+        self.socket.send(b'1')
         size = self.socket.recv(4)
         size = int.from_bytes(size, 'big')
         img_str = self.socket.recv(size)
@@ -34,7 +35,10 @@ class CameraReceiver:
             exact_size += len(data)
         nparr = np.frombuffer(img_str, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        return True, img
+        out = img * 2
+        out = np.clip(out, 0, 255)
+        out = np.uint8(out)
+        return True, out
         
     def __del__(self):
         self.close()

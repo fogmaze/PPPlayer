@@ -4,6 +4,7 @@ ball_simulate/model_saves/
 ball_simulate_v2/dataset/
 ball_simulate_v2/model_saves/
 ball_detection/result/
+exp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

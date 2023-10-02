@@ -419,7 +419,6 @@ def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"
 
     print("simulate done")
 
-
 if __name__ == "__main__":
     #print(calculateMeanStd("train.bin"))
     argparser = argparse.ArgumentParser()

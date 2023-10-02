@@ -10,7 +10,39 @@ import cv2
 import csv
 import time
 import pickle
+from camera_reciever.CameraReceiver import CameraReceiver
 
+
+def takePicture_and():
+    t = time.time()
+    cap = CameraReceiver("172.20.10.2")
+    #lprint(cap.get(cv2.CAP_PROP_FPS))
+    a = False
+    i = 0
+    cap.connect()
+    while True :
+        ret, frame = cap.read()
+        #print(1/(time.time() - t))
+        t = time.time()
+        if ret :
+            cv2.imshow('frame', frame)
+            key = cv2.waitKey(10) & 0xff
+
+            if a :
+                cv2.imwrite('pic0.jpg', frame)
+                break
+
+            if key == ord('w') :
+                cv2.imwrite('D{}.jpg'.format(i), frame)
+                i += 1
+
+
+            if key == ord('q') :
+                #sleep for one second
+                #time.sleep(5)
+                a = True
+    cap.close()
+    cv2.destroyAllWindows()
 
 def takePicture():
     t = time.time()
@@ -100,7 +132,8 @@ def runExerment() :
             writer.writerow(res_z)
             
 if __name__ == "__main__" :
-    takePicture()
+    takePicture_and()
+    exit()
     #runExerment()
     cameraMatrix = pickle.load(open('calibration', 'rb'))
     #takePicture()

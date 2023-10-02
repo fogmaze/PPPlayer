@@ -16,6 +16,7 @@ import core.Equation3d as equ
 import camera_calibrate.utils as utils
 import camera_calibrate.Calibration as calib
 from camera_reciever.CameraReceiver import CameraReceiver
+import time
 
 
 def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
@@ -88,10 +89,13 @@ class Detection :
             self.meanBallSize = self.MEAN_BALL_SIZE_DICT["720"] ################################
         else :
             raise Exception("frame size is not supported")
+
         if type(source) == str and source.replace(".", "").isdigit() :
             self.cam = CameraReceiver(source)
         elif type(source) == str or type(source) == int:
             self.cam = cv2.VideoCapture(source)
+        elif type(source) == CameraReceiver :
+            self.cam = source
 
         self.mode = mode
         if self.mode == "analysis" or self.mode == "dual_analysis":
@@ -194,8 +198,10 @@ class Detection :
                     if msg == "start" :
                         break
         
+        print(1)
         if type(self.cam) == CameraReceiver :
             self.cam.connect()
+        print(2)
         while(True) :
             ret, frame = self.getNextFrame()
             if ret :
@@ -239,7 +245,7 @@ class Detection :
                         f1.append((x, y, w, h))
 
                 last_map.append(merged)
-                if len(last_map) > 60 :
+                if len(last_map) > 20 :
                     last_map.pop(0)
 
                 f2 = []
@@ -368,14 +374,22 @@ def setup_camera(source, calibrationFile="calibration") :
 def setup_camera_android(source, calibrationFile="calibration") :
     pos = None
     homo = None
+    isCam = True
     if type(source) == str :
         cam = CameraReceiver(source)
+    elif type(source) == np.ndarray :
+        frame = source
+        ret = True
+        isCam = False
     else :
         cam = source
     
-    cam.connect()
+    if isCam :
+        cam.connect()
     while True :
-        ret, frame = cam.read()
+        if isCam :
+            ret, frame = cam.read()
+        
         if ret :
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             cv2.imshow("setup camera", gray)
@@ -389,7 +403,10 @@ def setup_camera_android(source, calibrationFile="calibration") :
                 print("camera pos")
                 print(pos.to_str())
                 break
-    cam.close()
+    if isCam :
+        cam.close()
+    cv2.imwrite("t{}.jpg".format(time.time()), frame)
+    
     return pos, homo
 
 
@@ -434,8 +451,8 @@ def merge_rectangles(rectangles):
     return merged_rectangles
 
 if __name__ == "__main__" :
-    dect = Detection(source="ball_detection/result/dual_and/cam2/all.mp4", color_range="cr_k520", frame_size=(1280, 720), save_name="c1")
-    dect.runDetection(realTime=False, debugging=True)
+    dect = Detection(source="172.20.10.2", color_range="cr_k520", frame_size=(1280, 720), save_name="c1")
+    dect.runDetection()
 
 
     exit()

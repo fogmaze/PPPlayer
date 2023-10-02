@@ -2,10 +2,10 @@ import time
 import torch
 import csv
 import multiprocessing as mp
-import os
-import sys
 import pickle
 from typing import List, Tuple
+import os
+import sys
 sys.path.append(os.getcwd())
 import core.Constants as Constants
 import ball_detection.Detection as Detection
@@ -16,8 +16,8 @@ from ball_detection.ColorRange import *
 from camera_reciever.CameraReceiver import CameraReceiver
 import core.Equation3d as equ
 
-def getHitPointInformation(_traj:torch.Tensor) :
-    traj = _traj.view(-1, 3)
+def getHitPointInformation(_traj_unnormed:torch.Tensor) :
+    traj = _traj_unnormed.view(-1, 3)
     if not traj[0][0] < 2.74 < traj[-1][0] :
         return None, None
     l = 0
@@ -106,10 +106,11 @@ def predict(
         source          = (0, 1),
         frame_size      = (1280, 720), 
         frame_rate      = 30, 
-        color_ranges     = "color_range", 
+        color_ranges    = "color_range", 
         save_name       = "dual_default", 
         mode            = "normalB",
-        visualization   = True
+        visualization   = True,
+        initial_frames  = None
         ) :
 
     if type(calibrationFiles) == str :
@@ -167,8 +168,16 @@ def predict(
         else :
             source1 = CameraReceiver(source[0])
             source2 = CameraReceiver(source[1])
-            cam1_pos, cam1_homo = Detection.setup_camera_android(source[0], calibrationFile=calibrationFile[0])
-            cam2_pos, cam2_homo = Detection.setup_camera_android(source[1], calibrationFile=calibrationFile[1])
+            if initial_frames is None :
+                cam1_pos, cam1_homo = Detection.setup_camera_android(source[0], calibrationFile=calibrationFile[0])
+                cam2_pos, cam2_homo = Detection.setup_camera_android(source[1], calibrationFile=calibrationFile[1])
+            else :
+                #cam1_pos, cam1_homo = Detection.setup_camera_android(initial_frames[0], calibrationFile=calibrationFile[0])
+                #cam2_pos, cam2_homo = Detection.setup_camera_android(initial_frames[1], calibrationFile=calibrationFile[1])
+                cam1_pos = equ.Point3d(1,1,1)
+                cam2_pos = equ.Point3d(1,1,1)
+                cam1_homo =  np.array([[1,2,3],[4,5,6],[7,8,9]])
+                cam2_homo =  np.array([[1,2,3],[4,5,6],[7,8,9]])
             save("cam1_pos", cam1_pos)
             save("cam1_homo", cam1_homo)
             save("cam2_pos", cam2_pos)
@@ -272,5 +281,6 @@ def predict(
         display.visualizePrediction(os.path.join("ball_detection/result", save_name), fps=frame_rate)
 
 if __name__ == "__main__" :
-    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", calibrationFiles=("calibration_hd", "calibration_hd"), color_ranges="cr_a50", source="dual_and", visualization=True)
+    ini = (cv2.imread("t1696227897.5635931.jpg"), cv2.imread("t1696227897.5635931.jpg"))
+    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", calibrationFiles=("calibration_hd", "calibration_hd"), color_ranges="cr_a50", source=("172.20.10.2", "172.20.10.4"), visualization=True, initial_frames=ini)
     #predict("medium", "ball_simulate_v2/model_saves/predict/epoch_29/weight.pt", source=(0, 1))
