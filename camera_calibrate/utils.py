@@ -46,9 +46,10 @@ def takePicture_and():
 
 def takePicture():
     t = time.time()
-    cap = cv2.VideoCapture(1)
+
+    cap = cv2.VideoCapture(2)
     cap.set(cv2.CAP_PROP_FPS, 60)
-    #lprint(cap.get(cv2.CAP_PROP_FPS))
+    print(cap.get(cv2.CAP_PROP_FPS))
     a = False
     i = 0
     while True :
