@@ -15,4 +15,14 @@ class Robot :
         self.socket.sendall(b'hit')
     
     def move(self, y, z) :
-        self.socket.sendall(("move " + str(y) + " " + str(z)).encode())
+        self.socket.sendall(("m " + str(y) + " " + str(z)).encode())
+
+if __name__ == "__main__" :
+    robot = Robot("")
+    robot.move(-1, 0.5)
+    time.sleep(2)
+    robot.move(0, 0.8)
+    time.sleep(2)
+    robot.hit()
+    time.sleep(2)
+

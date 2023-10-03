@@ -363,6 +363,7 @@ def setup_camera(source, calibrationFile="calibration") :
         if ret :
             k = cv2.waitKey(1)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            cv2.imshow("W", gray)
             if k == ord(' ') :
                 pos = utils.calculateCameraPosition(calib.load_calibration(calibrationFile), gray)
                 homo = find_homography_matrix_to_apriltag(gray)

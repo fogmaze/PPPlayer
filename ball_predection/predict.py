@@ -143,7 +143,7 @@ def predict(
     # load model
     model:models.ISEFWINNER_BASE = MODEL_MAP[model_name](device="cuda:0")
     model.cuda()
-    model.load_state_dict(torch.load(weight))
+    #model.load_state_dict(torch.load(weight))
     model.eval()
     Constants.set2Normal()
     PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)

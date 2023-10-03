@@ -130,6 +130,6 @@ def empty(a) :
 
 if __name__ == "__main__" :
     cr = load("cr_k52")
-    cr.runColorRange_video("ball_detection/result/c1/tagged.mp4", recursive=True, f2f=True)
-    save("cr_k520", cr)
+    cr.runColorRange_video("172.20.10.2", recursive=False, f2f=False)
+    save("cr_k521a", cr)
     #cr.runColorRange_video("ball_detection/result/hd_60_detection_r2/bad.mp4", recursive=True)

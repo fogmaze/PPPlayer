@@ -10,7 +10,31 @@ import cv2
 import csv
 import time
 import pickle
-from camera_reciever.CameraReceiver import CameraReceiver
+import multiprocessing as mp
+
+
+def p(s, f ) :
+    cap = cv2.VideoCapture(s)
+    wri = cv2.VideoWriter(f, cv2.VideoWriter_fourcc(*'mp4v'), 30.0, (640, 480))
+    while True :
+        ret, frame = cap.read()
+        if ret :
+            wri.write(frame)
+            cv2.imshow('frame', frame)
+            if cv2.waitKey(1) & 0xff == ord('q') :
+                break
+    wri.release()
+
+
+def rec() :
+    p1 = mp.Process(target=p, args=(2, '3.mp4'))
+    p2 = mp.Process(target=p, args=(3, '4.mp4'))
+    p1.start()
+    p2.start()
+    p1.join()
+    p2.join()
+
+
 
 
 def takePicture_and():
@@ -65,7 +89,10 @@ def takePicture():
                 break
 
             if key == ord('w') :
-                cv2.imwrite('D{}.jpg'.format(i), frame)
+                g = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                pos = calculateCameraPosition(pickle.load(open('calibration1_old', 'rb')), g)
+                print(pos)
+                cv2.imwrite('A13{}.jpg'.format(i), frame)
                 i += 1
 
 
@@ -132,9 +159,15 @@ def runExerment() :
             writer.writerow(res_y)
             writer.writerow(res_z)
             
+
 if __name__ == "__main__" :
-    takePicture_and()
+    takePicture()
     exit()
+    i = cv2.imread("C1.jpg", cv2.IMREAD_GRAYSCALE)
+    pos = calculateCameraPosition(pickle.load(open('calibration1_old', 'rb')), i)
+    print(pos)
+    exit()
+
     #runExerment()
     cameraMatrix = pickle.load(open('calibration', 'rb'))
     #takePicture()
