@@ -282,5 +282,5 @@ def predict(
 
 if __name__ == "__main__" :
     ini = (cv2.imread("t1696227897.5635931.jpg"), cv2.imread("t1696227897.5635931.jpg"))
-    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", calibrationFiles=("calibration_hd", "calibration_hd"), color_ranges="cr_a50", source=("172.20.10.2", "172.20.10.4"), visualization=True, initial_frames=ini)
+    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", calibrationFiles=("calibration_hd", "calibration_hd"), color_ranges="cr_a50", source=("exp/3.mp4", "exp/4.mp4"), visualization=True, initial_frames=ini)
     #predict("medium", "ball_simulate_v2/model_saves/predict/epoch_29/weight.pt", source=(0, 1))

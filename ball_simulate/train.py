@@ -378,8 +378,8 @@ def visualizeModelOutput(model_name, weight, seed = 3):
 
     print("loss: " + str(criterion(out, ans).item()))
 
-    normer.unnorm_ans_tensor(ans)
-    normer.unnorm_ans_tensor(out)
+    ans = normer.unnorm_ans_tensor(ans)
+    out = normer.unnorm_ans_tensor(out)
 
     ax = createRoom()
     plotOutput(ax, out)

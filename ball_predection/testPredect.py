@@ -25,18 +25,25 @@ def sim_prediction() :
     print(X1_len, X2_len)
     print(hp, t)
     print("---")
+    ax = train.createRoom()
     for i in range(4, X2_len) :
-        m.reset_hidden_cell(1)
-        out = m(X1, torch.tensor([i], device="cuda:0"), X2, torch.tensor([i], device="cuda:0"), T)
-        un_out = c.normer.unnorm_ans_tensor(out)
-        hp, t = predict.getHitPointInformation(un_out)
-        print(hp, t)
-
-        m.reset_hidden_cell(1)
-        out = m(X1, torch.tensor([i], device="cuda:0"), X2, torch.tensor([i+1], device="cuda:0"), T)
-        un_out = c.normer.unnorm_ans_tensor(out)
-        hp, t = predict.getHitPointInformation(un_out)
-        print(hp, t)
+        for j in range(i, i+2) :
+            train.cleenRoom(ax)
+            m.reset_hidden_cell(1)
+            out = m(X1, torch.tensor([i], device="cuda:0"), X2, torch.tensor([j], device="cuda:0"), T)
+            c.normer.unnorm_ans_tensor(out)
+            X1_u = X1.clone()
+            X2_u = X2.clone()
+            c.normer.unorm_input_tensor(X1_u)
+            c.normer.unorm_input_tensor(X2_u)
+            hp, t = predict.getHitPointInformation(out)
+            print(hp, t)
+            pre = train.plotOutput(ax, out, color="green")
+            l1 = train.drawLineSeq(ax, X1_u.cpu(), torch.tensor([i]), color="blue")
+            l2 = train.drawLineSeq(ax, X2_u.cpu(), torch.tensor([j]), color="red")
+            plt.legend([l1, l2, pre], ["X1", "X2", "predict"])
+            plt.pause(0.01)
+            input()
 
 def find_seed() :
     ax = train.createRoom()
@@ -46,10 +53,10 @@ def find_seed() :
     i = 0
     for X1, X1_len, X2, X2_len, T, Y in dl :
         train.cleenRoom(ax)
-        Yl =c.normer.unnorm_ans_tensor(Y)
-        hp, t = predict.getHitPointInformation(Yl)
+        c.normer.unnorm_ans_tensor(Y)
+        hp, t = predict.getHitPointInformation(Y)
         print(hp, t, i)
-        train.plotOutput(ax, Yl, color="green")
+        train.plotOutput(ax, Y, color="green")
         plt.pause(0.01)
         input()
 

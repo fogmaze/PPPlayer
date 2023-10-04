@@ -146,7 +146,7 @@ def main(
                     model.reset_hidden_cell(1)
                     l, l_len, r, r_len = prepareModelInput(lines1.lines, lines2.lines)
                     out:torch.Tensor = model(l, l_len, r, r_len, PREDICT_T).view(-1)
-                    out = Constants.normer.unnorm_ans_tensor(out)
+                    Constants.normer.unnorm_ans_tensor(out)
 
                     hitPoint, t = getHitPointInformation(out)
                     if hitPoint is not None :
