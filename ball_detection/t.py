@@ -94,7 +94,7 @@ def cmpResult(xml_dir, res_data, img_dir, img_start, frame_len) :
             cv2.imshow("img", img)
             cv2.waitKey(0)
     distances = np.array(distances)
-    return tp/ frame_len, tn / frame_len, fp / frame_len, fn / frame_len, distances.mean(), distances.std()
+    return tp, tn , fp , fn , distances.mean(), distances.std()
 
 
 def getMiddleOfRect(x, y, w, h) :
@@ -117,8 +117,8 @@ def findRange_hsv_img(color_range:np.ndarray, source, xml_dir, frame_size, frame
 
 def findRange_hsv(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30):
     detection = Det.Detection(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, mode="compute")
-    detection.runDetection(debugging=False)
-    return cmpResult(xml_dir, detection.data, None, 0)
+    i = detection.runDetection(debugging=False)
+    return cmpResult(xml_dir, detection.data, None, 0, i)
 
 def caculateBestColorRange() :
     las_t = time.perf_counter()
