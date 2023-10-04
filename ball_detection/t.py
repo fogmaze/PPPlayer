@@ -38,14 +38,23 @@ def calculateBallSize(xml_dir, max_len) :
     hs = np.array(hs)
     print(ws.mean() * hs.mean())
     
-def cmpResult(xml_dir, res_data, img_dir, img_start) :
+def cmpResult(xml_dir, res_data, img_dir, img_start, frame_len) :
     # list all xml files in xml_dir
     marked_xmls = os.listdir(xml_dir)
+    marked_i = [int(t.split('.')[0]) for t in marked_xmls]
     detecteds = []
     detection_result = {}
     for data in res_data :
         detection_result[int(data[0])] = data[1:]
-    corr_len = 0
+    tp = 0
+    for i in range(img_start, frame_len+img_start) :
+        if i in marked_i and i - img_start in detection_result :
+            tp += 1
+    fp = len(detection_result) - tp
+    tn = len(marked_i) - tp
+    fn = frame_len - tp
+    print("tp: " + str(tp) + " tn: " + str(tn) + " fp: " + str(fp) + " fn: " + str(fn) + " frame_len: " + str(frame_len))
+    print("tpr: " + str(tp/ frame_len) + " tnr: " + str(fn / frame_len) + " fpr: " + str(fp / frame_len) + " fnr: " + str(fn / frame_len))
     for marked in marked_xmls:
         ind_marked = int(marked.split('.')[0]) - img_start
         if ind_marked in detection_result :
@@ -53,12 +62,12 @@ def cmpResult(xml_dir, res_data, img_dir, img_start) :
             # delete detection_result[ind_marked]
             del detection_result[ind_marked]
             #detecteds.pop(ind_marked)
-            corr_len += 1
         else :
             detecteds.append(None)
-    corr_rate = corr_len / len(marked_xmls) * 100
+    #corr_rate = corr_len / len(marked_xmls) * 100
     distances = []
-    error_rate = len(detection_result) / len(marked_xmls) * 100
+    #error_rate = len(detection_result) / len(marked_xmls) * 100
+    
     for i, mark in enumerate(marked_xmls) :
         detected = detecteds[i]
         if detected is None :
@@ -85,7 +94,7 @@ def cmpResult(xml_dir, res_data, img_dir, img_start) :
             cv2.imshow("img", img)
             cv2.waitKey(0)
     distances = np.array(distances)
-    return "%.2f" % round(corr_rate, 2), "%.2f" % round(error_rate, 2), "%.2f" %  round(distances.mean(), 2), "%.2f" %  round(distances.std(), 2)
+    return tp/ frame_len, tn / frame_len, fp / frame_len, fn / frame_len, distances.mean(), distances.std()
 
 
 def getMiddleOfRect(x, y, w, h) :
@@ -103,8 +112,8 @@ def form(xml_dir ="/home/changer/Downloads/320_60_tagged/result/"):
 
 def findRange_hsv_img(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30, beg = 0):
     detection = Det.Detection_img(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, mode="compute", beg_ind = beg)
-    detection.runDetection()
-    return cmpResult(xml_dir, detection.data, None, img_start=beg)
+    i = detection.runDetection()
+    return cmpResult(xml_dir, detection.data, None, img_start=beg, frame_len=i)
 
 def findRange_hsv(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30):
     detection = Det.Detection(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, mode="compute")
@@ -146,9 +155,8 @@ if __name__ == "__main__" :
 
     with open("color_range_2", "rb") as f :
         c = pickle.load(f)
-        print(c.upper)
-        print(c.lower)
-    #print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
+
+    print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
     print("--------------------------------------------------")
     #print(findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
     print(findRange_hsv_img(c, "/home/changer/Downloads/hd_60_tagged/frames", "/home/changer/Downloads/hd_60_tagged/result/", (1920, 1080), 60, beg=1000))

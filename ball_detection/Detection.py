@@ -198,10 +198,8 @@ class Detection :
                     if msg == "start" :
                         break
         
-        print(1)
         if type(self.cam) == CameraReceiver :
             self.cam.connect()
-        print(2)
         while(True) :
             ret, frame = self.getNextFrame()
             if ret :
@@ -322,7 +320,7 @@ class Detection :
                     self.conn.send("stop")
                 break
             iteration += 1
-            print("pid : {} process time : {}".format(self.pid, time.perf_counter() - this_iter_time))
+            # print("pid : {} process time : {}".format(self.pid, time.perf_counter() - this_iter_time))
             pt += time.perf_counter() - this_iter_time
 
 
@@ -340,7 +338,8 @@ class Detection :
         if self.mode == "dual_analysis" or self.mode == "dual_run":
             self.conn.send("stop")
 
-        print("pid : {} avg process time : {} ".format(self.pid, pt/iteration))
+        #print("pid : {} avg process time : {} ".format(self.pid, pt/iteration))
+        return iteration
 
 class Detection_img(Detection) :
     def __init__(self, source, calibrationFile="calibration",frame_size=(640,480), frame_rate=30, color_range="color_range", save_name="default", mode="analysis", beg_ind=0) :
