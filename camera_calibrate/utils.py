@@ -6,6 +6,7 @@ sys.path.append(os.getcwd())
 import core.Equation3d as equ
 import camera_calibrate.Calibration as calib
 from core.Constants import *
+from camera_reciever.CameraReceiver import CameraReceiver
 import cv2
 import csv
 import time
@@ -115,7 +116,6 @@ def calculateCameraPosition(cameraMatrix:np.ndarray, frame_gray, tagSize=APRILTA
             position = np.matmul(np.linalg.inv(res.pose_R), -res.pose_t)
             return equ.Point3d(position[0][0] + (tagSize/2) - 2.74/2, -position[2][0] - 1.525/2, -position[1][0] + (tagSize/2))
         else:
-            print(1)
             return None
     except Exception as e:
         print(e)

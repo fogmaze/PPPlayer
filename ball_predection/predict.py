@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import time
 import torch
 import csv
@@ -7,6 +8,7 @@ from typing import List, Tuple
 import os
 import sys
 sys.path.append(os.getcwd())
+import ball_predection.display as display
 import core.Constants as Constants
 import ball_detection.Detection as Detection
 from ball_simulate_v2.models import MODEL_MAP
@@ -17,25 +19,27 @@ from camera_reciever.CameraReceiver import CameraReceiver
 import core.Equation3d as equ
 
 def getHitPointInformation(_traj_unnormed:torch.Tensor) :
+    END = 27.4/2
     traj = _traj_unnormed.view(-1, 3)
-    if not traj[0][0] < 2.74 < traj[-1][0] :
+    if not traj[0][0] < END < traj[-1][0] :
         return None, None
     l = 0
     r = traj.shape[0] - 1
     while l < r :
         mid = (l + r) // 2
-        if traj[mid][0] < 2.74 :
+        if traj[mid][0] < END :
             l = mid + 1
         else :
             r = mid
     l = l - 1
-    w = (2.74 - traj[l][0]) / (traj[l+1][0] - traj[l][0])
+    w = (END - traj[l][0]) / (traj[l+1][0] - traj[l][0])
     hit_point = traj[l] * (1 - w) + traj[l+1] * w
     return hit_point, (l * (1 - w) + (l+1) * w) * Constants.CURVE_SHOWING_GAP
 
 class LineCollector:
-    bounceTimestamp = 0
-    lines:List[Tuple[int, int, int, int, int]] = []
+    def __init__(self) :
+        self.bounceTimestamp = 0
+        self.lines:List[Tuple[int, int, int, int, int]] = []
     def put(self, x, y, z, rxy, rxz) :
         if self.checkHit(x, y, z, rxy, rxz) :
             self.lines.clear()
@@ -43,16 +47,24 @@ class LineCollector:
         else :
             if len(self.lines) == 0 :
                 self.bounceTimestamp = time.time()
-            if len(self.lines) > 50:
+            if len(self.lines) >= Constants.SIMULATE_INPUT_LEN:
                 self.lines.pop(0)
             self.lines.append((x, y, z, rxy, rxz))
             return True
     def checkHit(self, x, y, z, rxy, rxz) :
         pass
+    def clear(self) :
+        self.lines.clear()
 
 class LineCollector_hor(LineCollector) :
+    def __init__(self):
+        super().__init__()
     movement = None
     last_rxy = None
+    def clear(self):
+        self.last_rxy = None
+        self.movement = None
+        super().clear()
     def checkHit(self, x, y, z, rxy, rxz):
         if self.movement == 1:
             if rxy - self.last_rxy < 0:
@@ -72,12 +84,16 @@ class LineCollector_hor(LineCollector) :
 def prepareModelInput(ll:list, rl:list, device="cuda:0") :
     l = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
     r = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
-    l[:len(ll)] = torch.tensor(ll, device=device)
-    r[:len(rl)] = torch.tensor(rl, device=device)
+    if len(ll) > 0 :
+        l[:len(ll)] = torch.tensor(ll, device=device)
+    if len(rl) > 0 :
+        r[:len(rl)] = torch.tensor(rl, device=device) 
     l = l.view(1, Constants.SIMULATE_INPUT_LEN, Constants.MODEL_INPUT_SIZE)
     r = r.view(1, Constants.SIMULATE_INPUT_LEN, Constants.MODEL_INPUT_SIZE)
     l_len = torch.tensor([len(ll)]).view(1,1).to(device)
     r_len = torch.tensor([len(rl)]).view(1,1).to(device)
+    Constants.normer.norm_input_tensor(l)
+    Constants.normer.norm_input_tensor(r)
     return l, l_len, r, r_len
 
 def runDec(s, sub_name, cp, h, q, c2s, calibrationFile, frame_size, frame_rate, color_range, save_name) :
@@ -103,6 +119,7 @@ def predict(
         model_name:str,
         weight,
         calibrationFiles = "calibration",
+        calibrationFiles_initial = None,
         source          = (0, 1),
         frame_size      = (1280, 720), 
         frame_rate      = 30, 
@@ -110,7 +127,7 @@ def predict(
         save_name       = "dual_default", 
         mode            = "normalB",
         visualization   = True,
-        initial_frames  = None
+        initial_frames_gray  = None
         ) :
 
     if type(calibrationFiles) == str :
@@ -121,6 +138,8 @@ def predict(
         color_range = (color_ranges, color_ranges)
     else :
         color_range = color_ranges
+    if calibrationFiles_initial is None :
+        calibrationFiles_initial = calibrationFiles
 
     SPEED_UP = False
     if mode != "default":
@@ -143,10 +162,12 @@ def predict(
     # load model
     model:models.ISEFWINNER_BASE = MODEL_MAP[model_name](device="cuda:0")
     model.cuda()
-    #model.load_state_dict(torch.load(weight))
+    model.load_state_dict(torch.load(weight))
     model.eval()
     Constants.set2Normal()
-    PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)
+    NORMED_PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)
+    Constants.normer.norm_t_tensor(NORMED_PREDICT_T)
+
     
     common.replaceDir("ball_detection/result/", save_name)
     pf = open("ball_detection/result/" + save_name + "/pred.csv", "w")
@@ -159,41 +180,51 @@ def predict(
 
 
     if type(source) == tuple and len(source) == 2 :
-        if type(source[0]) == int :
-            cam1_pos, cam1_homo = Detection.setup_camera(source[0], calibrationFile=calibrationFile[0])
-            cam2_pos, cam2_homo = Detection.setup_camera(source[1], calibrationFile=calibrationFile[1])
+        if type(source[0]) == int or type(source[0]) == str:
+            
+            if initial_frames_gray is None :
+                cam1_pos, cam1_homo = Detection.setup_camera(source[0], calibrationFile=calibrationFiles_initial[0])
+                cam2_pos, cam2_homo = Detection.setup_camera(source[1], calibrationFile=calibrationFiles_initial[1])
+            else :
+                cam1_pos, cam1_homo = Detection.setup_camera_img(initial_frames_gray[0], calibrationFiles_initial[0])
+                cam2_pos, cam2_homo = Detection.setup_camera_img(initial_frames_gray[1], calibrationFiles_initial[1])
             
             source1 = source[0]
             source2 = source[1]
         else :
             source1 = CameraReceiver(source[0])
             source2 = CameraReceiver(source[1])
-            if initial_frames is None :
-                cam1_pos, cam1_homo = Detection.setup_camera_android(source[0], calibrationFile=calibrationFile[0])
-                cam2_pos, cam2_homo = Detection.setup_camera_android(source[1], calibrationFile=calibrationFile[1])
+            if initial_frames_gray is None :
+                cam1_pos, cam1_homo = Detection.setup_camera_android(source[0], calibrationFile=calibrationFiles_initial[0])
+                cam2_pos, cam2_homo = Detection.setup_camera_android(source[1], calibrationFile=calibrationFiles_initial[1])
             else :
+                cam1_pos, cam1_homo = Detection.setup_camera_img(initial_frames_gray[0], calibrationFiles_initial[0])
+                cam2_pos, cam2_homo = Detection.setup_camera_img(initial_frames_gray[1], calibrationFiles_initial[1])
                 #cam1_pos, cam1_homo = Detection.setup_camera_android(initial_frames[0], calibrationFile=calibrationFile[0])
                 #cam2_pos, cam2_homo = Detection.setup_camera_android(initial_frames[1], calibrationFile=calibrationFile[1])
-                cam1_pos = equ.Point3d(1,1,1)
-                cam2_pos = equ.Point3d(1,1,1)
-                cam1_homo =  np.array([[1,2,3],[4,5,6],[7,8,9]])
-                cam2_homo =  np.array([[1,2,3],[4,5,6],[7,8,9]])
-            save("cam1_pos", cam1_pos)
-            save("cam1_homo", cam1_homo)
-            save("cam2_pos", cam2_pos)
-            save("cam2_pos", cam2_pos)
+                #cam1_pos = equ.Point3d(1,1,1)
+                #cam2_pos = equ.Point3d(1,1,1)
+                #cam1_homo =  np.array([[1,2,3],[4,5,6],[7,8,9]])
+                #cam2_homo =  np.array([[1,2,3],[4,5,6],[7,8,9]])
+
     elif type(source) == str :
         source1 = os.path.join("ball_detection/result", source + "/cam1/all.mp4")
         source2 = os.path.join("ball_detection/result", source + "/cam2/all.mp4")
-        with open(os.path.join("ball_detection/result", source + "/cam1/camera_position"), "rb") as f:
-            cam1_pos = pickle.load(f)
-        with open(os.path.join("ball_detection/result", source + "/cam2/camera_position"), "rb") as f:
-            cam2_pos = pickle.load(f)
-        with open(os.path.join("ball_detection/result", source + "/cam1/homography_matrix"), "rb") as f:
-            cam1_homo = pickle.load(f)
-        with open(os.path.join("ball_detection/result", source + "/cam2/homography_matrix"), "rb") as f:
-            cam2_homo = pickle.load(f)
+        if initial_frames_gray is None :
+            with open(os.path.join("ball_detection/result", source + "/cam1/camera_position"), "rb") as f:
+                cam1_pos = pickle.load(f)
+            with open(os.path.join("ball_detection/result", source + "/cam2/camera_position"), "rb") as f:
+                cam2_pos = pickle.load(f)
+            with open(os.path.join("ball_detection/result", source + "/cam1/homography_matrix"), "rb") as f:
+                cam1_homo = pickle.load(f)
+            with open(os.path.join("ball_detection/result", source + "/cam2/homography_matrix"), "rb") as f:
+                cam2_homo = pickle.load(f)
+        else :
+            cam1_pos, cam1_homo = Detection.setup_camera_img(initial_frames_gray[0], calibrationFiles_initial[0])
+            cam2_pos, cam2_homo = Detection.setup_camera_img(initial_frames_gray[1], calibrationFiles_initial[1])
 
+    print("camera1 position: " + cam1_pos.to_str())
+    print("camera2 position: " + cam2_pos.to_str())
 
     p1 = mp.Process(target=runDec, args=(source1, "/cam1", cam1_pos, cam1_homo, queue, c12s, calibrationFile[0], frame_size, frame_rate, color_range[0], save_name))
     p2 = mp.Process(target=runDec, args=(source2, "/cam2", cam2_pos, cam2_homo, queue, c22s, calibrationFile[1], frame_size, frame_rate, color_range[1], save_name))
@@ -219,6 +250,7 @@ def predict(
             msg = c22d.recv()
             if msg == "ready":
                 break
+    f, ax = display.createFigRoom()
     c12d.send("start")
     c22d.send("start")
 
@@ -232,28 +264,33 @@ def predict(
             isHit = None
             if new_data[0] == p1.pid:
                 isHit = not lines1.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
+                if isHit :
+                    lines2.clear()
                 which = 1
             elif new_data[0] == p2.pid:
                 isHit = not lines2.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
+                if isHit :
+                    lines1.clear()
                 which = 2
             # send to model
             if isHit:
                 pass
             elif SPEED_UP :
                 pass
-            else :
+            elif len(lines1.lines) > 1 and len(lines2.lines) > 1 :
                 model.reset_hidden_cell(1)
                 l, l_len, r, r_len = prepareModelInput(lines1.lines, lines2.lines)
-                out:torch.Tensor = model(l, l_len, r, r_len, PREDICT_T) 
+                out:torch.Tensor = model(l, l_len, r, r_len, NORMED_PREDICT_T) 
                 Constants.normer.unnorm_ans_tensor(out)
                 hp, t = getHitPointInformation(out)
-                print("hit point:", hp, "time:", t)
+                #print("hit point:", hp, "time:", t)
                 process_time += time.time() - nowT
                 process_time_iter += 1
                 if hp is not None :
-                    pfw.writerow([which, new_data[1], hp[0], hp[1], hp[2], t] + out.tolist())
+                    pfw.writerow([which, new_data[1], hp[0], hp[1], hp[2], t] + out.view(-1).tolist())
                 else :
-                    pfw.writerow([which, new_data[1], -1, -1, -1, -1] + out.tolist())
+                    pfw.writerow([which, new_data[1], -1, -1, -1, -1] + out.view(-1).tolist())
+
         if c12d.poll() :
             recv = c12d.recv()
             if recv == "stop" :
@@ -277,10 +314,17 @@ def predict(
 
     # display
     if visualization :
-        import ball_predection.display as display
         display.visualizePrediction(os.path.join("ball_detection/result", save_name), fps=frame_rate)
 
 if __name__ == "__main__" :
-    ini = (cv2.imread("t1696227897.5635931.jpg"), cv2.imread("t1696227897.5635931.jpg"))
-    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", calibrationFiles=("calibration_hd", "calibration_hd"), color_ranges="cr_a50", source=("exp/3.mp4", "exp/4.mp4"), visualization=True, initial_frames=ini)
+    ini = (cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE), cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE))
+
+    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", frame_size=(640, 480),calibrationFiles_initial=("calibration", "calibration"), calibrationFiles=("calibration_hd", "calibration"), color_ranges="cr3", source=("exp/3.mp4", "exp/4.mp4"), visualization=True, initial_frames_gray=ini)
     #predict("medium", "ball_simulate_v2/model_saves/predict/epoch_29/weight.pt", source=(0, 1))
+    exit()
+    ini = cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE)
+    pos, ho = Detection.setup_camera_img(ini[1], "calibration")
+    print(pos.to_str(), ho.shape)
+    save("pos", pos)
+    save("ho", ho)
+    exit()

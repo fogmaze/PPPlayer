@@ -18,10 +18,9 @@ class Robot :
         self.socket.sendall(("m " + str(y) + " " + str(z)).encode())
 
 if __name__ == "__main__" :
-    robot = Robot("192.168.50.234")
-    robot.move(-0.5, 0.5)
-    time.sleep(2)
-    robot.move(0, 0.8)
-    time.sleep(2)
+    robot = Robot("172.20.20.228")
+    robot.move(0.5, 0.5 )
+    time.sleep(1)
+    robot.move(-0.5, 0.5 )
 
 

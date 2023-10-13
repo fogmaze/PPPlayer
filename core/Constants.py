@@ -252,7 +252,50 @@ class Normer :
             #data[i][0] = data[i][0] * self.BALL_STD[0] + self.BALL_MEAN[0]
             #data[i][1] = data[i][1] * self.BALL_STD[1] + self.BALL_MEAN[1]
             #data[i][2] = data[i][2] * self.BALL_STD[2] + self.BALL_MEAN[2]
-
+    def norm_ans_tensor(self, data) :
+        d = data.view(-1, 3)
+        d.transpose_(0, 1)
+        d[0] = (d[0] - self.BALL_MEAN[0]) / self.BALL_STD[0]
+        d[1] = (d[1] - self.BALL_MEAN[1]) / self.BALL_STD[1]
+        d[2] = (d[2] - self.BALL_MEAN[2]) / self.BALL_STD[2]
+        d.transpose_(0, 1)
+        return d
+        #for i in range(len(data)) :
+            #data[i][0] = (data[i][0] - self.BALL_MEAN[0]) / self.BALL_STD[0]
+            #data[i][1] = (data[i][1] - self.BALL_MEAN[1]) / self.BALL_STD[1]
+            #data[i][2] = (data[i][2] - self.BALL_MEAN[2]) / self.BALL_STD[2]
+    def norm_t_tensor(self, data) :
+        d = data.view(-1, 1)
+        d.transpose_(0, 1)
+        d[0] = (d[0] - self.TIME_MEAN[0]) / self.TIME_STD[0]
+        d.transpose_(0, 1)
+        return d
+        #for i in range(len(data)) :
+            #data[i][0] = (data[i][0] - self.TIME_MEAN[0]) / self.TIME_STD[0]
+    def unnorm_t_tensor(self, data) :
+        d = data.view(-1, 1)
+        d.transpose_(0, 1)
+        d[0] = d[0] * self.TIME_STD[0] + self.TIME_MEAN[0]
+        d.transpose_(0, 1)
+        return d
+        #for i in range(len(data)) :
+            #data[i][0] = data[i][0] * self.TIME_STD[0] + self.TIME_MEAN[0]
+    def norm_input_tensor(self, data) :
+        d = data.view(-1, 5)
+        d.transpose_(0, 1)
+        d[0] = (d[0] - self.CAM_MEAN[0]) / self.CAM_STD[0]
+        d[1] = (d[1] - self.CAM_MEAN[1]) / self.CAM_STD[1]
+        d[2] = (d[2] - self.CAM_MEAN[2]) / self.CAM_STD[2]
+        d[3] = (d[3] - self.LINE_MEAN[0]) / self.LINE_STD[0]
+        d[4] = (d[4] - self.LINE_MEAN[1]) / self.LINE_STD[1]
+        d.transpose_(0, 1)
+        return d
+        #for i in range(len(data)) :
+            #data[i][0] = (data[i][0] - self.CAM_MEAN[0]) / self.CAM_STD[0]
+            #data[i][1] = (data[i][1] - self.CAM_MEAN[1]) / self.CAM_STD[1]
+            #data[i][2] = (data[i][2] - self.CAM_MEAN[2]) / self.CAM_STD[2]
+            #data[i][3] = (data[i][3] - self.LINE_MEAN[0]) / self.LINE_STD[0]
+            #data[i][4] = (data[i][4] - self.LINE_MEAN[1]) / self.LINE_STD[1]
     def unorm_input_tensor(self, data) :
         d = data.view(-1, 5)
         d.transpose_(0, 1)

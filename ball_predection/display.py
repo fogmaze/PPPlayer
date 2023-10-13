@@ -25,6 +25,40 @@ def prepareModelInput(ll:list, rl:list, device="cuda:0") :
     r_len = torch.tensor([len(rl)]).view(1,1).to(device)
     return l, l_len, r, r_len
 
+def visualizeDetection(root, fps=30) :
+    forcc = cv2.VideoWriter_fourcc(*'mp4v')
+    if os.path.exists(os.path.join(root, 'visualize.mp4')) :
+        os.remove(os.path.join(root, 'visualize.mp4'))
+    outputVideo = cv2.VideoWriter(os.path.join(root, 'visualize.mp4'), forcc, fps, (640, 480))  
+
+    lines = pred.LineCollector_hor()
+    fig, axe = createFigRoom()
+
+    with open(os.path.join(root, 'detection.csv'), 'r') as f :
+        reader = csv.reader(f)
+        title = next(reader)
+        cam_datas = list(reader)
+        # cast to float
+        cam_datas = [[float(b) for b in a] for a in cam_datas]
+    
+    for cam_data in tqdm.tqdm(cam_datas) :
+        cleanRoom(axe)
+        line_data = cam_data[6:]
+        isHit = not lines.put(line_data[0], line_data[1], line_data[2], line_data[3], line_data[4])
+        if isHit :
+            pass
+        else :
+            l1, = displayLines(axe, lines, color='b', label=None)
+            plt.legend([l1], ['cam'])
+            fig.canvas.draw()
+            img = np.fromstring(axe.figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+            img = img.reshape(axe.figure.canvas.get_width_height()[::-1] + (3,))
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+            outputVideo.write(img)
+    outputVideo.release()
+
+
 def visualizePrediction(root, fps=30) :
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     if os.path.exists(os.path.join(root, 'visualize.mp4')) :
@@ -72,9 +106,14 @@ def visualizePrediction(root, fps=30) :
         else :
             out:torch.Tensor = torch.tensor(pred_data[6:]).view(-1,3)
             o = plotOutput(axe, out, color='r', label=None)
-            l1, = displayLines(axe, lines1, color='b', label=None)
-            l2, = displayLines(axe, lines2, color='g', label=None)
-            plt.legend([o, l1, l2], ['output', 'cam1', 'cam2'])
+            leg = [(o, 'output')]
+            if len(lines1.lines) > 0 :
+                l1, = displayLines(axe, lines1, color='b', label=None)
+                leg.append((l1, 'cam1'))
+            if len(lines2.lines) > 0 :
+                l2, = displayLines(axe, lines2, color='g', label=None)
+                leg.append((l2, 'cam2'))
+            plt.legend(*zip(*leg))
             fig.canvas.draw()
             img = np.fromstring(axe.figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
             img = img.reshape(axe.figure.canvas.get_width_height()[::-1] + (3,))
@@ -88,7 +127,7 @@ def displayLines(axe, lines: pred.LineCollector_hor, color="b", label=None) :
     for line in lines.lines :
         l = equ.LineEquation3d(None, None)
         cp = equ.Point3d(line[0], line[1], line[2])
-        l.setByPointOblique(equ.Point3d(0, 0, 0), line[3], line[4])
+        l.setByPointOblique(cp, line[3], line[4])
         r = drawLine3d(axe, l, color=color, label=label)
     return r
 
@@ -125,4 +164,5 @@ def plotOutput(ax, out, color = 'r', label=None):
     return obj
 
 if __name__ == "__main__" :
-    visualizePrediction("ball_detection/result/dual_default")
+    Constants.set2NormalB()
+    visualizePrediction("ball_detection/result/dual_default_105")

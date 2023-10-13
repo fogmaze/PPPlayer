@@ -371,6 +371,14 @@ def setup_camera(source, calibrationFile="calibration") :
                 break
     return pos, homo
 
+def setup_camera_img(img_gray, calibrationFile) :
+    pos = utils.calculateCameraPosition(calib.load_calibration(calibrationFile), img_gray)
+    if pos is None :
+        raise Exception("pos not found")
+    homo = find_homography_matrix_to_apriltag(img_gray)
+    return pos, homo
+
+
 def setup_camera_android(source, calibrationFile="calibration") :
     pos = None
     homo = None
@@ -451,8 +459,10 @@ def merge_rectangles(rectangles):
     return merged_rectangles
 
 if __name__ == "__main__" :
-    dect = Detection(source="172.20.10.2", color_range="cr_k520", frame_size=(1280, 720), save_name="c1")
-    dect.runDetection()
+    ini = cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE)
+    pos, ho = setup_camera_img(ini, "calibration1")
+    dect = Detection(source="exp/3.mp4", color_range="color_range_2", frame_size=(640, 480), save_name="c1",cam_pos=pos, homography_matrix=ho, mode="analysis" )
+    dect.runDetection(debugging=False, realTime=False)
 
 
     exit()

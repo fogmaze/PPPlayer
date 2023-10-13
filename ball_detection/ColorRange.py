@@ -17,6 +17,12 @@ def load(path) :
         return pickle.load(f)
 
         
+hsv:np.ndarray = None
+def on_mouse(event, x, y, flags, param):
+    if hsv is not None :
+        if event == cv2.EVENT_LBUTTONDOWN:
+            print("H:", hsv[y, x, 0], " S:", hsv[y, x, 1], " V:", hsv[y, x, 2])
+
 class ColorRange :
     upper:np.ndarray
     lower:np.ndarray
@@ -40,6 +46,8 @@ class ColorRange :
 
     def runColorRange_video(self, source, recursive = False, save_file_name = None, f2f = False) :
         cv2.namedWindow("ColorRangeSetting")
+        global hsv
+        cv2.setMouseCallback("ColorRangeSetting", on_mouse)
 
         cv2.createTrackbar("Hue Min", "ColorRangeSetting", self.lower[0], 179, empty)
         cv2.createTrackbar("Hue Max", "ColorRangeSetting", self.upper[0], 179, empty)
@@ -47,6 +55,7 @@ class ColorRange :
         cv2.createTrackbar("Sat Max", "ColorRangeSetting", self.upper[1], 255, empty)
         cv2.createTrackbar("Val Min", "ColorRangeSetting", self.lower[2], 255, empty)
         cv2.createTrackbar("Val Max", "ColorRangeSetting", self.upper[2], 255, empty)
+
 
         if type(source) == str and source.replace(".", "").isdigit() :
             cam = CameraReceiver(source)
@@ -129,7 +138,7 @@ def empty(a) :
         save("color_range_1", cr)
 
 if __name__ == "__main__" :
-    cr = load("cr_k52")
-    cr.runColorRange_video("172.20.10.2", recursive=False, f2f=False)
-    save("cr_k521a", cr)
+    cr = load("cr3")
+    cr.runColorRange_video("exp/3.mp4", recursive=True, f2f=True)
+    save("cr3", cr)
     #cr.runColorRange_video("ball_detection/result/hd_60_detection_r2/bad.mp4", recursive=True)
