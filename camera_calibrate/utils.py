@@ -114,6 +114,9 @@ def calculateCameraPosition(cameraMatrix:np.ndarray, frame_gray, tagSize=APRILTA
         if len(results) == 1:
             res:Detection = results[0]
             position = np.matmul(np.linalg.inv(res.pose_R), -res.pose_t)
+            print("origin: ", position)
+            p = equ.Point3d(position[0][0] + (tagSize/2) - 2.74/2, -position[2][0] - 1.525/2, -position[1][0] + (tagSize/2))
+            print("after: ", p.to_str())
             return equ.Point3d(position[0][0] + (tagSize/2) - 2.74/2, -position[2][0] - 1.525/2, -position[1][0] + (tagSize/2))
         else:
             return None

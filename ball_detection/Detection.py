@@ -103,6 +103,7 @@ class Detection :
             self.video_writer_all = cv2.VideoWriter("ball_detection/result/" + save_name + "/all.mp4", self.fourcc, self.frame_rate, self.frame_size)
             self.video_writer_bad = cv2.VideoWriter("ball_detection/result/" + save_name + "/bad.mp4", self.fourcc, self.frame_rate, self.frame_size)
             self.video_writer_tagged = cv2.VideoWriter("ball_detection/result/" + save_name + "/tagged.mp4", self.fourcc, self.frame_rate, self.frame_size)
+            self.video_writer_all_tagged = cv2.VideoWriter("ball_detection/result/" + save_name + "/all_tagged.mp4", self.fourcc, self.frame_rate, self.frame_size)
             self.detection_csv = open("ball_detection/result/" + save_name + "/detection.csv", "w", newline='')
             self.situation_csv = open("ball_detection/result/" + save_name + "/situation.csv", "w", newline='')
             self.detection_csv_writer = csv.writer(self.detection_csv)
@@ -129,6 +130,8 @@ class Detection :
                 self.video_writer_bad.release()
             if self.video_writer_tagged is not None :
                 self.video_writer_tagged.release()
+            if self.video_writer_all_tagged is not None :
+                self.video_writer_all_tagged.release()
             if self.detection_csv is not None :
                 self.detection_csv.close()
             if self.situation_csv is not None :
@@ -297,6 +300,8 @@ class Detection :
                         self.video_writer_bad.write(frame)
                     else:
                         self.video_writer_tagged.write(frame)
+                    self.video_writer_all_tagged.write(frame)
+                pass
                 
                 window = "Source" + str(self.source) 
                 if self.mode == "analysis" or self.mode == "dual_analysis" or self.mode == "dual_run":
@@ -330,6 +335,7 @@ class Detection :
                     pass
             
             last_iter_time = this_iter_time
+
         
         if type(self.cam) == CameraReceiver :
             self.cam.close()
@@ -460,8 +466,8 @@ def merge_rectangles(rectangles):
 
 if __name__ == "__main__" :
     ini = cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE)
-    pos, ho = setup_camera_img(ini, "calibration1")
-    dect = Detection(source="exp/3.mp4", color_range="color_range_2", frame_size=(640, 480), save_name="c1",cam_pos=pos, homography_matrix=ho, mode="analysis" )
+    pos, ho = setup_camera_img(ini, "calibration_hd")
+    dect = Detection(source="exp/3.mp4", color_range="cr3", frame_size=(640, 480), save_name="c1",cam_pos=pos, homography_matrix=ho, mode="analysis" )
     dect.runDetection(debugging=False, realTime=False)
 
 

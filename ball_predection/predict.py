@@ -14,12 +14,13 @@ import ball_detection.Detection as Detection
 from ball_simulate_v2.models import MODEL_MAP
 import ball_simulate_v2.models as models
 import core.common as common
+import camera_calibrate.utils as utils
 from ball_detection.ColorRange import *
 from camera_reciever.CameraReceiver import CameraReceiver
 import core.Equation3d as equ
 
 def getHitPointInformation(_traj_unnormed:torch.Tensor) :
-    END = 27.4/2
+    END = 2.74/2
     traj = _traj_unnormed.view(-1, 3)
     if not traj[0][0] < END < traj[-1][0] :
         return None, None
@@ -318,6 +319,8 @@ def predict(
 
 if __name__ == "__main__" :
     ini = (cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE), cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE))
+    Detection.setup_camera_img(ini[1], "calibration_hd")
+    exit()
 
     predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", frame_size=(640, 480),calibrationFiles_initial=("calibration", "calibration"), calibrationFiles=("calibration_hd", "calibration"), color_ranges="cr3", source=("exp/3.mp4", "exp/4.mp4"), visualization=True, initial_frames_gray=ini)
     #predict("medium", "ball_simulate_v2/model_saves/predict/epoch_29/weight.pt", source=(0, 1))

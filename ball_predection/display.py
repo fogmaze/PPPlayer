@@ -5,6 +5,7 @@ import csv
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
 import torch
 import cv2
 import sys
@@ -24,6 +25,55 @@ def prepareModelInput(ll:list, rl:list, device="cuda:0") :
     l_len = torch.tensor([len(ll)]).view(1,1).to(device)
     r_len = torch.tensor([len(rl)]).view(1,1).to(device)
     return l, l_len, r, r_len
+
+def visualizeDetection_video(root, fps=30) :
+    forcc = cv2.VideoWriter_fourcc(*'mp4v')
+    if os.path.exists(os.path.join(root, 'visualize.mp4')) :
+        os.remove(os.path.join(root, 'visualize.mp4'))
+    outputVideo = cv2.VideoWriter(os.path.join(root, 'visualize.mp4'), forcc, fps, (640*2, 480))
+    origVideo = cv2.VideoCapture(os.path.join(root, 'all_tagged.mp4'))
+
+    lines = pred.LineCollector_hor()
+    fig, axe = createFigRoom()
+
+    white = np.zeros((480, 640, 3), np.uint8)
+    white[:] = (255, 255, 255)
+
+    with open(os.path.join(root, 'detection.csv'), 'r') as f :
+        reader = csv.reader(f)
+        title = next(reader)
+        cam_datas = list(reader)
+        # cast to float
+        cam_datas = [[float(b) for b in a] for a in cam_datas]
+    
+    result = None
+    for i in tqdm.tqdm(range(round(cam_datas[-1][0]))) :
+        ret, frame = origVideo.read()
+        if i == cam_datas[0][0] :
+            cleanRoom(axe)
+            line_data = cam_datas[0][6:]
+            isHit = not lines.put(line_data[0], line_data[1], line_data[2], line_data[3], line_data[4])
+            if isHit :
+                pass
+            else :
+                l1, = displayLines(axe, lines, color='b', label=None)
+                axe.scatter(line_data[0], line_data[1], line_data[2], c='r', label=None)
+                plt.legend([l1], ['cam'])
+                fig.canvas.draw()
+                img = np.fromstring(axe.figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+                img = img.reshape(axe.figure.canvas.get_width_height()[::-1] + (3,))
+                img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+                result = img
+            cam_datas.pop(0)
+
+        if result is None :
+            result = white
+
+        fin = cv2.hconcat([frame, result])
+        outputVideo.write(fin)
+    outputVideo.release()
+
 
 def visualizeDetection(root, fps=30) :
     forcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -122,7 +172,7 @@ def visualizePrediction(root, fps=30) :
             outputVideo.write(img)
     outputVideo.release()
 
-def displayLines(axe, lines: pred.LineCollector_hor, color="b", label=None) :
+def displayLines(axe, lines, color="b", label=None) :
     r = None
     for line in lines.lines :
         l = equ.LineEquation3d(None, None)
@@ -139,6 +189,22 @@ def configRoom(ax:Axes) -> Axes:
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlabel('z')
+    ax.invert_xaxis()
+    ax.view_init(50, 70)
+    W = 2.74/2
+    H = 1.525/2
+    Z = np.array([
+        [-W, -H, 0],
+        [W, -H, 0],
+        [W, H, 0],
+        [-W, H, 0],
+    ])
+    ax.scatter3D(Z[:, 0], Z[:, 1], Z[:, 2])
+    verts = [
+        [Z[0],Z[1],Z[2],Z[3]],
+    ]
+    ax.add_collection3d(Poly3DCollection(verts, facecolors='cyan', linewidths=1, edgecolors='r', alpha=.20))
+    return ax
 
 def drawLine3d(axe:plt.Axes,line:equ.LineEquation3d, color="r", label=None):
     points = [line.getPoint({'x':-Constants.BALL_AREA_HALF_LENGTH*1}),line.getPoint({'x':Constants.BALL_AREA_HALF_LENGTH*1})]
@@ -163,6 +229,9 @@ def plotOutput(ax, out, color = 'r', label=None):
         obj = ax.scatter(p[0].item(),p[1].item(),p[2].item(),c=color, label=label)
     return obj
 
+
+
 if __name__ == "__main__" :
     Constants.set2NormalB()
-    visualizePrediction("ball_detection/result/dual_default_105")
+    visualizeDetection_video("ball_detection/result/c1_40")
+    #visualizePrediction("ball_detection/result/dual_default_105")
