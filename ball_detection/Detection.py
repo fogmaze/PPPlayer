@@ -35,6 +35,7 @@ def getBallProjectionPoint(homography_matrix, frame_size, x, y, w, h) :
     projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
     return projection
 
+
 class Detection :
     #save test frames
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -47,36 +48,62 @@ class Detection :
 
     def __init__(self, 
                 source, 
-                calibrationFile    = "calibration",
-                frame_size         = (640,480), 
-                frame_rate         = 30, 
-                color_range        = "color_range", 
+                calibrationFile    = None,
+                frame_size         = None, 
+                frame_rate         = None, 
+                color_range        = None, 
                 save_name          = "default", 
-                mode               ="analysis", 
+                mode               = None, 
                 cam_pos            = None, 
                 homography_matrix  = None,
                 queue              = None,
-                conn               = None
+                conn               = None,
+                load_from_result   = None
                 ) :
+        
+        self.frame_rate = 30 
+        self.frame_size = (640, 480)
+        self.camera_position = None
+        self.homography_matrix = None
+        self.range = None
+        self.inmtx = None
+        
+        if load_from_result is not None :
+            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "frame_size")) :
+                self.frame_size = load(os.path.join("ball_detection/result", load_from_result, "frame_size"))
+            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "frame_rate")) :
+                self.frame_rate = load(os.path.join("ball_detection/result", load_from_result, "frame_rate"))
+            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "camera_position")) :
+                self.camera_position = load(os.path.join("ball_detection/result", load_from_result, "camera_position"))
+            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "homography_matrix")) :
+                self.homography_matrix = load(os.path.join("ball_detection/result", load_from_result, "homography_matrix"))
+            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "calibration")) :
+                self.inmtx = load(os.path.join("ball_detection/result", load_from_result, "calibration"))
+            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "color_range")) :
+                self.range = load(os.path.join("ball_detection/result", load_from_result, "color_range"))
 
         self.pid = os.getpid()
-        self.frame_size = frame_size
-        self.frame_rate = frame_rate
+
+        self.frame_size = frame_size if frame_size is not None else self.frame_size
+        self.frame_rate = frame_rate if frame_rate is not None else self.frame_rate
         if type(cam_pos) == np.ndarray :
             self.camera_position = equ.Point3d(cam_pos[0], cam_pos[1], cam_pos[2])
-        else :
+        elif type(cam_pos == equ.Point3d):
             self.camera_position = cam_pos
         if type(color_range) == str :
             self.range = load(color_range)
-        else :
+        elif type(color_range) == ColorRange :
             self.range = color_range
         self.upper = self.range.upper
         self.lower = self.range.lower
-        self.homography_matrix = homography_matrix
+        self.homography_matrix = homography_matrix if type(homography_matrix) == np.ndarray else homography_matrix
         self.video_writer_all = None
         self.video_writer_bad = None
         self.video_writer_tagged = None
-        self.inmtx = calib.load_calibration(calibrationFile)
+        if calibrationFile is not None :
+            self.inmtx = calib.load_calibration(calibrationFile)
+        elif type(self.inmtx) == str :
+            self.inmtx = calib.load_calibration(self.inmtx)
         self.cam = None
         self.source = source
         self.data = []
@@ -111,16 +138,32 @@ class Detection :
             self.detection_csv_writer.writerow(["iter", "id", "x", "y", "h", "w", "cam_x", "cam_y", "cam_z","rxy", "rxz"])
             self.situation_csv_writer.writerow(["iter", "time", "fps", "numOfBall"])
             # pickle camera position and homography matrix
-            if self.camera_position is not None and self.homography_matrix is not None:
-                with open("ball_detection/result/" + save_name + "/camera_position", "wb") as f :
-                    pickle.dump(self.camera_position, f)
-                with open("ball_detection/result/" + save_name + "/homography_matrix", "wb") as f :
-                    pickle.dump(self.homography_matrix, f)
         if self.mode == "dual_analysis" or self.mode == "dual_run":
             if queue is None or cam_pos is None or homography_matrix is None:
                 raise Exception("dual_analysis mode need pipe, cam_pos and homography_matrix")
             self.queue = queue
             self.conn = conn
+        
+        if self.camera_position is not None and self.homography_matrix is not None:
+            with open("ball_detection/result/" + save_name + "/camera_position", "wb") as f :
+                pickle.dump(self.camera_position, f)
+            with open("ball_detection/result/" + save_name + "/homography_matrix", "wb") as f :
+                pickle.dump(self.homography_matrix, f)
+        if calibrationFile is not None :
+            with open("ball_detection/result/" + save_name + "/calibration", "wb") as f :
+                pickle.dump(self.inmtx, f)
+        if self.range is not None :
+            with open("ball_detection/result/" + save_name + "/color_range", "wb") as f :
+                pickle.dump(self.range, f)
+        if self.frame_rate is not None :
+            with open("ball_detection/result/" + save_name + "/frame_rate", "wb") as f :
+                pickle.dump(self.frame_rate, f)
+        if self.frame_size is not None :
+            with open("ball_detection/result/" + save_name + "/frame_size", "wb") as f :
+                pickle.dump(self.frame_size, f)
+        
+
+        
 
     def __del__(self) :
         if self.mode == "analysis" or self.mode == "dual_analysis":
@@ -176,7 +219,7 @@ class Detection :
     def getNextFrame(self) :
         return self.cam.read()
    
-    def runDetection(self, img=None, fromFrameIndex=0, realTime=True, debugging=False) :
+    def runDetection(self, fromFrameIndex=0, realTime=True, debugging=False) :
         BG_CONSIDERED_FRAMES = 60
         MAX_BALL_DISTANCE = 100
         whetherTheFirstFrame = True
@@ -186,9 +229,6 @@ class Detection :
         last_result = None
         pt = 0
         iteration = 0
-        if img is not None :
-            self.camera_position = utils.calculateCameraPosition(self.inmtx, img)
-            self.homography_matrix = find_homography_matrix_to_apriltag(img)
         for i in range(fromFrameIndex) :
             self.getNextFrame()
         
