@@ -1,4 +1,5 @@
 import time
+import shutil
 import cv2
 import numpy as np
 import math
@@ -9,9 +10,11 @@ import sys
 import os
 sys.path.append(os.getcwd())
 from ball_detection.ColorRange import *
+import core.display as display
 import core.common as common
 from camera_calibrate.utils import *
 from core.Constants import *
+import core.Constants as Constants
 import core.Equation3d as equ
 import camera_calibrate.utils as utils
 import camera_calibrate.Calibration as calib
@@ -35,6 +38,46 @@ def getBallProjectionPoint(homography_matrix, frame_size, x, y, w, h) :
     projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
     return projection
 
+def initDetection(source, save_name, calibrationFile="calibration", calibrationFile4pos = None, frame_size=(640,480), frame_rate=30, color_range="cr3", cam_pos=None, homography_matrix=None,  consider_poly=None, ini_img=None) :
+    common.replaceDir("ball_detection/result", save_name)
+    if cam_pos is not None and homography_matrix is not None :
+        with open("ball_detection/result/" + save_name + "/camera_position", "wb") as f :
+            pickle.dump(cam_pos, f)
+        with open("ball_detection/result/" + save_name + "/homography_matrix", "wb") as f :
+            pickle.dump(homography_matrix, f)
+    else :
+        if ini_img is not None :
+            pos, ho = setup_camera_img(ini_img, calibrationFile if calibrationFile4pos is None else calibrationFile4pos)
+        else :
+            pos, ho = setup_camera(source, calibrationFile if calibrationFile4pos is None else calibrationFile4pos)
+        with open("ball_detection/result/" + save_name + "/camera_position", "wb") as f :
+            pickle.dump(pos, f)
+        with open("ball_detection/result/" + save_name + "/homography_matrix", "wb") as f :
+            pickle.dump(ho, f)
+
+    if consider_poly is not None :
+        with open("ball_detection/result/" + save_name + "/consider_poly", "wb") as f :
+            pickle.dump(consider_poly, f)
+    else :
+        poly = setup_poly(source)
+        with open("ball_detection/result/" + save_name + "/consider_poly", "wb") as f :
+            pickle.dump(poly, f)
+
+    # copy calibration file
+    if os.path.exists(calibrationFile) :
+        shutil.copy(calibrationFile, "ball_detection/result/" + save_name + "/calibration")
+    else :
+        raise Exception("calibration file not found")
+    # copy color range file
+    if os.path.exists(color_range) :
+        shutil.copy(color_range, "ball_detection/result/" + save_name + "/color_range")
+    else :
+        raise Exception("color range file not found")
+    with open("ball_detection/result/" + save_name + "/frame_rate", "wb") as f :
+        pickle.dump(frame_rate, f)
+    with open("ball_detection/result/" + save_name + "/frame_size", "wb") as f :
+        pickle.dump(frame_size, f)
+    
 
 class Detection :
     #save test frames
@@ -58,8 +101,11 @@ class Detection :
                 homography_matrix  = None,
                 queue              = None,
                 conn               = None,
-                load_from_result   = None
+                load_from_result   = None,
+                consider_poly      = None,
                 ) :
+
+        self.save_name = save_name
         
         self.frame_rate = 30 
         self.frame_size = (640, 480)
@@ -67,6 +113,7 @@ class Detection :
         self.homography_matrix = None
         self.range = None
         self.inmtx = None
+        self.consider_poly = None
         
         if load_from_result is not None :
             if os.path.exists(os.path.join("ball_detection/result", load_from_result, "frame_size")) :
@@ -81,14 +128,17 @@ class Detection :
                 self.inmtx = load(os.path.join("ball_detection/result", load_from_result, "calibration"))
             if os.path.exists(os.path.join("ball_detection/result", load_from_result, "color_range")) :
                 self.range = load(os.path.join("ball_detection/result", load_from_result, "color_range"))
+            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "consider_poly")) :
+                self.consider_poly = load(os.path.join("ball_detection/result", load_from_result, "consider_poly"))
 
         self.pid = os.getpid()
 
         self.frame_size = frame_size if frame_size is not None else self.frame_size
         self.frame_rate = frame_rate if frame_rate is not None else self.frame_rate
+        self.consider_poly = consider_poly if consider_poly is not None else self.consider_poly
         if type(cam_pos) == np.ndarray :
             self.camera_position = equ.Point3d(cam_pos[0], cam_pos[1], cam_pos[2])
-        elif type(cam_pos == equ.Point3d):
+        elif type(cam_pos) == equ.Point3d:
             self.camera_position = cam_pos
         if type(color_range) == str :
             self.range = load(color_range)
@@ -96,7 +146,7 @@ class Detection :
             self.range = color_range
         self.upper = self.range.upper
         self.lower = self.range.lower
-        self.homography_matrix = homography_matrix if type(homography_matrix) == np.ndarray else homography_matrix
+        self.homography_matrix = homography_matrix if type(homography_matrix) == np.ndarray else self.homography_matrix
         self.video_writer_all = None
         self.video_writer_bad = None
         self.video_writer_tagged = None
@@ -149,7 +199,7 @@ class Detection :
                 pickle.dump(self.camera_position, f)
             with open("ball_detection/result/" + save_name + "/homography_matrix", "wb") as f :
                 pickle.dump(self.homography_matrix, f)
-        if calibrationFile is not None :
+        if self.inmtx is not None :
             with open("ball_detection/result/" + save_name + "/calibration", "wb") as f :
                 pickle.dump(self.inmtx, f)
         if self.range is not None :
@@ -161,10 +211,10 @@ class Detection :
         if self.frame_size is not None :
             with open("ball_detection/result/" + save_name + "/frame_size", "wb") as f :
                 pickle.dump(self.frame_size, f)
-        
-
-        
-
+        if self.consider_poly is not None :
+            with open("ball_detection/result/" + save_name + "/consider_poly", "wb") as f :
+                pickle.dump(self.consider_poly, f)
+            
     def __del__(self) :
         if self.mode == "analysis" or self.mode == "dual_analysis":
             if self.video_writer_all is not None :
@@ -180,7 +230,7 @@ class Detection :
             if self.situation_csv is not None :
                 self.situation_csv.close()
         cv2.destroyAllWindows()
-
+    
             
     def drawDirection(self, frame, x, y, h, w, i) :
         xCenter = x + w // 2
@@ -259,7 +309,8 @@ class Detection :
                 c = self.compareFrames(frame, compare)
                 m = self.maskFrames(c)
                 detected = self.detectContours(m)
-                # draw contours
+
+                cv2.polylines(frame, [self.consider_poly], True, (0, 255, 0), 2)
 
                 if debugging:
                     cv2.drawContours(frame, detected, -1, (0, 255, 255), 2)
@@ -274,8 +325,12 @@ class Detection :
                         qualified.append((x, y, w, h))
                 merged = merge_rectangles(qualified)
 
-                f1 = []
+                f0 = []
                 for x, y, w, h in merged :
+                    if cv2.pointPolygonTest(self.consider_poly, (x+w//2, y+h//2), False) >= 0 :
+                        f0.append((x, y, w, h))
+                f1 = []
+                for x, y, w, h in f0:
                     q = True
                     for l in last_map:
                         for x1, y1, w1, h1 in l :
@@ -384,7 +439,6 @@ class Detection :
         if self.mode == "dual_analysis" or self.mode == "dual_run":
             self.conn.send("stop")
 
-        #print("pid : {} avg process time : {} ".format(self.pid, pt/iteration))
         return iteration
 
 class Detection_img(Detection) :
@@ -398,6 +452,41 @@ class Detection_img(Detection) :
             return False, None
         self.frameIndex += 1
         return True, img
+
+_poly = []
+_poly_now_pos = (0, 0)
+
+def _setup_poly_mouse_event(event, x, y, flags, param) :
+    global _poly, _poly_now_pos
+    # check if left button was clicked
+    if event == cv2.EVENT_LBUTTONDOWN:
+        _poly.append([x, y])
+        print("click at ({}, {})".format(x, y))
+    # check if right button was clicked
+    elif event == cv2.EVENT_RBUTTONDOWN:
+        _poly.pop()
+        print("pop")
+    elif event == cv2.EVENT_MOUSEMOVE:
+        _poly_now_pos = [x, y]
+
+
+def setup_poly(source) :
+    global _poly, _poly_now_pos
+    cam = cv2.VideoCapture(source)
+    cv2.namedWindow("setup poly")
+    cv2.setMouseCallback("setup poly", _setup_poly_mouse_event)
+    while True :
+        ret, frame = cam.read()
+        if ret :
+            k = cv2.waitKey(round(1/30*1000))
+            # draw poly
+            if len(_poly) > 1 :
+                cv2.polylines(frame, np.array([_poly + [_poly_now_pos]]), True, (0, 255, 0), 2)
+            cv2.imshow("setup poly", frame)
+            if k == ord(' ') :
+                break
+    cv2.destroyAllWindows()
+    return np.array(_poly)
 
 def setup_camera(source, calibrationFile="calibration") :
     pos = None
@@ -505,12 +594,12 @@ def merge_rectangles(rectangles):
     return merged_rectangles
 
 if __name__ == "__main__" :
-    ini = cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE)
-    pos, ho = setup_camera_img(ini, "calibration_hd")
-    dect = Detection(source="exp/3.mp4", color_range="cr3", frame_size=(640, 480), save_name="c1",cam_pos=pos, homography_matrix=ho, mode="analysis" )
+    #ini = cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE)
+    ini = cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE)
+    initDetection("exp/4.mp4", "s480p30_r", "calibration", consider_poly=load("ball_detection/result/480p30_r/consider_poly"), ini_img=ini, calibrationFile4pos="calibration_hd")
+
+    dect = Detection(source="exp/3.mp4", save_name="test",  mode="analysis", load_from_result="480p30_mid3")
     dect.runDetection(debugging=False, realTime=False)
-
-
     exit()
     detector1 = Detection()
     detector2 = Detection()

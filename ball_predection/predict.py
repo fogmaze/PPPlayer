@@ -8,7 +8,7 @@ from typing import List, Tuple
 import os
 import sys
 sys.path.append(os.getcwd())
-import ball_predection.display as display
+import core.display as display
 import core.Constants as Constants
 import ball_detection.Detection as Detection
 from ball_simulate_v2.models import MODEL_MAP
@@ -67,6 +67,7 @@ class LineCollector_hor(LineCollector) :
         self.movement = None
         super().clear()
     def checkHit(self, x, y, z, rxy, rxz):
+        print(rxy, self.last_rxy, self.movement)
         if self.movement == 1:
             if rxy - self.last_rxy < 0:
                 self.movement = None
@@ -97,19 +98,14 @@ def prepareModelInput(ll:list, rl:list, device="cuda:0") :
     Constants.normer.norm_input_tensor(r)
     return l, l_len, r, r_len
 
-def runDec(s, sub_name, cp, h, q, c2s, calibrationFile, frame_size, frame_rate, color_range, save_name) :
+def runDec(s, sub_name, detection_load, q, c2s, save_name) :
     dec = Detection.Detection(
         source = s,
-        calibrationFile = calibrationFile,
-        frame_size = frame_size, 
-        frame_rate = frame_rate, 
-        color_range = color_range, 
         save_name = save_name + sub_name, 
         mode = "dual_analysis",
-        cam_pos = cp, 
-        homography_matrix = h,
         queue = q,
-        conn=c2s
+        conn=c2s,
+        load_from_result=detection_load
     )
     print("start")
     
@@ -119,28 +115,13 @@ def runDec(s, sub_name, cp, h, q, c2s, calibrationFile, frame_size, frame_rate, 
 def predict(
         model_name:str,
         weight,
-        calibrationFiles = "calibration",
-        calibrationFiles_initial = None,
-        source          = (0, 1),
-        frame_size      = (1280, 720), 
-        frame_rate      = 30, 
-        color_ranges    = "color_range", 
-        save_name       = "dual_default", 
-        mode            = "normalB",
-        visualization   = True,
-        initial_frames_gray  = None
+        source                   = (0, 1),
+        detection_load           = (None, None) ,
+        save_name                = "dual_default", 
+        mode                     = "normalB",
+        visualization            = True
         ) :
 
-    if type(calibrationFiles) == str :
-        calibrationFile = (calibrationFiles, calibrationFiles)
-    else :
-        calibrationFile = calibrationFiles
-    if type(color_ranges) == str :
-        color_range = (color_ranges, color_ranges)
-    else :
-        color_range = color_ranges
-    if calibrationFiles_initial is None :
-        calibrationFiles_initial = calibrationFiles
 
     SPEED_UP = False
     if mode != "default":
@@ -183,52 +164,17 @@ def predict(
     if type(source) == tuple and len(source) == 2 :
         if type(source[0]) == int or type(source[0]) == str:
             
-            if initial_frames_gray is None :
-                cam1_pos, cam1_homo = Detection.setup_camera(source[0], calibrationFile=calibrationFiles_initial[0])
-                cam2_pos, cam2_homo = Detection.setup_camera(source[1], calibrationFile=calibrationFiles_initial[1])
-            else :
-                cam1_pos, cam1_homo = Detection.setup_camera_img(initial_frames_gray[0], calibrationFiles_initial[0])
-                cam2_pos, cam2_homo = Detection.setup_camera_img(initial_frames_gray[1], calibrationFiles_initial[1])
-            
             source1 = source[0]
             source2 = source[1]
         else :
             source1 = CameraReceiver(source[0])
             source2 = CameraReceiver(source[1])
-            if initial_frames_gray is None :
-                cam1_pos, cam1_homo = Detection.setup_camera_android(source[0], calibrationFile=calibrationFiles_initial[0])
-                cam2_pos, cam2_homo = Detection.setup_camera_android(source[1], calibrationFile=calibrationFiles_initial[1])
-            else :
-                cam1_pos, cam1_homo = Detection.setup_camera_img(initial_frames_gray[0], calibrationFiles_initial[0])
-                cam2_pos, cam2_homo = Detection.setup_camera_img(initial_frames_gray[1], calibrationFiles_initial[1])
-                #cam1_pos, cam1_homo = Detection.setup_camera_android(initial_frames[0], calibrationFile=calibrationFile[0])
-                #cam2_pos, cam2_homo = Detection.setup_camera_android(initial_frames[1], calibrationFile=calibrationFile[1])
-                #cam1_pos = equ.Point3d(1,1,1)
-                #cam2_pos = equ.Point3d(1,1,1)
-                #cam1_homo =  np.array([[1,2,3],[4,5,6],[7,8,9]])
-                #cam2_homo =  np.array([[1,2,3],[4,5,6],[7,8,9]])
-
     elif type(source) == str :
         source1 = os.path.join("ball_detection/result", source + "/cam1/all.mp4")
         source2 = os.path.join("ball_detection/result", source + "/cam2/all.mp4")
-        if initial_frames_gray is None :
-            with open(os.path.join("ball_detection/result", source + "/cam1/camera_position"), "rb") as f:
-                cam1_pos = pickle.load(f)
-            with open(os.path.join("ball_detection/result", source + "/cam2/camera_position"), "rb") as f:
-                cam2_pos = pickle.load(f)
-            with open(os.path.join("ball_detection/result", source + "/cam1/homography_matrix"), "rb") as f:
-                cam1_homo = pickle.load(f)
-            with open(os.path.join("ball_detection/result", source + "/cam2/homography_matrix"), "rb") as f:
-                cam2_homo = pickle.load(f)
-        else :
-            cam1_pos, cam1_homo = Detection.setup_camera_img(initial_frames_gray[0], calibrationFiles_initial[0])
-            cam2_pos, cam2_homo = Detection.setup_camera_img(initial_frames_gray[1], calibrationFiles_initial[1])
 
-    print("camera1 position: " + cam1_pos.to_str())
-    print("camera2 position: " + cam2_pos.to_str())
-
-    p1 = mp.Process(target=runDec, args=(source1, "/cam1", cam1_pos, cam1_homo, queue, c12s, calibrationFile[0], frame_size, frame_rate, color_range[0], save_name))
-    p2 = mp.Process(target=runDec, args=(source2, "/cam2", cam2_pos, cam2_homo, queue, c22s, calibrationFile[1], frame_size, frame_rate, color_range[1], save_name))
+    p1 = mp.Process(target=runDec, args=(source1, "/cam1", detection_load[0], queue, c12s, save_name))
+    p2 = mp.Process(target=runDec, args=(source2, "/cam2", detection_load[1], queue, c22s, save_name))
 
     lines1 = LineCollector_hor()
     lines2 = LineCollector_hor()
@@ -315,14 +261,13 @@ def predict(
 
     # display
     if visualization :
-        display.visualizePrediction(os.path.join("ball_detection/result", save_name), fps=frame_rate)
+        display.visualizePrediction(os.path.join("ball_detection/result", save_name), fps=30)
 
 if __name__ == "__main__" :
-    ini = (cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE), cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE))
-    Detection.setup_camera_img(ini[1], "calibration_hd")
-    exit()
+    #ini = (cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE), cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE))
 
-    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", frame_size=(640, 480),calibrationFiles_initial=("calibration", "calibration"), calibrationFiles=("calibration_hd", "calibration"), color_ranges="cr3", source=("exp/3.mp4", "exp/4.mp4"), visualization=True, initial_frames_gray=ini)
+    #predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", frame_size=(640, 480),calibrationFiles_initial=("calibration", "calibration"), calibrationFiles=("calibration_hd", "calibration"), color_ranges="cr3", source=("exp/3.mp4", "exp/4.mp4"), visualization=True, initial_frames_gray=ini)
+    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", ("exp/3.mp4", "exp/4.mp4"), ("480p30_mid3", "480p30_r"), visualization=True, )
     #predict("medium", "ball_simulate_v2/model_saves/predict/epoch_29/weight.pt", source=(0, 1))
     exit()
     ini = cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE)

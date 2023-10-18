@@ -15,16 +15,6 @@ import core.Constants as Constants
 import core.Equation3d as equ
 import ball_predection.predict as pred
 
-def prepareModelInput(ll:list, rl:list, device="cuda:0") :
-    l = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
-    r = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
-    l[:len(ll)] = torch.tensor(ll, device=device)
-    r[:len(rl)] = torch.tensor(rl, device=device)
-    l = l.view(1, Constants.SIMULATE_INPUT_LEN, Constants.MODEL_INPUT_SIZE)
-    r = r.view(1, Constants.SIMULATE_INPUT_LEN, Constants.MODEL_INPUT_SIZE)
-    l_len = torch.tensor([len(ll)]).view(1,1).to(device)
-    r_len = torch.tensor([len(rl)]).view(1,1).to(device)
-    return l, l_len, r, r_len
 
 def visualizeDetection_video(root, fps=30) :
     forcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -47,7 +37,7 @@ def visualizeDetection_video(root, fps=30) :
         cam_datas = [[float(b) for b in a] for a in cam_datas]
     
     result = None
-    for i in tqdm.tqdm(range(round(cam_datas[-1][0]))) :
+    for i in (range(round(cam_datas[-1][0]))) :
         ret, frame = origVideo.read()
         if i == cam_datas[0][0] :
             cleanRoom(axe)
@@ -71,6 +61,8 @@ def visualizeDetection_video(root, fps=30) :
             result = white
 
         fin = cv2.hconcat([frame, result])
+        cv2.imshow('frame', fin)
+        cv2.waitKey(0)
         outputVideo.write(fin)
     outputVideo.release()
 
@@ -79,7 +71,7 @@ def visualizeDetection(root, fps=30) :
     forcc = cv2.VideoWriter_fourcc(*'mp4v')
     if os.path.exists(os.path.join(root, 'visualize.mp4')) :
         os.remove(os.path.join(root, 'visualize.mp4'))
-    outputVideo = cv2.VideoWriter(os.path.join(root, 'visualize.mp4'), forcc, fps, (640, 480))  
+    #outputVideo = cv2.VideoWriter(os.path.join(root, 'visualize.mp4'), forcc, fps, (640, 480))  
 
     lines = pred.LineCollector_hor()
     fig, axe = createFigRoom()
@@ -105,8 +97,9 @@ def visualizeDetection(root, fps=30) :
             img = img.reshape(axe.figure.canvas.get_width_height()[::-1] + (3,))
             img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-            outputVideo.write(img)
-    outputVideo.release()
+            #outputVideo.write(img)
+            cv2.imshow('frame', img)
+    #outputVideo.release()
 
 
 def visualizePrediction(root, fps=30) :
@@ -233,5 +226,5 @@ def plotOutput(ax, out, color = 'r', label=None):
 
 if __name__ == "__main__" :
     Constants.set2NormalB()
-    visualizeDetection_video("ball_detection/result/c1_40")
+    visualizeDetection_video("ball_detection/result/test")
     #visualizePrediction("ball_detection/result/dual_default_105")
