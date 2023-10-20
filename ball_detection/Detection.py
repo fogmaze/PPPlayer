@@ -105,6 +105,7 @@ class Detection :
                 consider_poly      = None,
                 ) :
 
+        print("source: ",source)
         self.save_name = save_name
         
         self.frame_rate = 30 
@@ -116,6 +117,8 @@ class Detection :
         self.consider_poly = None
         
         if load_from_result is not None :
+            if not os.path.exists(os.path.join("ball_detection/result", load_from_result)) :
+                raise Exception("load_from_result dir not found")
             if os.path.exists(os.path.join("ball_detection/result", load_from_result, "frame_size")) :
                 self.frame_size = load(os.path.join("ball_detection/result", load_from_result, "frame_size"))
             if os.path.exists(os.path.join("ball_detection/result", load_from_result, "frame_rate")) :
@@ -189,8 +192,8 @@ class Detection :
             self.situation_csv_writer.writerow(["iter", "time", "fps", "numOfBall"])
             # pickle camera position and homography matrix
         if self.mode == "dual_analysis" or self.mode == "dual_run":
-            if queue is None or cam_pos is None or homography_matrix is None:
-                raise Exception("dual_analysis mode need pipe, cam_pos and homography_matrix")
+            if queue is None or self.camera_position is None or self.homography_matrix is None:
+                raise Exception("dual_analysis mode need pipe, cam_pos and homography_matrix but {} {} {}".format(queue, self.camera_position, self.homography_matrix))
             self.queue = queue
             self.conn = conn
         
@@ -371,7 +374,7 @@ class Detection :
                     self.drawDirection(frame, x, y, h, w, 1)
                     if self.homography_matrix is not None and self.camera_position is not None:
                         ball_in_world = np.matmul(self.homography_matrix, np.array([x+w//2, y+h//2, 1]))
-                        projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
+                        projection = equ.Point3d(ball_in_world[0]-2.74/2, 0, ball_in_world[1])
                         line = equ.LineEquation3d(self.camera_position, projection)
 
                         # save line data
@@ -404,7 +407,7 @@ class Detection :
             else :
                 # send stop signal to main process
                 if self.mode == "dual_analysis" or self.mode == "dual_run":
-                    print("send stop signal")
+                    print("send stop signal by {}".format(self.pid))
                     self.conn.send("stop")
                 break
             # check conn from main process
@@ -501,8 +504,12 @@ def setup_camera(source, calibrationFile="calibration") :
             if k == ord(' ') :
                 pos = utils.calculateCameraPosition(calib.load_calibration(calibrationFile), gray)
                 homo = find_homography_matrix_to_apriltag(gray)
+                if pos is None :
+                    print("not found")
+                    continue
                 print("camera pos")
                 print(pos.to_str())
+                cv2.imwrite("pic.jpg", frame)
                 break
     return pos, homo
 
@@ -596,9 +603,10 @@ def merge_rectangles(rectangles):
 if __name__ == "__main__" :
     #ini = cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE)
     ini = cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE)
-    initDetection("exp/4.mp4", "s480p30_r", "calibration", consider_poly=load("ball_detection/result/480p30_r/consider_poly"), ini_img=ini, calibrationFile4pos="calibration_hd")
+    #initDetection(0, "s480p30_a15", "calibration", consider_poly=load("ball_detection/result/s480p30_a50/consider_poly"))
+    #initDetection(0, "s480p30_a15", "calibration", consider_poly=setup_poly(0))
 
-    dect = Detection(source="exp/3.mp4", save_name="test",  mode="analysis", load_from_result="480p30_mid3")
+    dect = Detection(source="exp/a50.mp4", save_name="test",  mode="analysis", load_from_result="s480p30_a50_")
     dect.runDetection(debugging=False, realTime=False)
     exit()
     detector1 = Detection()

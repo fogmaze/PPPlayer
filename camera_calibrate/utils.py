@@ -28,8 +28,8 @@ def p(s, f ) :
 
 
 def rec() :
-    p1 = mp.Process(target=p, args=(2, '3.mp4'))
-    p2 = mp.Process(target=p, args=(3, '4.mp4'))
+    p1 = mp.Process(target=p, args=(0, '0.mp4'))
+    p2 = mp.Process(target=p, args=(1, '1.mp4'))
     p1.start()
     p2.start()
     p1.join()
@@ -163,15 +163,29 @@ def runExerment() :
             writer.writerow(res_z)
             
 
-if __name__ == "__main__" :
-    takePicture()
-    exit()
-    i = cv2.imread("C1.jpg", cv2.IMREAD_GRAYSCALE)
-    pos = calculateCameraPosition(pickle.load(open('calibration1_old', 'rb')), i)
-    print(pos)
-    exit()
+_x, _y = 0, 0
+def on_mouse_move(event, x, y, flags, param):
+    global _x, _y
+    if event == cv2.EVENT_MOUSEMOVE:
+        _x = x
+        _y = y
 
-    #runExerment()
+if __name__ == "__main__" :
+    cv2.namedWindow('frame')
+    cv2.setMouseCallback('frame', on_mouse_move)
+    ho = pickle.load(open('ball_detection/result/s480p30_a50_/homography_matrix', 'rb'))
+    img = cv2.imread("ball_detection/result/s480p30_a50_/pic.jpg")
+    while True :
+        cv2.imshow("frame", img)
+        cv2.waitKey(round(1/30*1000))
+        a = np.matmul(ho, np.array([_x, _y, 1]))
+        b = np.matmul(np.linalg.inv(ho), np.array([_x, _y, 1]))
+        print("a: %2f, %2f" %(a[0], a[1]))
+        print("b: %2f, %2f" %(b[0], b[1]))
+    print(ho)
+
+    exit()
+        #runExerment()
     cameraMatrix = pickle.load(open('calibration', 'rb'))
     #takePicture()
     img = cv2.imread("718-2.jpg", cv2.IMREAD_GRAYSCALE)

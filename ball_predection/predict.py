@@ -57,6 +57,9 @@ class LineCollector:
     def clear(self) :
         self.lines.clear()
 
+def rad_minus(a, b) :
+    return (a - b + np.pi) % (2 * np.pi) - np.pi
+
 class LineCollector_hor(LineCollector) :
     def __init__(self):
         super().__init__()
@@ -67,14 +70,13 @@ class LineCollector_hor(LineCollector) :
         self.movement = None
         super().clear()
     def checkHit(self, x, y, z, rxy, rxz):
-        print(rxy, self.last_rxy, self.movement)
         if self.movement == 1:
-            if rxy - self.last_rxy < 0:
+            if rad_minus(rxy, self.last_rxy) < 0:
                 self.movement = None
                 self.last_rxy = None
                 return True
         elif self.movement == -1 :
-            if rxy - self.last_rxy > 0:
+            if rad_minus(rxy, self.last_rxy) > 0:
                 self.movement = None
                 self.last_rxy = None
                 return True
@@ -234,7 +236,7 @@ def predict(
                 process_time += time.time() - nowT
                 process_time_iter += 1
                 if hp is not None :
-                    pfw.writerow([which, new_data[1], hp[0], hp[1], hp[2], t] + out.view(-1).tolist())
+                    pfw.writerow([which, new_data[1], float(hp[0]), float(hp[1]), float(hp[2]), float(t)] + out.view(-1).tolist())
                 else :
                     pfw.writerow([which, new_data[1], -1, -1, -1, -1] + out.view(-1).tolist())
 
@@ -267,7 +269,7 @@ if __name__ == "__main__" :
     #ini = (cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE), cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE))
 
     #predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", frame_size=(640, 480),calibrationFiles_initial=("calibration", "calibration"), calibrationFiles=("calibration_hd", "calibration"), color_ranges="cr3", source=("exp/3.mp4", "exp/4.mp4"), visualization=True, initial_frames_gray=ini)
-    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", ("exp/3.mp4", "exp/4.mp4"), ("480p30_mid3", "480p30_r"), visualization=True, )
+    predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", ("exp/a50.mp4", "exp/a15.mp4"), ("s480p30_a50_", "s480p30_a15_"), visualization=True, )
     #predict("medium", "ball_simulate_v2/model_saves/predict/epoch_29/weight.pt", source=(0, 1))
     exit()
     ini = cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE)
