@@ -85,6 +85,20 @@ class LineCollector_hor(LineCollector) :
         self.last_rxy = rxy
         return False
 
+class Lagger :
+    def __init__(self, lag) :
+        self.lag = lag
+        self.datas = []
+    
+    def update(self, data) :
+        if self.lag == 0 :
+            return data
+        ret = None
+        if len(self.datas) >= self.lag :
+            ret = self.datas.pop(0)
+        self.datas.append(data)
+        return ret
+
 def prepareModelInput(ll:list, rl:list, device="cuda:0") :
     l = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
     r = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
@@ -181,6 +195,9 @@ def predict(
     lines1 = LineCollector_hor()
     lines2 = LineCollector_hor()
 
+    lagger1 = Lagger(10)
+    lagger2 = Lagger(0)
+
     process_time = 0
     process_time_iter = 0
     tra_time = 0
@@ -205,18 +222,24 @@ def predict(
 
     while True :
         if not queue.empty() :
-            new_data = queue.get()
-            tra_time += time.time() - new_data[7]
+            recv_data = queue.get()
+            tra_time += time.time() - recv_data[7]
             tra_iter += 1
 
             nowT = time.time()
             isHit = None
-            if new_data[0] == p1.pid:
+            if recv_data[0] == p1.pid:
+                new_data = lagger1.update(recv_data)
+                if new_data is None :
+                    continue
                 isHit = not lines1.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
                 if isHit :
                     lines2.clear()
                 which = 1
-            elif new_data[0] == p2.pid:
+            elif recv_data[0] == p2.pid:
+                new_data = lagger2.update(recv_data)
+                if new_data is None :
+                    continue
                 isHit = not lines2.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
                 if isHit :
                     lines1.clear()
@@ -263,7 +286,7 @@ def predict(
 
     # display
     if visualization :
-        display.visualizePrediction(os.path.join("ball_detection/result", save_name), fps=30)
+        display.visualizePrediction_video(os.path.join("ball_detection/result", save_name), fps=30)
 
 if __name__ == "__main__" :
     #ini = (cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE), cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE))

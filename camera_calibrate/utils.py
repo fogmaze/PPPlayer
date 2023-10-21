@@ -170,18 +170,35 @@ def on_mouse_move(event, x, y, flags, param):
         _x = x
         _y = y
 
+def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
+    tag_len   = APRILTAG_SIZE 
+    detector  = Detector()
+    detection = detector.detect(img_gray)
+    if len(detection) == 0 :
+        return None
+    coners = detection[0].corners
+    # draw coners
+    for i in range(4) :
+        cv2.line(img_gray, tuple(coners[i-1].astype(int)), tuple(coners[i].astype(int)), (0, 0, 255), 2)
+    tar    = np.float32([[0, 0], [tag_len, 0], [tag_len, tag_len], [0, tag_len]])
+    homography = cv2.findHomography(coners, tar)[0]
+    return homography
+
 if __name__ == "__main__" :
     cv2.namedWindow('frame')
     cv2.setMouseCallback('frame', on_mouse_move)
-    ho = pickle.load(open('ball_detection/result/s480p30_a50_/homography_matrix', 'rb'))
-    img = cv2.imread("ball_detection/result/s480p30_a50_/pic.jpg")
+    #ho = pickle.load(open('ball_detection/result/s480p30_a15_/homography_matrix', 'rb'))
+    img = cv2.imread("ball_detection/result/s480p30_a50_/pic.jpg", cv2.IMREAD_GRAYSCALE)
+    ho = find_homography_matrix_to_apriltag(img)
     while True :
         cv2.imshow("frame", img)
         cv2.waitKey(round(1/30*1000))
         a = np.matmul(ho, np.array([_x, _y, 1]))
-        b = np.matmul(np.linalg.inv(ho), np.array([_x, _y, 1]))
-        print("a: %2f, %2f" %(a[0], a[1]))
-        print("b: %2f, %2f" %(b[0], b[1]))
+        a = a / a[2]
+        #b = np.matmul(np.linalg.inv(ho), np.array([_x, _y, 1]))
+        #b = b / b[2]
+        print("a: %2f, %2f" %(a[0], a[1]), a[2])
+        #print("b: %2f, %2f" %(b[0], b[1]))
     print(ho)
 
     exit()

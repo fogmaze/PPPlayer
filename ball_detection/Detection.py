@@ -371,10 +371,14 @@ class Detection :
                 last_result = result
                 if result is not None :
                     x, y, w, h = result
+                    # 在畫面中畫出偵測到的矩形
                     self.drawDirection(frame, x, y, h, w, 1)
                     if self.homography_matrix is not None and self.camera_position is not None:
+                        # 單應性變換
                         ball_in_world = np.matmul(self.homography_matrix, np.array([x+w//2, y+h//2, 1]))
+                        # 獲取投影點
                         projection = equ.Point3d(ball_in_world[0]-2.74/2, 0, ball_in_world[1])
+                        # 將投影點和相機座標連成直線
                         line = equ.LineEquation3d(self.camera_position, projection)
 
                         # save line data

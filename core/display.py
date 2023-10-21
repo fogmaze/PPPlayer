@@ -101,13 +101,13 @@ def visualizeDetection(root, fps=30) :
             cv2.imshow('frame', img)
     #outputVideo.release()
 
-def visualizePrediction_video(root, fps=30) :
+def visualizePrediction_video(root, fps=30, lagg=10) :
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    if os.path.exists(os.path.join(root, 'visualize.mp4')) :
-        os.remove(os.path.join(root, 'visualize.mp4'))
-    outputVideo = cv2.VideoWriter(os.path.join(root, 'visualize.mp4'), fourcc, fps, (640, 480))
-    cam1 = cv2.VideoCapture(os.path.join(root, 'cam1/all.mp4'))
-    cam2 = cv2.VideoCapture(os.path.join(root, 'cam2/all.mp4'))
+    if os.path.exists(os.path.join(root, 'visualize_video.mp4')) :
+        os.remove(os.path.join(root, 'visualize_video.mp4'))
+    outputVideo = cv2.VideoWriter(os.path.join(root, 'visualize_video.mp4'), fourcc, fps, (640*2, 480*2))
+    cam1 = cv2.VideoCapture(os.path.join(root, 'cam1/all_tagged.mp4'))
+    cam2 = cv2.VideoCapture(os.path.join(root, 'cam2/all_tagged.mp4'))
 
     lines1 = pred.LineCollector_hor()
     lines2 = pred.LineCollector_hor()
@@ -144,28 +144,43 @@ def visualizePrediction_video(root, fps=30) :
         for data in cam2_datas :
             cam2_dict[int(data[0])] = [float(a) for a in data[1:]]
 
-    rframe = np.zeros((480*2, 640, 3), np.uint8)
-    rframe[:] = (255, 255, 255)
+    white = np.zeros((480, 640, 3), np.uint8)
+    white[:] = (255, 255, 255)
+    ruframe = white
+    rdframe = white
 
-    ind = 0
-    while True :
+    s1,s2 = 0, 0
+
+    for i in range(abs(lagg)) :
+        if lagg < 0 :
+            cam1.read()
+            s1 += 1
+        else :
+            cam2.read()
+            s2 += 1
+    
+    ind2 = s2
+    for ind1 in tqdm.tqdm(range(s1, round(pred_datas[-1][1]))) :
         ret1, frame1 = cam1.read()
         ret2, frame2 = cam2.read()
+        cv2.putText(frame1, "cam1", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        cv2.putText(frame2, "cam2", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
         if not ret1 or not ret2 :
             break
         lframe = cv2.vconcat([frame1, frame2])
-        if cam1_pred[0][1] == ind:
+        isHit = True
+        if cam1_pred[0][1] == ind1:
             line_data = cam1_dict[cam1_pred[0][1]][5:]
             isHit = not lines1.put(line_data[0], line_data[1], line_data[2], line_data[3], line_data[4])
             which = 1
             pred_data = cam1_pred.pop(0)
-        if cam2_pred[0][1] == ind:
+        if cam2_pred[0][1] == ind2:
             line_data = cam2_dict[cam2_pred[0][1]][5:]
             isHit = not lines2.put(line_data[0], line_data[1], line_data[2], line_data[3], line_data[4])
             which = 2
             pred_data = cam2_pred.pop(0)
-        if isHit :
-            cleanRoom(axe, 0)
+        if not isHit :
+            cleanRoom(axe, (0, 90))
             out:torch.Tensor = torch.tensor(pred_data[6:]).view(-1,3)
             o = plotOutput(axe, out, color='r', label=None)
             leg = [(o, 'output')]
@@ -177,27 +192,11 @@ def visualizePrediction_video(root, fps=30) :
                 leg.append((l2, 'cam2'))
             plt.legend(*zip(*leg))
             fig.canvas.draw()
-            img = np.fromstring(axe.figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-            img = img.reshape(axe.figure.canvas.get_width_height()[::-1] + (3,))
-            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            ruframe = np.fromstring(axe.figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+            ruframe = ruframe.reshape(axe.figure.canvas.get_width_height()[::-1] + (3,))
+            ruframe = cv2.cvtColor(ruframe, cv2.COLOR_RGB2BGR)
 
-
-        ind += 1
-
-
-    for pred_data in tqdm.tqdm(pred_datas) :
-        cleanRoom(axe)
-        if pred_data[0] == 1 :
-            line_data = cam1_dict[pred_data[1]][5:]
-            isHit = not lines1.put(line_data[0], line_data[1], line_data[2], line_data[3], line_data[4])
-            which = 1
-        else :
-            line_data = cam2_dict[pred_data[1]][5:]
-            isHit = not lines2.put(line_data[0], line_data[1], line_data[2], line_data[3], line_data[4])
-            which = 2
-        if isHit :
-            pass
-        else :
+            cleanRoom(axe, (90, 90))
             out:torch.Tensor = torch.tensor(pred_data[6:]).view(-1,3)
             o = plotOutput(axe, out, color='r', label=None)
             leg = [(o, 'output')]
@@ -209,11 +208,19 @@ def visualizePrediction_video(root, fps=30) :
                 leg.append((l2, 'cam2'))
             plt.legend(*zip(*leg))
             fig.canvas.draw()
-            img = np.fromstring(axe.figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-            img = img.reshape(axe.figure.canvas.get_width_height()[::-1] + (3,))
-            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            rdframe = np.fromstring(axe.figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+            rdframe = rdframe.reshape(axe.figure.canvas.get_width_height()[::-1] + (3,))
+            rdframe = cv2.cvtColor(rdframe, cv2.COLOR_RGB2BGR)
+            if len(cam1_pred) == 0 or len(cam2_pred) == 0 :
+                break
+        ind2 += 1
+        
+        rframe = cv2.vconcat([ruframe, rdframe])
+        fin = cv2.hconcat([lframe, rframe])
+        cv2.imshow('frame', fin)
+        cv2.waitKey(1)
+        outputVideo.write(fin)
 
-            outputVideo.write(img)
     outputVideo.release()
 
 def visualizePrediction(root, fps=30) :
@@ -288,7 +295,7 @@ def displayLines(axe, lines, color="b", label=None) :
         r = drawLine3d(axe, l, color=color, label=label)
     return r
 
-def configRoom(ax:Axes, ang=50) -> Axes:
+def configRoom(ax:Axes, ang=(50, 70)) -> Axes:
     lim = Constants.CAMERA_AREA_HALF_LENGTH
     ax.set_xlim(-lim,lim)
     ax.set_ylim(-lim,lim)
@@ -297,7 +304,7 @@ def configRoom(ax:Axes, ang=50) -> Axes:
     ax.set_ylabel('y')
     ax.set_zlabel('z')
     ax.invert_xaxis()
-    ax.view_init(ang, 70)
+    ax.view_init(ang[0], ang[1])
     W = 2.74/2
     H = 1.525/2
     Z = np.array([
@@ -325,7 +332,7 @@ def createFigRoom()->Tuple[Figure, Axes]:
     configRoom(ax)
     return fig, ax
 
-def cleanRoom(axe:plt.Axes, ang=50):
+def cleanRoom(axe:plt.Axes, ang=(50, 70)):
     axe.cla()
     configRoom(ax=axe, ang=ang)
 
@@ -340,5 +347,6 @@ def plotOutput(ax, out, color = 'r', label=None):
 
 if __name__ == "__main__" :
     Constants.set2NormalB()
-    visualizeDetection_video("ball_detection/result/test")
+    #visualizeDetection_video("ball_detection/result/test")
+    visualizePrediction_video("ball_detection/result/dual_default", lagg=10)
     #visualizePrediction("ball_detection/result/dual_default_105")
