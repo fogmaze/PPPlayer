@@ -139,6 +139,8 @@ class Detection :
         self.frame_size = frame_size if frame_size is not None else self.frame_size
         self.frame_rate = frame_rate if frame_rate is not None else self.frame_rate
         self.consider_poly = consider_poly if consider_poly is not None else self.consider_poly
+        if self.consider_poly is None :
+            self.consider_poly = np.array([[0, 0], [self.frame_size[0], 0], [self.frame_size[0], self.frame_size[1]], [0, self.frame_size[1]]])
         if type(cam_pos) == np.ndarray :
             self.camera_position = equ.Point3d(cam_pos[0], cam_pos[1], cam_pos[2])
         elif type(cam_pos) == equ.Point3d:
@@ -243,7 +245,6 @@ class Detection :
         cv2.putText(frame, ("x : {} y : {}".format(xCenter, yCenter)), (10, 40*i), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
 
     def compareFrames(self, frame, compare) :
-        return frame
         move = cv2.bitwise_xor(frame, compare)
         color = cv2.inRange(move, np.array([10, 10, 10]), np.array([255, 255, 255]))
         return cv2.bitwise_and(frame, cv2.cvtColor(color, cv2.COLOR_GRAY2BGR))
@@ -309,17 +310,17 @@ class Detection :
                     compare = frame
                     whetherTheFirstFrame = False
                 
-                c = self.compareFrames(frame, compare)
-                m = self.maskFrames(c)
+                m = self.maskFrames(frame)
                 detected = self.detectContours(m)
 
                 cv2.polylines(frame, [self.consider_poly], True, (0, 255, 0), 2)
 
                 if debugging:
+                    c = self.compareFrames(frame, compare)
                     cv2.drawContours(frame, detected, -1, (0, 255, 255), 2)
                     cv2.drawContours(c, detected, -1, (0, 255, 255), 2)
-                    #frame = cv2.hconcat([frame, m])
-                    cv2.imshow("mask", m)
+                    frame = cv2.hconcat([frame, c])
+                    #cv2.imshow("mask", c)
                 qualified = []
                 for contour in detected :
                     #area = cv2.contourArea(contour)
@@ -493,7 +494,14 @@ def setup_poly(source) :
             if k == ord(' ') :
                 break
     cv2.destroyAllWindows()
-    return np.array(_poly)
+    ret = np.array(_poly)
+    _poly = []
+    _poly_now_pos = (0, 0)
+    return ret
+
+    
+
+
 
 def setup_camera(source, calibrationFile="calibration") :
     pos = None
@@ -610,7 +618,7 @@ if __name__ == "__main__" :
     #initDetection(0, "s480p30_a15", "calibration", consider_poly=load("ball_detection/result/s480p30_a50/consider_poly"))
     #initDetection(0, "s480p30_a15", "calibration", consider_poly=setup_poly(0))
 
-    dect = Detection(source="exp/a50.mp4", save_name="test",  mode="analysis", load_from_result="s480p30_a50_")
+    dect = Detection(source="ball_detection/result/c1_20/all.mp4", save_name="noise",  mode="analysis", load_from_result="480p30_r4_4", frame_size=(1280, 720))
     dect.runDetection(debugging=False, realTime=False)
     exit()
     detector1 = Detection()

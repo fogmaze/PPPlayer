@@ -1,4 +1,5 @@
 import numpy as np
+from ctypes import *
 from pupil_apriltags import Detector, Detection
 import sys
 import os
@@ -125,6 +126,39 @@ def calculateCameraPosition(cameraMatrix:np.ndarray, frame_gray, tagSize=APRILTA
         return None
     
 
+class mat_d9(Structure):
+    _fields_ = [
+        ("nrows", c_uint),
+        ("ncols", c_uint),
+        ("data", c_double * 9)
+    ]
+
+class mat_d16(Structure):
+    _fields_ = [
+        ("nrows", c_uint),
+        ("ncols", c_uint),
+        ("data", c_double * 16)
+    ]
+
+def calculateCameraPosition_table(cameraMatrix:np.ndarray, homographyMatrix:np.ndarray) :
+    detector = Detector()
+    detector.libc.homography_to_pose.restype = c_void_p
+    detector.libc.homography_to_pose.argtypes = [c_void_p, c_double, c_double, c_double, c_double]
+    mat_d_ho = mat_d9()  # homography matrix
+    mat_d_ho.nrows = 3
+    mat_d_ho.ncols = 3
+    mat_d_ho.data = (c_double * 9)(*np.linalg.inv(homographyMatrix).flatten())
+    pv_mat_d_o = detector.libc.homography_to_pose(cast(byref(mat_d_ho), c_void_p), cameraMatrix[0][0], cameraMatrix[1][1], cameraMatrix[0][2], cameraMatrix[1][2])
+    p_mat_d_o = cast(pv_mat_d_o, POINTER(mat_d16))
+    o = np.array(p_mat_d_o.contents.data).reshape(4, 4)
+    r = o[:3, :3]
+    fix = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+    r = np.matmul(fix, r)
+    t = o[:3, 3]
+    return np.matmul(np.linalg.inv(r), t)
+    return r, t
+    pass
+
 def getCameraPosition_realTime(cameraMatrix) :
     cap = cv2.VideoCapture(0)
     while True :
@@ -170,6 +204,103 @@ def on_mouse_move(event, x, y, flags, param):
         _x = x
         _y = y
 
+_table_mouse_state = "up"
+_table_points = []
+_table_scale = 5
+_table_scale_base_pos = (0, 0)
+_table_mouse_now_pos = (0, 0)
+
+def _setup_table_mouse_event(event, x, y, flags, param) :
+    global _table_scale_base_pos, _table_mouse_state, _table_points, _table_scale, _table_mouse_now_pos
+    if event == cv2.EVENT_LBUTTONDOWN:
+        _table_mouse_state = "down"
+        _table_scale_base_pos = (x, y)
+    if event == cv2.EVENT_LBUTTONUP :
+        _table_mouse_state = "up"
+        _table_points.append([
+            (x - _table_scale_base_pos[0]) / _table_scale + _table_scale_base_pos[0],
+            (y - _table_scale_base_pos[1]) / _table_scale + _table_scale_base_pos[1]
+        ])
+    if event == cv2.EVENT_MOUSEMOVE :
+        if _table_mouse_state == "down" :
+            _table_mouse_now_pos = (
+                (x - _table_scale_base_pos[0]) / _table_scale + _table_scale_base_pos[0],
+                (y - _table_scale_base_pos[1]) / _table_scale + _table_scale_base_pos[1]
+            )
+        else :
+            _table_mouse_now_pos = (x, y)
+    if event == cv2.EVENT_RBUTTONDOWN :
+        _table_points.pop()
+
+def setup_table_img(img, hw = 2.74/2, hh = 1.525/2) :
+    
+    global _table_mouse_state, _table_scale_base_pos, _table_points, _table_scale, _table_mouse_now_pos
+    cv2.namedWindow("setup table")
+    cv2.setMouseCallback("setup table", _setup_table_mouse_event)
+
+    while True :
+        try: 
+            frame = img.copy()
+            k = cv2.waitKey(round(1/30*1000))
+            # draw poly
+            if len(_table_points) >= 1 :
+                cv2.polylines(frame, np.array([[(round(d[0]), round(d[1])) for d in _table_points] + [(round(_table_mouse_now_pos[0]), round(_table_mouse_now_pos[1])) ]]), True, (0, 255, 0), 1)
+            if _table_mouse_state == "down" :
+                frame = cv2.warpAffine(frame, np.array(
+                    [
+                        [_table_scale, 0, (1 - _table_scale) * _table_scale_base_pos[0]],
+                        [0, _table_scale, (1 - _table_scale) * _table_scale_base_pos[1]] ], dtype=np.float32), img.shape[:2][::-1])
+            else :
+                if len(_table_points) == 4 :
+                    break
+            cv2.imshow("setup table", frame)
+        except Exception as e :
+            print(e)
+    cv2.destroyAllWindows()
+    result = np.array(_table_points)
+    _table_mouse_state = "up"
+    _table_points = []
+    _table_scale = 3
+    _table_scale_base_pos = (0, 0)
+    _table_mouse_now_pos = (0, 0)
+    tar = np.float32([[-hw, -hh], [-hw, hh], [hw, hh], [hw, -hh]])
+    return cv2.findHomography(result, tar)[0]
+
+def setup_table(source, hw = 2.74/2, hh = 1.525/2) :
+    global _table_mouse_state, _table_scale_base_pos, _table_points, _table_scale, _table_mouse_now_pos
+    cam = cv2.VideoCapture(source)
+    cv2.namedWindow("setup table")
+    cv2.setMouseCallback("setup table", _setup_table_mouse_event)
+
+    while True :
+        ret, frame = cam.read()
+        if ret :
+            try: 
+                k = cv2.waitKey(round(1/30*1000))
+                # draw poly
+                if len(_table_points) >= 1 :
+                    cv2.polylines(frame, np.array([[(round(d[0]), round(d[1])) for d in _table_points] + [(round(_table_mouse_now_pos[0]), round(_table_mouse_now_pos[1])) ]]), True, (0, 255, 0), 1)
+                if _table_mouse_state == "down" :
+                    frame = cv2.warpAffine(frame, np.array(
+                        [
+                            [_table_scale, 0, (1 - _table_scale) * _table_scale_base_pos[0]],
+                            [0, _table_scale, (1 - _table_scale) * _table_scale_base_pos[1]] ], dtype=np.float32), frame.shape[:2][::-1])
+                else :
+                    if len(_table_points) == 4 :
+                        break
+                cv2.imshow("setup table", frame)
+            except Exception as e :
+                print(e)
+    cv2.destroyAllWindows()
+    result = np.array(_table_points)
+    _table_mouse_state = "up"
+    _table_points = []
+    _table_scale = 3
+    _table_scale_base_pos = (0, 0)
+    _table_mouse_now_pos = (0, 0)
+    tar = np.float32([[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]])
+    return cv2.findHomography(result, tar)[0]
+
 def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
     tag_len   = APRILTAG_SIZE 
     detector  = Detector()
@@ -184,22 +315,36 @@ def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
     homography = cv2.findHomography(coners, tar)[0]
     return homography
 
-if __name__ == "__main__" :
+def test_homo(img, ho) :
     cv2.namedWindow('frame')
     cv2.setMouseCallback('frame', on_mouse_move)
     #ho = pickle.load(open('ball_detection/result/s480p30_a15_/homography_matrix', 'rb'))
-    img = cv2.imread("ball_detection/result/s480p30_a50_/pic.jpg", cv2.IMREAD_GRAYSCALE)
-    ho = find_homography_matrix_to_apriltag(img)
     while True :
         cv2.imshow("frame", img)
         cv2.waitKey(round(1/30*1000))
         a = np.matmul(ho, np.array([_x, _y, 1]))
         a = a / a[2]
-        #b = np.matmul(np.linalg.inv(ho), np.array([_x, _y, 1]))
-        #b = b / b[2]
+        b = np.matmul(np.linalg.inv(ho), np.array([_x, _y, 1]))
+        b = b / b[2]
         print("a: %2f, %2f" %(a[0], a[1]), a[2])
-        #print("b: %2f, %2f" %(b[0], b[1]))
+        print("b: %2f, %2f" %(b[0], b[1]), b[2])
     print(ho)
+
+if __name__ == "__main__" :
+    #img = cv2.imread("exp/718.jpg")
+    #m = setup_table_img(img, APRILTAG_SIZE/2, APRILTAG_SIZE/2)
+    #pickle.dump(m, open('ho_table', 'wb'))
+    #exit()
+    c = pickle.load(open('calibration', 'rb'))
+    d = Detector().detect(cv2.imread("exp/718.jpg", cv2.IMREAD_GRAYSCALE), estimate_tag_pose=True, camera_params=(c[0][0],c[1][1],c[0][2],c[1][2]), tag_size=APRILTAG_SIZE)
+    m = pickle.load(open('ho_table', 'rb'))
+    #test_homo(cv2.imread("exp/718.jpg"), m)
+    p_t = calculateCameraPosition_table(c, m)
+    p_a = np.matmul(np.linalg.inv(d[0].pose_R), d[0].pose_t)
+
+    exit()
+
+    
 
     exit()
         #runExerment()
