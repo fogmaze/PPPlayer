@@ -126,6 +126,14 @@ def calculateCameraPosition(cameraMatrix:np.ndarray, frame_gray, tagSize=APRILTA
         return None
     
 
+class _Matd(Structure):
+    _fields_ = [
+        ("nrows", c_int),
+        ("ncols", c_int),
+        ("data", c_double * 1),
+    ]
+
+    
 class mat_d9(Structure):
     _fields_ = [
         ("nrows", c_uint),
@@ -133,29 +141,102 @@ class mat_d9(Structure):
         ("data", c_double * 9)
     ]
 
-class mat_d16(Structure):
+
+def _ptr_to_array2d(datatype, ptr, rows, cols):
+    array_type = (datatype * cols) * rows
+    array_buf = array_type.from_address(addressof(ptr))
+    return np.ctypeslib.as_array(array_buf, shape=(rows, cols))
+
+def _matd_get_array(mat_ptr):
+    return _ptr_to_array2d(
+        c_double,
+        mat_ptr.contents.data,
+        int(mat_ptr.contents.nrows),
+        int(mat_ptr.contents.ncols),
+    )
+    
+class _ApriltagDetection(Structure):
     _fields_ = [
-        ("nrows", c_uint),
-        ("ncols", c_uint),
-        ("data", c_double * 16)
+        ("family", c_void_p),
+        ("id", c_int),
+        ("hamming", c_int),
+        ("decision_margin", c_float),
+        ("H", POINTER(mat_d9)),
+        ("c", c_double * 2),
+        ("p", (c_double * 2) * 4),
     ]
 
-def calculateCameraPosition_table(cameraMatrix:np.ndarray, homographyMatrix:np.ndarray) :
-    detector = Detector()
-    detector.libc.homography_to_pose.restype = c_void_p
-    detector.libc.homography_to_pose.argtypes = [c_void_p, c_double, c_double, c_double, c_double]
+
+class _ApriltagDetectionInfo(Structure):
+    _fields_ = [
+        ("det", POINTER(_ApriltagDetection)),
+        ("tagsize", c_double),
+        ("fx", c_double),
+        ("fy", c_double),
+        ("cx", c_double),
+        ("cy", c_double),
+    ]
+
+
+class _ApriltagPose(Structure):
+    """Wraps apriltag_pose C struct."""
+
+    _fields_ = [("R", POINTER(_Matd)), ("t", POINTER(_Matd))]
+
+def _np2doublep(np_array):
+    res = ((c_double * 2) * 4)()
+
+class TableInfo :
+    homo:np.ndarray    = None
+    corners:np.ndarray = None # (-1,1), (1,1), (1,-1), and (-1,-1))
+    inmtx:np.ndarray   = None
+    width              = 2.74
+    height             = 1.525
+
+
+def calculateCameraPosition_table(info:TableInfo) :
+    libc = CDLL("build/libpose.so")
+    libc.estimate.restype = c_double
+    libc.estimate.argtypes = [c_void_p, (c_double * 2) * 4, c_double, c_double, c_double, c_double, c_double, c_double, c_void_p]
+    #detector = Detector()
+    #detector.libc.homography_to_pose.restype = c_void_p
+    #detector.libc.homography_to_pose.argtypes = [c_void_p, c_double, c_double, c_double, c_double]
+    #d = Detector().detect(cv2.imread("exp/718.jpg", cv2.IMREAD_GRAYSCALE), estimate_tag_pose=True, camera_params=(c[0][0],c[1][1],c[0][2],c[1][2]), tag_size=APRILTAG_SIZE)
+
+    src = np.float32([[-info.w/2, info.h/2], [info.w/2, info.h/2], [info.w/2, -info.h/2], [-info.w/2, -info.h/2]])
+    homo = cv2.findHomography(srcPoints=src, dstPoints=info.corners)[0]
     mat_d_ho = mat_d9()  # homography matrix
     mat_d_ho.nrows = 3
     mat_d_ho.ncols = 3
-    mat_d_ho.data = (c_double * 9)(*np.linalg.inv(homographyMatrix).flatten())
-    pv_mat_d_o = detector.libc.homography_to_pose(cast(byref(mat_d_ho), c_void_p), cameraMatrix[0][0], cameraMatrix[1][1], cameraMatrix[0][2], cameraMatrix[1][2])
-    p_mat_d_o = cast(pv_mat_d_o, POINTER(mat_d16))
-    o = np.array(p_mat_d_o.contents.data).reshape(4, 4)
-    r = o[:3, :3]
-    fix = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
-    r = np.matmul(fix, r)
-    t = o[:3, 3]
-    return np.matmul(np.linalg.inv(r), t)
+    mat_d_ho.data = (c_double * 9)(*homo.flatten())
+    corners = ((c_double * 2) * 4)(*[(c_double * 2) (*a.tolist()) for a in info.corners])
+    pose1 = _ApriltagPose()
+    libc.estimate(cast(byref(mat_d_ho), c_void_p), corners, cameraMatrix[0][0], cameraMatrix[1][1], cameraMatrix[0][2], cameraMatrix[1][2], info.width, info.height, cast(byref(pose1), c_void_p))
+    #pv_mat_d_o = detector.libc.homography_to_pose(cast(byref(mat_d_ho), c_void_p), -cameraMatrix[0][0], cameraMatrix[1][1], cameraMatrix[0][2], cameraMatrix[1][2])
+    #dete = _ApriltagDetection(
+            #family = None,
+            #id = 0,
+            #hamming = 0,
+            #decision_margin = 0,
+            #H = cast(byref(mat_d_ho), POINTER(mat_d9)),
+            #c = (c_double * 2)(0, 0),
+            #p = ((c_double * 2) * 4)((c_double * 2)(*d[0].corners[0]), (c_double * 2)(*d[0].corners[1]), (c_double * 2)(*d[0].corners[2]), (c_double * 2)(*d[0].corners[3]))
+        #)
+    #info = _ApriltagDetectionInfo(
+        #det = cast(byref(dete), POINTER(_ApriltagDetection)),
+        #tagsize = APRILTAG_SIZE,
+        #fx = cameraMatrix[0][0],
+        #fy = cameraMatrix[1][1],
+        #cx = cameraMatrix[0][2],
+        #cy = cameraMatrix[1][2]
+    #)
+    #pose2 = _ApriltagPose()
+    #err = detector.libc.estimate_tag_pose(byref(info), byref(pose2))
+
+    R = _matd_get_array(pose1.R)
+    t = _matd_get_array(pose1.t)
+
+    return np.matmul(np.linalg.inv(R), t)
     return r, t
     pass
 

@@ -1,9 +1,11 @@
 set(CMAKE_CURRENT_BINARY_DIR build)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-find_package(PythonInterp REQUIRED)
 cmake_minimum_required(VERSION 3.0.0)
 project(ball_simulate VERSION 0.1.0)
+
+find_package(PythonInterp REQUIRED)
+find_package(apriltag REQUIRED)
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -D_DEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
@@ -31,6 +33,12 @@ target_compile_definitions(dataFileOperatorV2-40-250 PRIVATE -DINPUT_LEN=40 -DTE
 target_compile_definitions(dataFileOperatorV2-80-50 PRIVATE -DINPUT_LEN=80 -DTEST_LEN=50)
 target_compile_definitions(dataFileOperatorV2-40-50 PRIVATE -DINPUT_LEN=40 -DTEST_LEN=50)
 
+# pose
+include_directories(apriltag)
+add_library(pose SHARED camera_calibrate/pose.c)
+add_executable(pose_test camera_calibrate/pose.c)
+target_link_libraries(pose apriltag::apriltag)
+target_link_libraries(pose_test apriltag::apriltag)
 
 
 #set(CMAKE_PREFIX_PATH cpp_packages/libtorch)
