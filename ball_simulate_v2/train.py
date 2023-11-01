@@ -416,6 +416,8 @@ if __name__ == "__main__" :
             c.set2NormalB()
         elif args.mode == "normalB60" :
             c.set2NormalB60()
+        elif args.mode == "normalBR" :
+            c.set2NormalBR()
         else :
             raise Exception("mode error")
 

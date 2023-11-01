@@ -115,9 +115,7 @@ def calculateCameraPosition(cameraMatrix:np.ndarray, frame_gray, tagSize=APRILTA
         if len(results) == 1:
             res:Detection = results[0]
             position = np.matmul(np.linalg.inv(res.pose_R), -res.pose_t)
-            print("origin: ", position)
             p = equ.Point3d(position[0][0] + (tagSize/2) - 2.74/2, -position[2][0] - 1.525/2, -position[1][0] + (tagSize/2))
-            print("after: ", p.to_str())
             return equ.Point3d(position[0][0] + (tagSize/2) - 2.74/2, -position[2][0] - 1.525/2, -position[1][0] + (tagSize/2))
         else:
             return None
@@ -171,7 +169,7 @@ def save_table_info(save_name, corners, calibration, width=2.74, height=1.525) :
         pickle.dump(info, f)
 
 def calculateCameraPosition_table(info:TableInfo) :
-    libc = CDLL("lib/libpose.so")
+    libc = CDLL("bin/libpose.so")
     libc.estimate.restype = c_double
     libc.estimate.argtypes = [c_void_p, (c_double * 2) * 4, c_double, c_double, c_double, c_double, c_double, c_double, c_void_p]
 
@@ -188,12 +186,8 @@ def calculateCameraPosition_table(info:TableInfo) :
     R = _matd_get_array(pose1.R)
     t = _matd_get_array(pose1.t)
 
-    print(R)
-    print(d[0].pose_R)
-    position = np.matmul(np.linalg.inv(R), -t)
-    print("origin: ", position)
-    p = equ.Point3d(position[0][0], -position[2][0], -position[1][0])
-    print("after: ", p.to_str())
+    position = np.matmul(np.linalg.inv(R), t)
+    p = equ.Point3d(-position[0][0], -position[1][0], position[2][0])
     return p
     return np.matmul(np.linalg.inv(R), t)
 
@@ -371,9 +365,10 @@ if __name__ == "__main__" :
     #pickle.dump(m, open('ho_table', 'wb'))
     #exit()
     c = pickle.load(open('calibration', 'rb'))
-    save_table_info("esttest", setup_table_img(cv2.imread("exp/718.jpg")), c)
-    info = pickle.load(open("esttest", "rb"))
-    calculateCameraPosition_table(info)
+    #save_table_info("exp/esttest", setup_table_img(cv2.imread("ball_detection/result/s480p30_a50_/pic.jpg")), c)
+    info = pickle.load(open("exp/esttest", "rb"))
+    print(calculateCameraPosition_table(info).to_str())
+    print(calculateCameraPosition(c, cv2.imread("ball_detection/result/s480p30_a50_/pic.jpg", cv2.IMREAD_GRAYSCALE)).to_str())
     exit()
     c = pickle.load(open('calibration', 'rb'))
     d = Detector().detect(cv2.imread("exp/718.jpg", cv2.IMREAD_GRAYSCALE), estimate_tag_pose=True, camera_params=(c[0][0],c[1][1],c[0][2],c[1][2]), tag_size=APRILTAG_SIZE)

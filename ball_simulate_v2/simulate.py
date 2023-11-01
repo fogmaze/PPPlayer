@@ -239,6 +239,8 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
                 dataStruct.inputs[0].line_rad_xz[ind] = cam1_data[k].rad_xz
                 dataStruct.inputs[0].timestamps[ind] = cam1_data[k].timestamp
                 ind += 1
+                if ind >= cam1_end:
+                    break
                 if random.random() < c.INPUT_RANDOM_ERROR_RATE :
                     dataStruct.inputs[0].line_rad_xy[ind] = random.uniform(-math.pi, math.pi)
                     dataStruct.inputs[0].line_rad_xz[ind] = random.uniform(-math.pi, math.pi)
@@ -254,6 +256,8 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
                 dataStruct.inputs[1].line_rad_xz[ind] = cam2_data[k].rad_xz
                 dataStruct.inputs[1].timestamps[ind] = cam2_data[k].timestamp
                 ind += 1
+                if ind >= cam1_end:
+                    break
                 if random.random() < c.INPUT_RANDOM_ERROR_RATE :
                     dataStruct.inputs[0].line_rad_xy[ind] = random.uniform(-math.pi, math.pi)
                     dataStruct.inputs[0].line_rad_xz[ind] = random.uniform(-math.pi, math.pi)
@@ -457,6 +461,8 @@ if __name__ == "__main__":
             c.set2NormalB()
         elif args.mode == "normalB60" :
             c.set2NormalB60()
+        elif args.mode == "normalBR" :
+            c.set2NormalBR()
         else:
             raise Exception("mode error")
 

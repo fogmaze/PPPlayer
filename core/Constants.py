@@ -133,7 +133,7 @@ def set2NormalB() :
     INPUT_IGNORE_WIDTH_STD = 3
     normer = Normer()
 
-def set2NormalB() :
+def set2NormalBR() :
     global SIMULATE_INPUT_LEN
     global SIMULATE_TEST_LEN
     global SHUTTER_RANDOM_ERROR_STD
