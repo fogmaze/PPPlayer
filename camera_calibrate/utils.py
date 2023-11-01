@@ -124,7 +124,6 @@ def calculateCameraPosition(cameraMatrix:np.ndarray, frame_gray, tagSize=APRILTA
     except Exception as e:
         print(e)
         return None
-    
 
 class _Matd(Structure):
     _fields_ = [
@@ -132,7 +131,6 @@ class _Matd(Structure):
         ("ncols", c_int),
         ("data", c_double * 1),
     ]
-
     
 class mat_d9(Structure):
     _fields_ = [
@@ -140,7 +138,6 @@ class mat_d9(Structure):
         ("ncols", c_uint),
         ("data", c_double * 9)
     ]
-
 
 def _ptr_to_array2d(datatype, ptr, rows, cols):
     array_type = (datatype * cols) * rows
@@ -154,91 +151,51 @@ def _matd_get_array(mat_ptr):
         int(mat_ptr.contents.nrows),
         int(mat_ptr.contents.ncols),
     )
-    
-class _ApriltagDetection(Structure):
-    _fields_ = [
-        ("family", c_void_p),
-        ("id", c_int),
-        ("hamming", c_int),
-        ("decision_margin", c_float),
-        ("H", POINTER(mat_d9)),
-        ("c", c_double * 2),
-        ("p", (c_double * 2) * 4),
-    ]
-
-
-class _ApriltagDetectionInfo(Structure):
-    _fields_ = [
-        ("det", POINTER(_ApriltagDetection)),
-        ("tagsize", c_double),
-        ("fx", c_double),
-        ("fy", c_double),
-        ("cx", c_double),
-        ("cy", c_double),
-    ]
-
 
 class _ApriltagPose(Structure):
-    """Wraps apriltag_pose C struct."""
-
     _fields_ = [("R", POINTER(_Matd)), ("t", POINTER(_Matd))]
 
-def _np2doublep(np_array):
-    res = ((c_double * 2) * 4)()
-
 class TableInfo :
-    homo:np.ndarray    = None
     corners:np.ndarray = None # (-1,1), (1,1), (1,-1), and (-1,-1))
     inmtx:np.ndarray   = None
     width              = 2.74
     height             = 1.525
 
+def save_table_info(save_name, corners, calibration, width=2.74, height=1.525) :
+    info = TableInfo()
+    info.corners = corners
+    info.inmtx = calibration
+    info.width = width
+    info.height = height
+    with open(save_name, 'wb') as f :
+        pickle.dump(info, f)
 
 def calculateCameraPosition_table(info:TableInfo) :
-    libc = CDLL("build/libpose.so")
+    libc = CDLL("lib/libpose.so")
     libc.estimate.restype = c_double
     libc.estimate.argtypes = [c_void_p, (c_double * 2) * 4, c_double, c_double, c_double, c_double, c_double, c_double, c_void_p]
-    #detector = Detector()
-    #detector.libc.homography_to_pose.restype = c_void_p
-    #detector.libc.homography_to_pose.argtypes = [c_void_p, c_double, c_double, c_double, c_double]
-    #d = Detector().detect(cv2.imread("exp/718.jpg", cv2.IMREAD_GRAYSCALE), estimate_tag_pose=True, camera_params=(c[0][0],c[1][1],c[0][2],c[1][2]), tag_size=APRILTAG_SIZE)
 
-    src = np.float32([[-info.w/2, info.h/2], [info.w/2, info.h/2], [info.w/2, -info.h/2], [-info.w/2, -info.h/2]])
+    src = np.float32([[-info.width/2, info.height/2], [info.width/2, info.height/2], [info.width/2, -info.height/2], [-info.width/2, -info.height/2]])
     homo = cv2.findHomography(srcPoints=src, dstPoints=info.corners)[0]
-    mat_d_ho = mat_d9()  # homography matrix
+    mat_d_ho = mat_d9()
     mat_d_ho.nrows = 3
     mat_d_ho.ncols = 3
     mat_d_ho.data = (c_double * 9)(*homo.flatten())
     corners = ((c_double * 2) * 4)(*[(c_double * 2) (*a.tolist()) for a in info.corners])
     pose1 = _ApriltagPose()
-    libc.estimate(cast(byref(mat_d_ho), c_void_p), corners, cameraMatrix[0][0], cameraMatrix[1][1], cameraMatrix[0][2], cameraMatrix[1][2], info.width, info.height, cast(byref(pose1), c_void_p))
-    #pv_mat_d_o = detector.libc.homography_to_pose(cast(byref(mat_d_ho), c_void_p), -cameraMatrix[0][0], cameraMatrix[1][1], cameraMatrix[0][2], cameraMatrix[1][2])
-    #dete = _ApriltagDetection(
-            #family = None,
-            #id = 0,
-            #hamming = 0,
-            #decision_margin = 0,
-            #H = cast(byref(mat_d_ho), POINTER(mat_d9)),
-            #c = (c_double * 2)(0, 0),
-            #p = ((c_double * 2) * 4)((c_double * 2)(*d[0].corners[0]), (c_double * 2)(*d[0].corners[1]), (c_double * 2)(*d[0].corners[2]), (c_double * 2)(*d[0].corners[3]))
-        #)
-    #info = _ApriltagDetectionInfo(
-        #det = cast(byref(dete), POINTER(_ApriltagDetection)),
-        #tagsize = APRILTAG_SIZE,
-        #fx = cameraMatrix[0][0],
-        #fy = cameraMatrix[1][1],
-        #cx = cameraMatrix[0][2],
-        #cy = cameraMatrix[1][2]
-    #)
-    #pose2 = _ApriltagPose()
-    #err = detector.libc.estimate_tag_pose(byref(info), byref(pose2))
+    libc.estimate(cast(byref(mat_d_ho), c_void_p), corners, info.inmtx[0][0], info.inmtx[1][1], info.inmtx[0][2], info.inmtx[1][2], info.width, info.height, cast(byref(pose1), c_void_p))
 
     R = _matd_get_array(pose1.R)
     t = _matd_get_array(pose1.t)
 
+    print(R)
+    print(d[0].pose_R)
+    position = np.matmul(np.linalg.inv(R), -t)
+    print("origin: ", position)
+    p = equ.Point3d(position[0][0], -position[2][0], -position[1][0])
+    print("after: ", p.to_str())
+    return p
     return np.matmul(np.linalg.inv(R), t)
-    return r, t
-    pass
 
 def getCameraPosition_realTime(cameraMatrix) :
     cap = cv2.VideoCapture(0)
@@ -313,8 +270,7 @@ def _setup_table_mouse_event(event, x, y, flags, param) :
     if event == cv2.EVENT_RBUTTONDOWN :
         _table_points.pop()
 
-def setup_table_img(img, hw = 2.74/2, hh = 1.525/2) :
-    
+def setup_table_img(img) :
     global _table_mouse_state, _table_scale_base_pos, _table_points, _table_scale, _table_mouse_now_pos
     cv2.namedWindow("setup table")
     cv2.setMouseCallback("setup table", _setup_table_mouse_event)
@@ -344,10 +300,9 @@ def setup_table_img(img, hw = 2.74/2, hh = 1.525/2) :
     _table_scale = 3
     _table_scale_base_pos = (0, 0)
     _table_mouse_now_pos = (0, 0)
-    tar = np.float32([[-hw, -hh], [-hw, hh], [hw, hh], [hw, -hh]])
-    return cv2.findHomography(result, tar)[0]
+    return result
 
-def setup_table(source, hw = 2.74/2, hh = 1.525/2) :
+def setup_table(source) :
     global _table_mouse_state, _table_scale_base_pos, _table_points, _table_scale, _table_mouse_now_pos
     cam = cv2.VideoCapture(source)
     cv2.namedWindow("setup table")
@@ -379,8 +334,7 @@ def setup_table(source, hw = 2.74/2, hh = 1.525/2) :
     _table_scale = 3
     _table_scale_base_pos = (0, 0)
     _table_mouse_now_pos = (0, 0)
-    tar = np.float32([[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]])
-    return cv2.findHomography(result, tar)[0]
+    return result
 
 def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
     tag_len   = APRILTAG_SIZE 
@@ -416,6 +370,11 @@ if __name__ == "__main__" :
     #m = setup_table_img(img, APRILTAG_SIZE/2, APRILTAG_SIZE/2)
     #pickle.dump(m, open('ho_table', 'wb'))
     #exit()
+    c = pickle.load(open('calibration', 'rb'))
+    save_table_info("esttest", setup_table_img(cv2.imread("exp/718.jpg")), c)
+    info = pickle.load(open("esttest", "rb"))
+    calculateCameraPosition_table(info)
+    exit()
     c = pickle.load(open('calibration', 'rb'))
     d = Detector().detect(cv2.imread("exp/718.jpg", cv2.IMREAD_GRAYSCALE), estimate_tag_pose=True, camera_params=(c[0][0],c[1][1],c[0][2],c[1][2]), tag_size=APRILTAG_SIZE)
     m = pickle.load(open('ho_table', 'rb'))

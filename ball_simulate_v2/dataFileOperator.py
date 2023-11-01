@@ -14,7 +14,7 @@ class BallDataSet_sync(torch.utils.data.Dataset) :
     def loadLib(self):
         libname = "dataFileOperatorV2-{}-{}".format(c.SIMULATE_INPUT_LEN, c.SIMULATE_TEST_LEN)
         print("load lib {}".format(libname))
-        self.lib = CDLL("build/lib{}.so".format(libname))
+        self.lib = CDLL("bin/lib{}.so".format(libname))
 
         class Data_Point_(Structure):
             _fields_ = [
