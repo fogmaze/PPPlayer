@@ -239,6 +239,11 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
                 dataStruct.inputs[0].line_rad_xz[ind] = cam1_data[k].rad_xz
                 dataStruct.inputs[0].timestamps[ind] = cam1_data[k].timestamp
                 ind += 1
+                if random.random() < c.INPUT_RANDOM_ERROR_RATE :
+                    dataStruct.inputs[0].line_rad_xy[ind] = random.uniform(-math.pi, math.pi)
+                    dataStruct.inputs[0].line_rad_xz[ind] = random.uniform(-math.pi, math.pi)
+                    dataStruct.inputs[0].timestamps[ind] = random.uniform(0, c.SIMULATE_INPUT_LEN/c.FPS)
+                    ind += 1
                 if ind >= cam1_end:
                     break
             dataStruct.inputs[0].seq_len = ind
@@ -249,6 +254,11 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
                 dataStruct.inputs[1].line_rad_xz[ind] = cam2_data[k].rad_xz
                 dataStruct.inputs[1].timestamps[ind] = cam2_data[k].timestamp
                 ind += 1
+                if random.random() < c.INPUT_RANDOM_ERROR_RATE :
+                    dataStruct.inputs[0].line_rad_xy[ind] = random.uniform(-math.pi, math.pi)
+                    dataStruct.inputs[0].line_rad_xz[ind] = random.uniform(-math.pi, math.pi)
+                    dataStruct.inputs[0].timestamps[ind] = random.uniform(0, c.SIMULATE_INPUT_LEN/c.FPS)
+                    ind += 1
                 if ind >= cam2_end:
                     break
             dataStruct.inputs[1].seq_len = ind
