@@ -73,7 +73,7 @@ def takePicture_and():
 def takePicture():
     t = time.time()
 
-    cap = cv2.VideoCapture(2)
+    cap = cv2.VideoCapture(1)
     cap.set(cv2.CAP_PROP_FPS, 60)
     print(cap.get(cv2.CAP_PROP_FPS))
     a = False
@@ -94,7 +94,7 @@ def takePicture():
                 g = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 pos = calculateCameraPosition(pickle.load(open('calibration1_old', 'rb')), g)
                 print(pos)
-                cv2.imwrite('A13{}.jpg'.format(i), frame)
+                cv2.imwrite('D1{}.jpg'.format(i), frame)
                 i += 1
 
 
@@ -264,14 +264,15 @@ def _setup_table_mouse_event(event, x, y, flags, param) :
     if event == cv2.EVENT_RBUTTONDOWN :
         _table_points.pop()
 
-def setup_table_img(img) :
+def setup_table_img(img, padding = 0) :
     global _table_mouse_state, _table_scale_base_pos, _table_points, _table_scale, _table_mouse_now_pos
     cv2.namedWindow("setup table")
     cv2.setMouseCallback("setup table", _setup_table_mouse_event)
+    img_padded = cv2.copyMakeBorder(img, padding, padding, padding, padding, cv2.BORDER_CONSTANT, value=(0, 0, 0))
 
     while True :
         try: 
-            frame = img.copy()
+            frame = img_padded.copy()
             k = cv2.waitKey(round(1/30*1000))
             # draw poly
             if len(_table_points) >= 1 :
@@ -280,7 +281,7 @@ def setup_table_img(img) :
                 frame = cv2.warpAffine(frame, np.array(
                     [
                         [_table_scale, 0, (1 - _table_scale) * _table_scale_base_pos[0]],
-                        [0, _table_scale, (1 - _table_scale) * _table_scale_base_pos[1]] ], dtype=np.float32), img.shape[:2][::-1])
+                        [0, _table_scale, (1 - _table_scale) * _table_scale_base_pos[1]] ], dtype=np.float32), img_padded.shape[:2][::-1])
             else :
                 if len(_table_points) == 4 :
                     break
@@ -289,6 +290,9 @@ def setup_table_img(img) :
             print(e)
     cv2.destroyAllWindows()
     result = np.array(_table_points)
+    for i in range(4) :
+        result[i][0] -= padding
+        result[i][1] -= padding
     _table_mouse_state = "up"
     _table_points = []
     _table_scale = 3
@@ -364,11 +368,12 @@ if __name__ == "__main__" :
     #m = setup_table_img(img, APRILTAG_SIZE/2, APRILTAG_SIZE/2)
     #pickle.dump(m, open('ho_table', 'wb'))
     #exit()
+    now = "ball_detection/result/s480p30_a15_/pic"
     c = pickle.load(open('calibration', 'rb'))
-    #save_table_info("exp/esttest", setup_table_img(cv2.imread("ball_detection/result/s480p30_a50_/pic.jpg")), c)
-    info = pickle.load(open("exp/esttest", "rb"))
+    save_table_info(now + ".info", setup_table_img(cv2.imread(now + ".jpg"), padding= 50), c)
+    info:TableInfo = pickle.load(open(now + ".info", "rb"))
     print(calculateCameraPosition_table(info).to_str())
-    print(calculateCameraPosition(c, cv2.imread("ball_detection/result/s480p30_a50_/pic.jpg", cv2.IMREAD_GRAYSCALE)).to_str())
+    print(calculateCameraPosition(c, cv2.imread(now + ".jpg", cv2.IMREAD_GRAYSCALE)).to_str())
     exit()
     c = pickle.load(open('calibration', 'rb'))
     d = Detector().detect(cv2.imread("exp/718.jpg", cv2.IMREAD_GRAYSCALE), estimate_tag_pose=True, camera_params=(c[0][0],c[1][1],c[0][2],c[1][2]), tag_size=APRILTAG_SIZE)
@@ -399,3 +404,4 @@ if __name__ == "__main__" :
     #print(cameraMatrix)
     #getCameraPosition_realTime(cameraMatrix)
     pass
+# 3.66

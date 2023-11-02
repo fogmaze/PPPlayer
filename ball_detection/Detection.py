@@ -91,18 +91,16 @@ class Detection :
 
     def __init__(self, 
                 source, 
-                calibrationFile    = None,
-                frame_size         = None, 
-                frame_rate         = None, 
-                color_range        = None, 
-                save_name          = "default", 
-                mode               = None, 
-                cam_pos            = None, 
-                homography_matrix  = None,
-                queue              = None,
-                conn               = None,
-                load_from_result   = None,
-                consider_poly      = None,
+                cameraInfo:TableInfo = None,
+                frame_size           = None, 
+                frame_rate           = None, 
+                color_range          = None, 
+                save_name            = "default", 
+                mode                 = None, 
+                queue                = None,
+                conn                 = None,
+                load_from_result     = None,
+                consider_poly        = None,
                 ) :
 
         print("source: ",source)
@@ -123,16 +121,12 @@ class Detection :
                 self.frame_size = load(os.path.join("ball_detection/result", load_from_result, "frame_size"))
             if os.path.exists(os.path.join("ball_detection/result", load_from_result, "frame_rate")) :
                 self.frame_rate = load(os.path.join("ball_detection/result", load_from_result, "frame_rate"))
-            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "camera_position")) :
-                self.camera_position = load(os.path.join("ball_detection/result", load_from_result, "camera_position"))
-            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "homography_matrix")) :
-                self.homography_matrix = load(os.path.join("ball_detection/result", load_from_result, "homography_matrix"))
-            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "calibration")) :
-                self.inmtx = load(os.path.join("ball_detection/result", load_from_result, "calibration"))
             if os.path.exists(os.path.join("ball_detection/result", load_from_result, "color_range")) :
                 self.range = load(os.path.join("ball_detection/result", load_from_result, "color_range"))
             if os.path.exists(os.path.join("ball_detection/result", load_from_result, "consider_poly")) :
                 self.consider_poly = load(os.path.join("ball_detection/result", load_from_result, "consider_poly"))
+            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "camera_info")) :
+                self.camera_info = load(os.path.join("ball_detection/result", load_from_result, "camera_info"))
 
         self.pid = os.getpid()
 
@@ -141,24 +135,17 @@ class Detection :
         self.consider_poly = consider_poly if consider_poly is not None else self.consider_poly
         if self.consider_poly is None :
             self.consider_poly = np.array([[0, 0], [self.frame_size[0], 0], [self.frame_size[0], self.frame_size[1]], [0, self.frame_size[1]]])
-        if type(cam_pos) == np.ndarray :
-            self.camera_position = equ.Point3d(cam_pos[0], cam_pos[1], cam_pos[2])
-        elif type(cam_pos) == equ.Point3d:
-            self.camera_position = cam_pos
+        if type(cameraInfo) == TableInfo :
+            self.camera_info = cameraInfo
         if type(color_range) == str :
             self.range = load(color_range)
         elif type(color_range) == ColorRange :
             self.range = color_range
         self.upper = self.range.upper
         self.lower = self.range.lower
-        self.homography_matrix = homography_matrix if type(homography_matrix) == np.ndarray else self.homography_matrix
         self.video_writer_all = None
         self.video_writer_bad = None
         self.video_writer_tagged = None
-        if calibrationFile is not None :
-            self.inmtx = calib.load_calibration(calibrationFile)
-        elif type(self.inmtx) == str :
-            self.inmtx = calib.load_calibration(self.inmtx)
         self.cam = None
         self.source = source
         self.data = []
@@ -178,6 +165,12 @@ class Detection :
             self.cam = cv2.VideoCapture(source)
         elif type(source) == CameraReceiver :
             self.cam = source
+
+        self.camera_position = calculateCameraPosition_table(self.camera_info)
+        self.inmtx = self.camera_info.inmtx
+        w =  self.camera_info.width
+        h =  self.camera_info.height
+        self.homography_matrix = cv2.findHomography(self.camera_info.corners, np.float32([[-w/2, h/2], [w/2, h/2], [w/2, -h/2], [-w/2, -h/2]]))[0]
 
         self.mode = mode
         if self.mode == "analysis" or self.mode == "dual_analysis":
@@ -199,14 +192,9 @@ class Detection :
             self.queue = queue
             self.conn = conn
         
-        if self.camera_position is not None and self.homography_matrix is not None:
-            with open("ball_detection/result/" + save_name + "/camera_position", "wb") as f :
-                pickle.dump(self.camera_position, f)
-            with open("ball_detection/result/" + save_name + "/homography_matrix", "wb") as f :
-                pickle.dump(self.homography_matrix, f)
-        if self.inmtx is not None :
-            with open("ball_detection/result/" + save_name + "/calibration", "wb") as f :
-                pickle.dump(self.inmtx, f)
+        if self.camera_info is not None :
+            with open("ball_detection/result/" + save_name + "/camera_info", "wb") as f :
+                pickle.dump(self.camera_info, f)
         if self.range is not None :
             with open("ball_detection/result/" + save_name + "/color_range", "wb") as f :
                 pickle.dump(self.range, f)
@@ -377,8 +365,9 @@ class Detection :
                     if self.homography_matrix is not None and self.camera_position is not None:
                         # 單應性變換
                         ball_in_world = np.matmul(self.homography_matrix, np.array([x+w//2, y+h//2, 1]))
+                        ball_in_world = ball_in_world / ball_in_world[2]
                         # 獲取投影點
-                        projection = equ.Point3d(ball_in_world[0]-2.74/2, 0, ball_in_world[1])
+                        projection = equ.Point3d(ball_in_world[0], ball_in_world[1], 0)
                         # 將投影點和相機座標連成直線
                         line = equ.LineEquation3d(self.camera_position, projection)
 
