@@ -82,6 +82,8 @@ def randomInpIdxs() -> List[int]:
             if j < c.SIMULATE_INPUT_LEN:
                 all[j] = 0
     res = [i for i in range(c.SIMULATE_INPUT_LEN) if all[i] == 1]
+    if res[0] != 0 :
+        res.insert(0, 0)
     if len(res) < 3 :
         return randomInpIdxs()
     return res

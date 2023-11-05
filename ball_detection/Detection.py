@@ -113,6 +113,7 @@ class Detection :
         self.range = None
         self.inmtx = None
         self.consider_poly = None
+        self.camera_info = None
         
         if load_from_result is not None :
             if not os.path.exists(os.path.join("ball_detection/result", load_from_result)) :
@@ -180,11 +181,8 @@ class Detection :
             self.video_writer_tagged = cv2.VideoWriter("ball_detection/result/" + save_name + "/tagged.mp4", self.fourcc, self.frame_rate, self.frame_size)
             self.video_writer_all_tagged = cv2.VideoWriter("ball_detection/result/" + save_name + "/all_tagged.mp4", self.fourcc, self.frame_rate, self.frame_size)
             self.detection_csv = open("ball_detection/result/" + save_name + "/detection.csv", "w", newline='')
-            self.situation_csv = open("ball_detection/result/" + save_name + "/situation.csv", "w", newline='')
             self.detection_csv_writer = csv.writer(self.detection_csv)
-            self.situation_csv_writer = csv.writer(self.situation_csv)
             self.detection_csv_writer.writerow(["iter", "id", "x", "y", "h", "w", "cam_x", "cam_y", "cam_z","rxy", "rxz"])
-            self.situation_csv_writer.writerow(["iter", "time", "fps", "numOfBall"])
             # pickle camera position and homography matrix
         if self.mode == "dual_analysis" or self.mode == "dual_run":
             if queue is None or self.camera_position is None or self.homography_matrix is None:
@@ -220,8 +218,6 @@ class Detection :
                 self.video_writer_all_tagged.release()
             if self.detection_csv is not None :
                 self.detection_csv.close()
-            if self.situation_csv is not None :
-                self.situation_csv.close()
         cv2.destroyAllWindows()
     
             
@@ -374,7 +370,7 @@ class Detection :
                         # save line data
                         if self.mode == "analysis" or self.mode == "dual_analysis":
                             self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
-                        elif self.mode == "compute":
+                        if self.mode == "compute":
                             self.data.append([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
                         if self.mode == "dual_analysis" or self.mode == "dual_run":
                             self.queue.put([self.pid, iteration, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg(), time.time()])
@@ -384,10 +380,17 @@ class Detection :
                             self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
                         elif self.mode == "compute":
                             self.data.append([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
+                else :
+                    if self.mode == "analysis" or self.mode == "dual_analysis":
+                        self.detection_csv_writer.writerow([iteration, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+                    if self.mode == "compute":
+                        self.data.append([iteration, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+                    if self.mode == "dual_analysis" or self.mode == "dual_run":
+                        self.queue.put([self.pid, iteration, None, None, None, None, None, time.time()])
+                    
 
                 #save situation data and video
                 if self.mode == "analysis" or self.mode == "dual_analysis":
-                    self.situation_csv_writer.writerow([iteration, this_iter_time - startTime, 1/(this_iter_time-last_iter_time), 1 if len(merged) > 0 else 0])
                     if result is None :
                         self.video_writer_bad.write(frame)
                     else:

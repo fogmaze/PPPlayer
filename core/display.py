@@ -39,7 +39,7 @@ def visualizeDetection_video(root, fps=30) :
     result = None
     for i in (range(round(cam_datas[-1][0]))) :
         ret, frame = origVideo.read()
-        if i == cam_datas[0][0] :
+        if cam_datas[0][1] == 1 :
             cleanRoom(axe)
             line_data = cam_datas[0][6:]
             isHit = not lines.put(line_data[0], line_data[1], line_data[2], line_data[3], line_data[4])
@@ -55,6 +55,8 @@ def visualizeDetection_video(root, fps=30) :
                 img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
                 result = img
+            cam_datas.pop(0)
+        else :
             cam_datas.pop(0)
 
         if result is None :
