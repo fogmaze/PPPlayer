@@ -17,7 +17,7 @@ Make sure you run the code in the root of the project
    python3 ball_simulate_v2/train.py [args]
    ``` 
 
-### Command-line Arguments
+#### Command-line Arguments
 - **-lr, --learning_rate**: Learning rate for the training process (default: 0.001).
 - **-b, --batch_size**: Batch size for training (default: 64).
 - **-e, --epochs**: Number of epochs for training (default: 30).
@@ -32,7 +32,7 @@ Make sure you run the code in the root of the project
 - **--test**: Test the model on the validation set (default: False).
 - **--mode**: Training mode (`default`, `fit`, `ne`, `predict`, `normal`, `normalB`, `normalB60`, `normalBR`) (default: `normalBR`). More details can be found in [Modes](#modes) or in [core/Constants.py](/core/Constants.py)
 
-## Modes
+### Modes
 - **fit**: Set the model mode to fitting.
 - **ne**: Set the model mode to no error.
 - **predict**: Set the model mode to prediction.
@@ -41,7 +41,7 @@ Make sure you run the code in the root of the project
 - **normalB60**: Set the model mode to normal with configuration 'B60'.
 - **normalBR**: Set the model mode to normal with configuration 'BR'.
 
-## Dataset
+### Dataset
 If the "ball_simulate_v2/dataset" directory does not exist, it will be created automatically.
 
 
