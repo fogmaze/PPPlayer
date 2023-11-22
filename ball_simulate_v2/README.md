@@ -1,16 +1,21 @@
 ## Introduction
-This script is designed for training and testing a ball simulation model using various configurations. The script provides command-line arguments to customize training parameters, such as learning rate, batch size, epochs, model type, and more.
 
 ## Model Training
 
+This script is designed for training and testing a ball simulation model using various configurations. The script provides command-line arguments to customize training parameters, such as learning rate, batch size, epochs, model type, and more.
+
 ## Usage
 
+   ;;;bash
+   python3 ball_simulate_v2/train.py \[args\]
+   ;;; 
+   
 ### Command-line Arguments
 - **-lr, --learning_rate**: Learning rate for the training process (default: 0.001).
 - **-b, --batch_size**: Batch size for training (default: 64).
 - **-e, --epochs**: Number of epochs for training (default: 30).
 - **-m, --model_type**: Type of the model (default: `medium`; availible values: `small`, `medium`, `medium_var`, `big`, `large`).
-- **-mom, --momentum**: Momentum for the `SGD` optimizer (default: 0.01). **(SGDM ONLY)**
+- **-mom, --momentum**: Momentum for the `SGDM` optimizer (default: 0.01). **(SGDM ONLY)**
 - **-d, --dataset**: Dataset name.
 - **-s, --scheduler_step_size**: Step size for the learning rate scheduler (default: 0).
 - **-w, --weight**: Path to the pre-trained model weight file (default: None).
@@ -23,9 +28,6 @@ This script is designed for training and testing a ball simulation model using v
 ### Examples
 Make sure you run the code in the root of the project
 Train the model with default settings:
-   ;;;bash
-   python3 ball_simulate_v2/train.py
-   ;;; 
 
 
 ## Modes
