@@ -30,7 +30,7 @@ Make sure you run the code in the root of the project
 - **-o, --optimizer**: Optimizer type (default: `adam`; avalible values: `adam`, `sgdm`).
 - **--num_workers**: Number of workers for data loading (default: 0). This may speed up the training. Setting to 2 is a good choice.
 - **--test**: Test the model on the validation set (default: False).
-- **--mode**: Training mode (`default`, `fit`, `ne`, `predict`, `normal`, `normalB`, `normalB60`, `normalBR`) (default: `normalBR`). More details can be found in [Modes](#modes) or in [core/Constants.py](/core/Constants.py)
+- **--mode**: Training mode (`default`, `fit`, `ne`, `predict`, `normal`, `normalB`, `normalB60`, `normalBR`) (default: `normalBR`). More details can be found in [Modes](#modes) or in [/core/Constants.py](/core/Constants.py)
 
 ### Modes
 - **fit**: Set the model mode to fitting.
