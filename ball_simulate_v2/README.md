@@ -7,7 +7,7 @@ This script is designed for training and testing a ball simulation model using v
 ## Usage
 
    ```bash
-   python3 ball_simulate_v2/train.py \[args\]
+   python3 ball_simulate_v2/train.py [args]
    ``` 
 
 ### Command-line Arguments
