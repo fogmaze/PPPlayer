@@ -122,7 +122,7 @@ def runDec(s, sub_name, detection_load, q, c2s, save_name) :
         mode = "dual_analysis",
         queue = q,
         conn=c2s,
-        load_from_result=detection_load
+        config=detection_load
     )
     print("start")
     

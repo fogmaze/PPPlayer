@@ -20,9 +20,9 @@ from typing import List,Tuple,Dict
 import tqdm
 import csv
 
-torch.multiprocessing.set_start_method('spawn')
 
-def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, dataset = "", opt="adam",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2):
+def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, momentum=0.01, dataset = "", opt="adam",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2, mode="normalBR"):
+    torch.multiprocessing.set_start_method('spawn')
     #model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
     model_save_dir = "./ball_simulate_v2/model_saves/" + name + "/"
     if os.path.isdir(model_save_dir):
@@ -44,8 +44,11 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, da
     train_logger.addHandler(file_handler)
     train_logger.addHandler(console_handler)
 
-    training_params = 'epochs:{}, batch_size:{}, scheduler_step_size:{}, LR:{}, dataset:{}, model_name:{}, weight:{}, device:{}'.format(epochs,batch_size,scheduler_step_size,LR,dataset,model_name,weight,device)
-    train_logger.info('start training with args: epochs:{}, batch_size:{}, scheduler_step_size:{}, LR:{}, dataset:{}, model_name:{}, weight:{}, device:{}'.format(epochs,batch_size,scheduler_step_size,LR,dataset,model_name,weight,device))
+    if opt == "adam":
+        training_params = 'optimizer: adam, epochs:{}, batch_size:{}, LR:{}, dataset:{}, model_name:{}, weight:{}, device:{}'.format(epochs, batch_size, LR, dataset, model_name, weight, device)
+    elif opt == "sgdm":
+        training_params = 'optimizer: sgdm, epochs:{}, batch_size:{}, LR:{}, momentum:{}, dataset:{}, model_name:{}, weight:{}, device:{}'.format(epochs, batch_size, LR, momentum, dataset, model_name, weight, device)
+    train_logger.info('start training with args: {}'.format(training_params))
 
     if (MODEL_MAP.get(model_name) == None):
         raise Exception("model name not found")
@@ -64,16 +67,17 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.0001, da
     if opt == "adam":
         optimizer = torch.optim.RAdam(model.parameters(), lr = LR)
     elif opt == "sgdm":
-        optimizer = torch.optim.SGD(model.parameters(), lr = LR, momentum=0.01)
+        optimizer = torch.optim.SGD(model.parameters(), lr = LR, momentum=momentum)
+        print("sgdm!!")
     if scheduler_step_size == None:
         scheduler = None
     else :
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
-    ball_datas_train = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".train.bin"), device=device)
+    ball_datas_train = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".train.bin"), device=device, mode=mode)
     dataloader_train = DataLoader(dataset=ball_datas_train, batch_size=batch_size,shuffle=True, num_workers=num_workers)
 
-    ball_datas_valid = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".valid.bin"), device=device)
+    ball_datas_valid = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".valid.bin"), device=device, mode=mode)
     dataloader_valid = DataLoader(dataset=ball_datas_valid, batch_size=batch_size)
 
     train_loss = 0
@@ -384,6 +388,7 @@ if __name__ == "__main__" :
     argparser.add_argument('-b', default=64, type=int)
     argparser.add_argument('-e', default=30, type=int)
     argparser.add_argument('-m', default="medium", type=str)
+    argparser.add_argument('-mom', default=0.01, type=float)
     argparser.add_argument('-d', default="normalB60", type=str)
     argparser.add_argument('-s', default=0, type=int)
     argparser.add_argument('-w', default=None, type=str)
@@ -392,7 +397,7 @@ if __name__ == "__main__" :
     argparser.add_argument('--num_workers', default=0, type=int)
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
     argparser.add_argument('--test', dest='test', action='store_true', default=False)
-    argparser.add_argument('--mode', default="normalB60", type=str)
+    argparser.add_argument('--mode', default="normalBR", type=str)
     argparser.add_argument('--LRRTest', dest='LRRTest', action='store_true', default=False)
 
     args = argparser.parse_args()
@@ -429,5 +434,18 @@ if __name__ == "__main__" :
         validModel(args.m, args.w, args.d)
         exit(0)
         
-    train(scheduler_step_size=None if args.s == 0 else args.s, LR=args.lr, batch_size=args.b, epochs=args.e, dataset=args.d, model_name=args.m, weight=args.w, name=args.n, num_workers=args.num_workers)
+    train(
+        scheduler_step_size=None if args.s == 0 else args.s,
+        LR=args.lr,
+        momentum=args.mom,
+        batch_size=args.b,
+        epochs=args.e, 
+        dataset=args.d, 
+        model_name=args.m, 
+        weight=args.w, 
+        name=args.n, 
+        num_workers=args.num_workers, 
+        opt=args.o, 
+        mode=args.mode
+    )
     pass

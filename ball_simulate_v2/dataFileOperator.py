@@ -6,105 +6,150 @@ import platform
 import sys
 import os
 sys.path.append(os.getcwd())
-import core.Constants as c
 import threading
 
+def loadLib(mode = "normalBR"):
+    libname = "dataFileOperatorV2-{}-{}".format(SIMULATE_INPUT_LEN[mode], SIMULATE_TEST_LEN[mode])
+    lib = CDLL("bin/lib{}.so".format(libname))
+
+    class Data_Point_(Structure):
+        _fields_ = [
+            ("x",c_double),
+            ("y",c_double),
+            ("z",c_double)
+        ]
+    Data_Point = Data_Point_
+
+    class Data_Input_(Structure):
+        _fields_ = [
+            ("camera_x", c_double),
+            ("camera_y", c_double),
+            ("camera_z", c_double),
+            ("line_rad_xy", c_double * SIMULATE_INPUT_LEN[mode]),
+            ("line_rad_xz", c_double * SIMULATE_INPUT_LEN[mode]),
+            ("timestamps", c_double * SIMULATE_INPUT_LEN[mode]),
+            ("seq_len", c_int)
+        ]
+    Data_Input = Data_Input_
+
+    class DataStruct_(Structure):
+        _fields_ = [
+            ("inputs", Data_Input * 2),
+            ("curvePoints", Data_Point * SIMULATE_TEST_LEN[mode]),
+            ("curveTimestamps", c_double * SIMULATE_TEST_LEN[mode])
+        ]
+    DataStruct = DataStruct_
+
+    lib.main.argtypes = []
+    lib.main.restype = c_int
+    lib.loadFromFile.argtypes = [c_char_p]
+    lib.loadFromFile.restype = c_void_p
+    lib.releaseData.argtypes = [c_void_p]
+    lib.releaseData.restype = None
+    lib.loadIsSuccess.argtypes = [c_void_p]
+    lib.loadIsSuccess.restype = c_bool
+    lib.getFileDataLength.argtypes = [c_void_p]
+    lib.getFileDataLength.restype = c_int
+    lib.getFileData.argtypes = [c_void_p, c_int]
+    lib.getFileData.restype = c_void_p
+    lib.createHeader.argtypes = [c_int]
+    lib.createHeader.restype = c_void_p
+    lib.putData.argtypes = [c_void_p, c_int, DataStruct]
+    lib.putData.restype = c_bool
+    lib.saveToFile.argtypes = [c_void_p, c_char_p]
+    lib.saveToFile.restype = c_bool
+    lib.getFileData_sync.argtypes = [c_char_p, c_int]
+    lib.getFileData_sync.restype = DataStruct
+    lib.getFileDataLength_sync.argtypes = [c_char_p]
+    lib.getFileDataLength_sync.restype = c_int
+    lib.createEmptyFile_sync.argtypes = [c_char_p, c_int]
+    lib.createEmptyFile_sync.restype = None
+    lib.putData_sync.argtypes = [c_char_p, c_int, DataStruct]
+    lib.putData_sync.restype = None
+    lib.merge.argtypes = [c_char_p, c_char_p, c_char_p]
+    lib.merge.restype = None
+    return lib
+
+SIMULATE_INPUT_LEN = {
+    "fit": 100,
+    "ne": 40,
+    "predict": 40,
+    "normal": 40,
+    "normalB": 40,
+    "normalB60": 80,
+    "normalBR": 40,
+    # Add values for other modes if needed
+}
+
+SIMULATE_TEST_LEN = {
+    "fit": 100,
+    "ne": 250,
+    "predict": 250,
+    "normal": 50,
+    "normalB": 50,
+    "normalB60": 50,
+    "normalBR": 50,
+    # Add values for other modes if needed
+}
 
 class BallDataSet_sync(torch.utils.data.Dataset) :
-    def loadLib(self):
-        libname = "dataFileOperatorV2-{}-{}".format(c.SIMULATE_INPUT_LEN, c.SIMULATE_TEST_LEN)
-        print("load lib {}".format(libname))
-        self.lib = CDLL("bin/lib{}.so".format(libname))
+    def __init__(self, fileName, dataLength = None, device = "cuda:0", mode = "normalBR"):
+        self.mode = mode
 
-        class Data_Point_(Structure):
-            _fields_ = [
-                ("x",c_double),
-                ("y",c_double),
-                ("z",c_double)
-            ]
-        self.Data_Point = Data_Point_
-
-        class Data_Input_(Structure):
-            _fields_ = [
-                ("camera_x", c_double),
-                ("camera_y", c_double),
-                ("camera_z", c_double),
-                ("line_rad_xy", c_double * c.SIMULATE_INPUT_LEN),
-                ("line_rad_xz", c_double * c.SIMULATE_INPUT_LEN),
-                ("timestamps", c_double * c.SIMULATE_INPUT_LEN),
-                ("seq_len", c_int)
-            ]
-        self.Data_Input = Data_Input_
-
-        class DataStruct_(Structure):
-            _fields_ = [
-                ("inputs", self.Data_Input * 2),
-                ("curvePoints", self.Data_Point * c.SIMULATE_TEST_LEN),
-                ("curveTimestamps", c_double * c.SIMULATE_TEST_LEN)
-            ]
-        self.DataStruct = DataStruct_
-
-        self.lib.main.argtypes = []
-        self.lib.main.restype = c_int
-        self.lib.loadFromFile.argtypes = [c_char_p]
-        self.lib.loadFromFile.restype = c_void_p
-        self.lib.releaseData.argtypes = [c_void_p]
-        self.lib.releaseData.restype = None
-        self.lib.loadIsSuccess.argtypes = [c_void_p]
-        self.lib.loadIsSuccess.restype = c_bool
-        self.lib.getFileDataLength.argtypes = [c_void_p]
-        self.lib.getFileDataLength.restype = c_int
-        self.lib.getFileData.argtypes = [c_void_p, c_int]
-        self.lib.getFileData.restype = c_void_p
-        self.lib.createHeader.argtypes = [c_int]
-        self.lib.createHeader.restype = c_void_p
-        self.lib.putData.argtypes = [c_void_p, c_int, self.DataStruct]
-        self.lib.putData.restype = c_bool
-        self.lib.saveToFile.argtypes = [c_void_p, c_char_p]
-        self.lib.saveToFile.restype = c_bool
-        self.lib.getFileData_sync.argtypes = [c_char_p, c_int]
-        self.lib.getFileData_sync.restype = self.DataStruct
-        self.lib.getFileDataLength_sync.argtypes = [c_char_p]
-        self.lib.getFileDataLength_sync.restype = c_int
-        self.lib.createEmptyFile_sync.argtypes = [c_char_p, c_int]
-        self.lib.createEmptyFile_sync.restype = None
-        self.lib.putData_sync.argtypes = [c_char_p, c_int, self.DataStruct]
-        self.lib.putData_sync.restype = None
-        self.lib.merge.argtypes = [c_char_p, c_char_p, c_char_p]
-        self.lib.merge.restype = None
-
-
-    def __init__(self, fileName, dataLength = None, device = "cuda:0"):
-        self.loadLib()
+        lib = loadLib(self.mode)
+        if self.mode == "fit":
+            self.SIMULATE_INPUT_LEN = 100
+            self.SIMULATE_TEST_LEN = 100
+        elif self.mode == "ne":
+            self.SIMULATE_INPUT_LEN = 40
+            self.SIMULATE_TEST_LEN = 250
+        elif self.mode == "predict":
+            self.SIMULATE_INPUT_LEN = 40
+            self.SIMULATE_TEST_LEN = 250
+        elif self.mode == "normal":
+            self.SIMULATE_INPUT_LEN = 40
+            self.SIMULATE_TEST_LEN = 50
+        elif self.mode == "normalB":
+            self.SIMULATE_INPUT_LEN = 40
+            self.SIMULATE_TEST_LEN = 50
+        elif self.mode == "normalB60":
+            self.SIMULATE_INPUT_LEN = 80
+            self.SIMULATE_TEST_LEN = 50
+        elif self.mode == "normalBR":
+            self.SIMULATE_INPUT_LEN = 40
+            self.SIMULATE_TEST_LEN = 50
+        # Add conditions for other modes if needed
 
         self.fileName = fileName
         self.device = torch.device(device)
 
         if dataLength != None:
-            self.lib.createEmptyFile_sync(self.fileName.encode('utf-8'), dataLength)
+            lib.createEmptyFile_sync(self.fileName.encode('utf-8'), dataLength)
         
         if not os.path.exists(fileName) :
             raise Exception("file not found")
-        self.length = self.lib.getFileDataLength_sync(self.fileName.encode('utf-8'))
+        self.length = lib.getFileDataLength_sync(self.fileName.encode('utf-8'))
         pass
     
     def __len__(self):
         return self.length
     
     def putData(self, index:int, data):
-        return self.lib.putData_sync(self.fileName.encode('utf-8'), index, data)
+        lib = loadLib(self.mode)
+        return lib.putData_sync(self.fileName.encode('utf-8'), index, data)
 
     def __getitem__(self, index):
-        d_ori = self.lib.getFileData_sync(self.fileName.encode('utf-8'), index)
-        d_list_r = [None] * c.SIMULATE_INPUT_LEN
-        d_list_l = [None] * c.SIMULATE_INPUT_LEN
-        d_list_t = [None] * c.SIMULATE_TEST_LEN
-        d_list_ans = [None] * c.SIMULATE_TEST_LEN
-        for i in range(c.SIMULATE_INPUT_LEN):
+        lib = loadLib(self.mode)
+        d_ori = lib.getFileData_sync(self.fileName.encode('utf-8'), index)
+        d_list_r = [None] * self.SIMULATE_INPUT_LEN
+        d_list_l = [None] * self.SIMULATE_INPUT_LEN
+        d_list_t = [None] * self.SIMULATE_TEST_LEN
+        d_list_ans = [None] * self.SIMULATE_TEST_LEN
+        for i in range(self.SIMULATE_INPUT_LEN):
             d_list_r[i] = [d_ori.inputs[0].camera_x, d_ori.inputs[0].camera_y, d_ori.inputs[0].camera_z ,d_ori.inputs[0].line_rad_xy[i], d_ori.inputs[0].line_rad_xz[i]]
             d_list_l[i] = [d_ori.inputs[1].camera_x, d_ori.inputs[1].camera_y, d_ori.inputs[1].camera_z ,d_ori.inputs[1].line_rad_xy[i], d_ori.inputs[1].line_rad_xz[i]]
         
-        for i in range(c.SIMULATE_TEST_LEN):
+        for i in range(self.SIMULATE_TEST_LEN):
             d_list_ans[i] = [d_ori.curvePoints[i].x, d_ori.curvePoints[i].y, d_ori.curvePoints[i].z]
             d_list_t[i] = d_ori.curveTimestamps[i]
         
@@ -158,7 +203,6 @@ def testLoadData():
     print(a[1].curveTimestamps[0])
     print(a[1].curveTimestamps[1])
 if __name__ == "__main__":
-    c.set2Fitting()
     ds = BallDataSet_sync("ball_simulate_v2/dataset/medium_fit.train.bin")
     a = ds[0]
     b = ds[1]

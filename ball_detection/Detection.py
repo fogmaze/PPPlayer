@@ -38,46 +38,67 @@ def getBallProjectionPoint(homography_matrix, frame_size, x, y, w, h) :
     projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
     return projection
 
-def initDetection(source, save_name, calibrationFile="calibration", calibrationFile4pos = None, frame_size=(640,480), frame_rate=30, color_range="cr3", cam_pos=None, homography_matrix=None,  consider_poly=None, ini_img=None) :
-    common.replaceDir("ball_detection/result", save_name)
+def createConfig(source, save_name, calibrationFile="calibration", calibrationFile4pos = None, frame_size=(640,480), frame_rate=30, color_range="cr3", cam_pos=None, homography_matrix=None,  consider_poly=None, ini_img=None) :
+    common.replaceDir("configs", save_name)
     if cam_pos is not None and homography_matrix is not None :
-        with open("ball_detection/result/" + save_name + "/camera_position", "wb") as f :
+        with open("configs/" + save_name + "/camera_position", "wb") as f :
             pickle.dump(cam_pos, f)
-        with open("ball_detection/result/" + save_name + "/homography_matrix", "wb") as f :
+        with open("configs/" + save_name + "/homography_matrix", "wb") as f :
             pickle.dump(homography_matrix, f)
     else :
         if ini_img is not None :
             pos, ho = setup_camera_img(ini_img, calibrationFile if calibrationFile4pos is None else calibrationFile4pos)
         else :
             pos, ho = setup_camera(source, calibrationFile if calibrationFile4pos is None else calibrationFile4pos)
-        with open("ball_detection/result/" + save_name + "/camera_position", "wb") as f :
+        with open("configs/" + save_name + "/camera_position", "wb") as f :
             pickle.dump(pos, f)
-        with open("ball_detection/result/" + save_name + "/homography_matrix", "wb") as f :
+        with open("configs/" + save_name + "/homography_matrix", "wb") as f :
             pickle.dump(ho, f)
 
     if consider_poly is not None :
-        with open("ball_detection/result/" + save_name + "/consider_poly", "wb") as f :
+        with open("configs/" + save_name + "/consider_poly", "wb") as f :
             pickle.dump(consider_poly, f)
     else :
         poly = setup_poly(source)
-        with open("ball_detection/result/" + save_name + "/consider_poly", "wb") as f :
+        with open("configs/" + save_name + "/consider_poly", "wb") as f :
             pickle.dump(poly, f)
 
     # copy calibration file
     if os.path.exists(calibrationFile) :
-        shutil.copy(calibrationFile, "ball_detection/result/" + save_name + "/calibration")
+        shutil.copy(calibrationFile, "configs/" + save_name + "/calibration")
     else :
         raise Exception("calibration file not found")
     # copy color range file
     if os.path.exists(color_range) :
-        shutil.copy(color_range, "ball_detection/result/" + save_name + "/color_range")
+        shutil.copy(color_range, "configs/" + save_name + "/color_range")
     else :
         raise Exception("color range file not found")
-    with open("ball_detection/result/" + save_name + "/frame_rate", "wb") as f :
+    with open("configs/" + save_name + "/frame_rate", "wb") as f :
         pickle.dump(frame_rate, f)
-    with open("ball_detection/result/" + save_name + "/frame_size", "wb") as f :
+    with open("configs/" + save_name + "/frame_size", "wb") as f :
         pickle.dump(frame_size, f)
     
+
+class _bounce_checker :
+    def __init__(self):
+        self.movement = None
+        self.last_y = None
+    
+    def update(self, y) :
+        if self.movement == 1:
+            if y < self.last_y:
+                self.movement = None
+                self.last_y = None
+                return True
+        elif self.movement == -1 :
+            if y > self.last_y:
+                self.movement = None
+                self.last_y = None
+                return True
+        elif self.movement == None and self.last_y is not None:
+            self.movement = 1 if y - self.last_y > 0 else -1
+        self.last_y = y
+        return False
 
 class Detection :
     #save test frames
@@ -99,7 +120,7 @@ class Detection :
                 mode                 = None, 
                 queue                = None,
                 conn                 = None,
-                load_from_result     = None,
+                config               = None,
                 consider_poly        = None,
                 ) :
 
@@ -115,19 +136,19 @@ class Detection :
         self.consider_poly = None
         self.camera_info = None
         
-        if load_from_result is not None :
-            if not os.path.exists(os.path.join("ball_detection/result", load_from_result)) :
-                raise Exception("load_from_result dir not found")
-            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "frame_size")) :
-                self.frame_size = load(os.path.join("ball_detection/result", load_from_result, "frame_size"))
-            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "frame_rate")) :
-                self.frame_rate = load(os.path.join("ball_detection/result", load_from_result, "frame_rate"))
-            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "color_range")) :
-                self.range = load(os.path.join("ball_detection/result", load_from_result, "color_range"))
-            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "consider_poly")) :
-                self.consider_poly = load(os.path.join("ball_detection/result", load_from_result, "consider_poly"))
-            if os.path.exists(os.path.join("ball_detection/result", load_from_result, "camera_info")) :
-                self.camera_info = load(os.path.join("ball_detection/result", load_from_result, "camera_info"))
+        if config is not None :
+            if not os.path.exists(os.path.join("configs", config)) :
+                raise Exception("config dir not found")
+            if os.path.exists(os.path.join("configs", config, "frame_size")) :
+                self.frame_size = load(os.path.join("configs", config, "frame_size"))
+            if os.path.exists(os.path.join("configs", config, "frame_rate")) :
+                self.frame_rate = load(os.path.join("configs", config, "frame_rate"))
+            if os.path.exists(os.path.join("configs", config, "color_range")) :
+                self.range = load(os.path.join("configs", config, "color_range"))
+            if os.path.exists(os.path.join("configs", config, "consider_poly")) :
+                self.consider_poly = load(os.path.join("configs", config, "consider_poly"))
+            if os.path.exists(os.path.join("configs", config, "camera_info")) :
+                self.camera_info = load(os.path.join("configs", config, "camera_info"))
 
         self.pid = os.getpid()
 
@@ -160,12 +181,9 @@ class Detection :
         else :
             raise Exception("frame size is not supported")
 
-        if type(source) == str and source.replace(".", "").isdigit() :
-            self.cam = CameraReceiver(source)
-        elif type(source) == str or type(source) == int:
-            self.cam = cv2.VideoCapture(source)
-        elif type(source) == CameraReceiver :
-            self.cam = source
+        if type(source) == str or type(source) == int:
+            #self.cam = cv2.VideoCapture(source)
+            pass
 
         self.camera_position = calculateCameraPosition_table(self.camera_info)
         self.inmtx = self.camera_info.inmtx
@@ -175,12 +193,12 @@ class Detection :
 
         self.mode = mode
         if self.mode == "analysis" or self.mode == "dual_analysis":
-            common.replaceDir("ball_detection/result", save_name)
-            self.video_writer_all = cv2.VideoWriter("ball_detection/result/" + save_name + "/all.mp4", self.fourcc, self.frame_rate, self.frame_size)
-            self.video_writer_bad = cv2.VideoWriter("ball_detection/result/" + save_name + "/bad.mp4", self.fourcc, self.frame_rate, self.frame_size)
-            self.video_writer_tagged = cv2.VideoWriter("ball_detection/result/" + save_name + "/tagged.mp4", self.fourcc, self.frame_rate, self.frame_size)
-            self.video_writer_all_tagged = cv2.VideoWriter("ball_detection/result/" + save_name + "/all_tagged.mp4", self.fourcc, self.frame_rate, self.frame_size)
-            self.detection_csv = open("ball_detection/result/" + save_name + "/detection.csv", "w", newline='')
+            common.replaceDir("results", save_name)
+            self.video_writer_all = cv2.VideoWriter("results/" + save_name + "/all.mp4", self.fourcc, self.frame_rate, self.frame_size)
+            self.video_writer_bad = cv2.VideoWriter("results/" + save_name + "/bad.mp4", self.fourcc, self.frame_rate, self.frame_size)
+            self.video_writer_tagged = cv2.VideoWriter("results/" + save_name + "/tagged.mp4", self.fourcc, self.frame_rate, self.frame_size)
+            self.video_writer_all_tagged = cv2.VideoWriter("results/" + save_name + "/all_tagged.mp4", self.fourcc, self.frame_rate, self.frame_size)
+            self.detection_csv = open("results/" + save_name + "/detection.csv", "w", newline='')
             self.detection_csv_writer = csv.writer(self.detection_csv)
             self.detection_csv_writer.writerow(["iter", "id", "x", "y", "h", "w", "cam_x", "cam_y", "cam_z","rxy", "rxz"])
             # pickle camera position and homography matrix
@@ -189,21 +207,26 @@ class Detection :
                 raise Exception("dual_analysis mode need pipe, cam_pos and homography_matrix but {} {} {}".format(queue, self.camera_position, self.homography_matrix))
             self.queue = queue
             self.conn = conn
+        if self.mode =="caculate_bounce":
+            self.bounce_checker = _bounce_checker()
+            self.conn = conn
+        
+
         
         if self.camera_info is not None :
-            with open("ball_detection/result/" + save_name + "/camera_info", "wb") as f :
+            with open("results/" + save_name + "/camera_info", "wb") as f :
                 pickle.dump(self.camera_info, f)
         if self.range is not None :
-            with open("ball_detection/result/" + save_name + "/color_range", "wb") as f :
+            with open("results/" + save_name + "/color_range", "wb") as f :
                 pickle.dump(self.range, f)
         if self.frame_rate is not None :
-            with open("ball_detection/result/" + save_name + "/frame_rate", "wb") as f :
+            with open("results/" + save_name + "/frame_rate", "wb") as f :
                 pickle.dump(self.frame_rate, f)
         if self.frame_size is not None :
-            with open("ball_detection/result/" + save_name + "/frame_size", "wb") as f :
+            with open("results/" + save_name + "/frame_size", "wb") as f :
                 pickle.dump(self.frame_size, f)
         if self.consider_poly is not None :
-            with open("ball_detection/result/" + save_name + "/consider_poly", "wb") as f :
+            with open("results/" + save_name + "/consider_poly", "wb") as f :
                 pickle.dump(self.consider_poly, f)
             
     def __del__(self) :
@@ -270,7 +293,7 @@ class Detection :
         for i in range(fromFrameIndex) :
             self.getNextFrame()
         
-        if self.mode == "dual_analysis" or self.mode == "dual_run" :
+        if self.mode == "dual_analysis" or self.mode == "dual_run" or self.mode == "caculate_bounce":
             self.conn.send("ready")
             # wait for main process to send start signal
             while True :
@@ -279,8 +302,7 @@ class Detection :
                     if msg == "start" :
                         break
         
-        if type(self.cam) == CameraReceiver :
-            self.cam.connect()
+        self.cam = cv2.VideoCapture(self.source)
         while(True) :
             ret, frame = self.getNextFrame()
             if ret :
@@ -380,6 +402,10 @@ class Detection :
                             self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
                         elif self.mode == "compute":
                             self.data.append([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
+                        elif self.mode == "caculate_bounce" :
+                            if self.bounce_checker.update(y+h//2) :
+                                print("bounce")
+                                self.data.append(iteration)
                 else :
                     if self.mode == "analysis" or self.mode == "dual_analysis":
                         self.detection_csv_writer.writerow([iteration, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
@@ -408,7 +434,7 @@ class Detection :
                     self.conn.send("stop")
                 break
             # check conn from main process
-            if self.mode == "dual_analysis" or self.mode == "dual_run":
+            if self.mode == "dual_analysis" or self.mode == "dual_run" or self.mode == "caculate_bounce":
                 if self.conn.poll() :
                     msg = self.conn.recv()
                     if msg == "stop" :
@@ -429,16 +455,11 @@ class Detection :
                 while time.perf_counter() - this_iter_time < 1/self.frame_rate :
                     pass
             
-            last_iter_time = this_iter_time
-
-        
         if type(self.cam) == CameraReceiver :
             self.cam.close()
         
-        
         if self.mode == "dual_analysis" or self.mode == "dual_run":
             self.conn.send("stop")
-
         return iteration
 
 class Detection_img(Detection) :
@@ -607,10 +628,10 @@ def merge_rectangles(rectangles):
 if __name__ == "__main__" :
     #ini = cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE)
     ini = cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE)
-    #initDetection(0, "s480p30_a15", "calibration", consider_poly=load("ball_detection/result/s480p30_a50/consider_poly"))
+    #initDetection(0, "s480p30_a15", "calibration", consider_poly=load("result/s480p30_a50/consider_poly"))
     #initDetection(0, "s480p30_a15", "calibration", consider_poly=setup_poly(0))
 
-    dect = Detection(source="ball_detection/result/c1_20/all.mp4", save_name="noise",  mode="analysis", load_from_result="480p30_r4_4", frame_size=(1280, 720))
+    dect = Detection(source="results/c1_20/all.mp4", save_name="noise",  mode="analysis", config="480p30_r4_4", frame_size=(1280, 720))
     dect.runDetection(debugging=False, realTime=False)
     exit()
     detector1 = Detection()
