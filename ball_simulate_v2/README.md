@@ -6,9 +6,9 @@ This script is designed for training and testing a ball simulation model using v
 
 ## Usage
 
-   '''bash
+   ```bash
    python3 ball_simulate_v2/train.py \[args\]
-   ''' 
+   ``` 
 
 ### Command-line Arguments
 - **-lr, --learning_rate**: Learning rate for the training process (default: 0.001).
