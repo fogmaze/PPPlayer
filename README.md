@@ -2,6 +2,46 @@
 
 This is a project for ping-pong detection, ping-pong prediction, ...
 
+# Setup & Dependencies
+
+***This project is mainly run on Ubuntu. Things will not perform as expected if you are not running from a Debian based OS***  
+First, clone the project using git or just download the zip file and extract it. And you will have to install the nessesary python package in `requirements.txt` with pip3 or whatever you want. For example:
+   ```bash
+   pip3 install -r requirements.txt
+   ```
+
+# Ball Simulation
+
+## Introduction
+This script is designed for simulating ball data with various configurations. It provides command-line arguments to customize simulation parameters and operations.
+
+## Usage
+
+### Command-line Arguments
+- **--GUI**: Enable GUI mode (default: False).
+- **-l**: Length of the simulated data (default: 1000).
+- **-n**: Name for the output files (default: "nb60test"), which will be stored at [/ball_simulate_v2/dataset](/ball_simulate_v2/dataset/). 
+- **--mode**: Simulation mode ("default", "fit", "ne", "predict", "normal", "normalB", "normalB60", "normalBR") (default: "normalB60").
+- **--merge**: Merge two datasets into one (default: False).
+- **--merge_a**: File name of the first dataset to merge (default: "train.bin").
+- **--merge_b**: File name of the second dataset to merge (default: "train.bin").
+
+### Examples
+1. Simulate data with recommend length and name:
+   ```bash
+   python script.py -l 1000000 -n medium --mode normalBR
+   ```
+   In the study, we use the length of 1000000 for the medium dataset and 10000000 for the huge dataset. Meanwhile, we chose the mode `normalBR` to process the simulation as the most realistic mode.
+
+## Modes
+- **fit**: Set the simulation mode to fitting.
+- **ne**: Set the simulation mode to no error.
+- **predict**: Set the simulation mode to prediction.
+- **normal**: Set the simulation mode to normal.
+- **normalB**: Set the simulation mode to normal with additional configuration 'B'.
+- **normalB60**: Set the simulation mode to normal with configuration 'B60'.
+- **normalBR**: Set the simulation mode to normal with configuration 'BR'.
+
 # Ping Pong Prediction
 
 Predict the ball by deep learning model.
