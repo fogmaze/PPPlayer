@@ -27,9 +27,9 @@ This script is designed for simulating ball data with various configurations. It
 - **--merge_b**: File name of the second dataset to merge (default: "train.bin").
 
 ### Examples
-1. Simulate data with recommend length and name:
+Simulate data with recommend length and name:
    ```bash
-   python script.py -l 1000000 -n medium --mode normalBR
+   python3 ball_simulate_v2/simulate.py -l 1000000 -n medium --mode normalBR
    ```
    In the study, we use the length of 1000000 for the medium dataset and 10000000 for the huge dataset. Meanwhile, we chose the mode `normalBR` to process the simulation as the most realistic mode.
 
@@ -80,12 +80,5 @@ Make sure you run the code in the root of the project
 - **normalB**: Set the model mode to normal with additional configuration 'B'.
 - **normalB60**: Set the model mode to normal with configuration 'B60'.
 - **normalBR**: Set the model mode to normal with configuration 'BR'.
-
-### Dataset
-If the "ball_simulate_v2/dataset" directory does not exist, it will be created automatically.
-
-
-## Dependencies
-- Ensure that the required dependencies are installed before running the script.
 
 Feel free to customize the script according to your specific use case and requirements.
