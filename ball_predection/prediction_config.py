@@ -9,6 +9,7 @@ from ball_detection.Detection import Detection, DetectionConfig
 
 def _sync_process(source, config:DetectionConfig, s) :
     d = Detection(source, config=config, conn=s)
+    d.runDetection()
 
 def createPredictionConfig(source:Tuple, detectionConfig:Tuple[DetectionConfig, DetectionConfig]) :
     # create four Pipes for communication between processes
