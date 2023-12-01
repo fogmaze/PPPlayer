@@ -127,8 +127,33 @@ def runDec(s, sub_name, detection_load, q, c2s, save_name) :
     print("start")
     
     dec.runDetection()
-    
-    
+
+class PredictionConfig :
+    def __init__(self) :
+        self.detectionConfigs:Tuple[Detection.DetectionConfig, Detection.DetectionConfig] = (None, None)
+        self.lag = 0
+        self.loadName = None
+    def load(self, configName) :
+        self.loadName = configName
+        if os.path.exists(os.path.join("configs", configName, "cam1")) :
+            c1 = Detection.DetectionConfig().load(os.path.exists(os.path.join("configs", configName, "cam1")))
+        else :
+            raise Exception("config not found")
+        if os.path.exists(os.path.join("configs", configName, "cam2")) :
+            c2 = Detection.DetectionConfig().load(os.path.exists(os.path.join("configs", configName, "cam2")))
+        self.detectionConfigs = (c1, c2)
+        if os.path.exists(os.path.join("configs", configName, "lag")) :
+            with open(os.path.join("configs", configName, "lag"), "r") as f :
+                self.lag = int(f.read())
+
+    def save(self, configName) :
+        if not os.path.exists(os.path.join("configs", configName)) :
+            os.mkdir(os.path.join("configs", configName))
+        self.detectionConfigs[0].save(os.path.join(configName, "cam1"))
+        self.detectionConfigs[1].save(os.path.join(configName, "cam2"))
+        with open(os.path.join("configs", configName, "lag"), "w") as f :
+            f.write(str(self.lag))
+            
 def predict(
         model_name:str,
         weight,
