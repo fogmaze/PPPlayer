@@ -38,47 +38,6 @@ def getBallProjectionPoint(homography_matrix, frame_size, x, y, w, h) :
     projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
     return projection
 
-def createConfig(source, save_name, calibrationFile="calibration", calibrationFile4pos = None, frame_size=(640,480), frame_rate=30, color_range="cr3", cam_pos=None, homography_matrix=None,  consider_poly=None, ini_img=None) :
-    common.replaceDir("configs", save_name)
-    if cam_pos is not None and homography_matrix is not None :
-        with open("configs/" + save_name + "/camera_position", "wb") as f :
-            pickle.dump(cam_pos, f)
-        with open("configs/" + save_name + "/homography_matrix", "wb") as f :
-            pickle.dump(homography_matrix, f)
-    else :
-        if ini_img is not None :
-            pos, ho = setup_camera_img(ini_img, calibrationFile if calibrationFile4pos is None else calibrationFile4pos)
-        else :
-            pos, ho = setup_camera(source, calibrationFile if calibrationFile4pos is None else calibrationFile4pos)
-        with open("configs/" + save_name + "/camera_position", "wb") as f :
-            pickle.dump(pos, f)
-        with open("configs/" + save_name + "/homography_matrix", "wb") as f :
-            pickle.dump(ho, f)
-
-    if consider_poly is not None :
-        with open("configs/" + save_name + "/consider_poly", "wb") as f :
-            pickle.dump(consider_poly, f)
-    else :
-        poly = setup_poly(source)
-        with open("configs/" + save_name + "/consider_poly", "wb") as f :
-            pickle.dump(poly, f)
-
-    # copy calibration file
-    if os.path.exists(calibrationFile) :
-        shutil.copy(calibrationFile, "configs/" + save_name + "/calibration")
-    else :
-        raise Exception("calibration file not found")
-    # copy color range file
-    if os.path.exists(color_range) :
-        shutil.copy(color_range, "configs/" + save_name + "/color_range")
-    else :
-        raise Exception("color range file not found")
-    with open("configs/" + save_name + "/frame_rate", "wb") as f :
-        pickle.dump(frame_rate, f)
-    with open("configs/" + save_name + "/frame_size", "wb") as f :
-        pickle.dump(frame_size, f)
-    
-
 class _bounce_checker :
     def __init__(self):
         self.movement = None
@@ -100,6 +59,86 @@ class _bounce_checker :
         self.last_y = y
         return False
 
+class DetectionConfig :
+    def __init__(self) :
+        self.frame_rate = 30
+        self.frame_size = (640, 480)
+        self.camera_position = None
+        self.homography_matrix = None
+        self.range = None
+        self.consider_poly = None
+        self.camera_info:TableInfo = None
+        self.upper = None
+        self.lower = None
+        self.configFileName = None
+
+    def load(self, config) :
+        self.configFileName = config
+        if not os.path.exists(os.path.join("configs", config)) :
+            raise Exception("config dir not found")
+        if os.path.exists(os.path.join("configs", config, "frame_size")) :
+            self.frame_size = load(os.path.join("configs", config, "frame_size"))
+        if os.path.exists(os.path.join("configs", config, "frame_rate")) :
+            self.frame_rate = load(os.path.join("configs", config, "frame_rate"))
+        if os.path.exists(os.path.join("configs", config, "color_range")) :
+            self.range = load(os.path.join("configs", config, "color_range"))
+        else :
+            raise Exception("color range file not found")
+        if os.path.exists(os.path.join("configs", config, "consider_poly")) :
+            self.consider_poly = load(os.path.join("configs", config, "consider_poly"))
+        if os.path.exists(os.path.join("configs", config, "camera_info")) :
+            self.camera_info = load(os.path.join("configs", config, "camera_info"))
+
+        if self.consider_poly is None :
+            self.consider_poly = np.array([[0, 0], [self.frame_size[0], 0], [self.frame_size[0], self.frame_size[1]], [0, self.frame_size[1]]])
+
+        self.upper = self.range.upper
+        self.lower = self.range.lower
+
+        if self.camera_info is not None :
+            self.camera_position = calculateCameraPosition_table(self.camera_info)
+            self.inmtx = self.camera_info.inmtx
+            w =  self.camera_info.width
+            h =  self.camera_info.height
+            self.homography_matrix = cv2.findHomography(self.camera_info.corners, np.float32([[-w/2, h/2], [w/2, h/2], [w/2, -h/2], [-w/2, -h/2]]))[0]
+
+    def save(self, save_name) :
+        if self.camera_info is not None :
+            with open("configs/" + save_name + "/camera_info", "wb") as f :
+                pickle.dump(self.camera_info, f)
+        if self.range is not None :
+            with open("configs/" + save_name + "/color_range", "wb") as f :
+                pickle.dump(self.range, f)
+        if self.frame_rate is not None :
+            with open("configs/" + save_name + "/frame_rate", "wb") as f :
+                pickle.dump(self.frame_rate, f)
+        if self.frame_size is not None :
+            with open("configs/" + save_name + "/frame_size", "wb") as f :
+                pickle.dump(self.frame_size, f)
+        if self.consider_poly is not None :
+            with open("/" + save_name + "/consider_poly", "wb") as f :
+                pickle.dump(self.consider_poly, f)
+
+def createConfig(source, save_name, frame_size=(640,480), frame_rate=30, color_range="cr3", camera_info=None, consider_poly=None, ini_img=None) :
+    common.replaceDir("configs", save_name)
+    config = DetectionConfig()
+    
+    if camera_info is not None:
+        config.camera_info = camera_info
+
+    if consider_poly is not None :
+        config.consider_poly = consider_poly
+    else :
+        poly = setup_poly(source)
+        config.consider_poly = poly
+    if os.path.exists(color_range) :
+        config.range = load(color_range)
+    else :
+        raise Exception("color range file not found")
+    config.frame_rate = frame_rate
+    config.frame_size = frame_size
+
+
 class Detection :
     #save test frames
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -112,16 +151,16 @@ class Detection :
 
     def __init__(self, 
                 source, 
-                cameraInfo:TableInfo = None,
-                frame_size           = None, 
-                frame_rate           = None, 
-                color_range          = None, 
-                save_name            = "default", 
-                mode                 = None, 
-                queue                = None,
-                conn                 = None,
-                config               = None,
-                consider_poly        = None,
+                frame_size             = None, 
+                frame_rate             = None, 
+                color_range            = None, 
+                save_name              = "default", 
+                mode                   = None, 
+                queue                  = None,
+                conn                   = None,
+                config:DetectionConfig = None,
+                camera_info            = None,
+                consider_poly          = None,
                 ) :
 
         print("source: ",source)
@@ -132,23 +171,15 @@ class Detection :
         self.camera_position = None
         self.homography_matrix = None
         self.range = None
-        self.inmtx = None
         self.consider_poly = None
-        self.camera_info = None
         
         if config is not None :
-            if not os.path.exists(os.path.join("configs", config)) :
-                raise Exception("config dir not found")
-            if os.path.exists(os.path.join("configs", config, "frame_size")) :
-                self.frame_size = load(os.path.join("configs", config, "frame_size"))
-            if os.path.exists(os.path.join("configs", config, "frame_rate")) :
-                self.frame_rate = load(os.path.join("configs", config, "frame_rate"))
-            if os.path.exists(os.path.join("configs", config, "color_range")) :
-                self.range = load(os.path.join("configs", config, "color_range"))
-            if os.path.exists(os.path.join("configs", config, "consider_poly")) :
-                self.consider_poly = load(os.path.join("configs", config, "consider_poly"))
-            if os.path.exists(os.path.join("configs", config, "camera_info")) :
-                self.camera_info = load(os.path.join("configs", config, "camera_info"))
+            self.frame_rate = config.frame_rate
+            self.frame_size = config.frame_size
+            self.camera_position = config.camera_position
+            self.homography_matrix = config.homography_matrix
+            self.range = config.range
+            self.consider_poly = config.consider_poly
 
         self.pid = os.getpid()
 
@@ -157,8 +188,6 @@ class Detection :
         self.consider_poly = consider_poly if consider_poly is not None else self.consider_poly
         if self.consider_poly is None :
             self.consider_poly = np.array([[0, 0], [self.frame_size[0], 0], [self.frame_size[0], self.frame_size[1]], [0, self.frame_size[1]]])
-        if type(cameraInfo) == TableInfo :
-            self.camera_info = cameraInfo
         if type(color_range) == str :
             self.range = load(color_range)
         elif type(color_range) == ColorRange :
@@ -185,11 +214,11 @@ class Detection :
             #self.cam = cv2.VideoCapture(source)
             pass
 
-        self.camera_position = calculateCameraPosition_table(self.camera_info)
-        self.inmtx = self.camera_info.inmtx
-        w =  self.camera_info.width
-        h =  self.camera_info.height
-        self.homography_matrix = cv2.findHomography(self.camera_info.corners, np.float32([[-w/2, h/2], [w/2, h/2], [w/2, -h/2], [-w/2, -h/2]]))[0]
+        if camera_info is not None:
+            self.camera_position = calculateCameraPosition_table(camera_info)
+            w =  camera_info.width
+            h =  camera_info.height
+            self.homography_matrix = cv2.findHomography(camera_info.corners, np.float32([[-w/2, h/2], [w/2, h/2], [w/2, -h/2], [-w/2, -h/2]]))[0]
 
         self.mode = mode
         if self.mode == "analysis" or self.mode == "dual_analysis":
@@ -202,6 +231,9 @@ class Detection :
             self.detection_csv_writer = csv.writer(self.detection_csv)
             self.detection_csv_writer.writerow(["iter", "id", "x", "y", "h", "w", "cam_x", "cam_y", "cam_z","rxy", "rxz"])
             # pickle camera position and homography matrix
+            if config.configFileName is not None if config is not None else False:
+                with open("results/" + save_name + "/config", "w") as f :
+                    f.write(config.configFileName)
         if self.mode == "dual_analysis" or self.mode == "dual_run":
             if queue is None or self.camera_position is None or self.homography_matrix is None:
                 raise Exception("dual_analysis mode need pipe, cam_pos and homography_matrix but {} {} {}".format(queue, self.camera_position, self.homography_matrix))
@@ -210,24 +242,6 @@ class Detection :
         if self.mode =="caculate_bounce":
             self.bounce_checker = _bounce_checker()
             self.conn = conn
-        
-
-        
-        if self.camera_info is not None :
-            with open("results/" + save_name + "/camera_info", "wb") as f :
-                pickle.dump(self.camera_info, f)
-        if self.range is not None :
-            with open("results/" + save_name + "/color_range", "wb") as f :
-                pickle.dump(self.range, f)
-        if self.frame_rate is not None :
-            with open("results/" + save_name + "/frame_rate", "wb") as f :
-                pickle.dump(self.frame_rate, f)
-        if self.frame_size is not None :
-            with open("results/" + save_name + "/frame_size", "wb") as f :
-                pickle.dump(self.frame_size, f)
-        if self.consider_poly is not None :
-            with open("results/" + save_name + "/consider_poly", "wb") as f :
-                pickle.dump(self.consider_poly, f)
             
     def __del__(self) :
         if self.mode == "analysis" or self.mode == "dual_analysis":
@@ -511,10 +525,6 @@ def setup_poly(source) :
     _poly = []
     _poly_now_pos = (0, 0)
     return ret
-
-    
-
-
 
 def setup_camera(source, calibrationFile="calibration") :
     pos = None

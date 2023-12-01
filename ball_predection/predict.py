@@ -132,8 +132,8 @@ def runDec(s, sub_name, detection_load, q, c2s, save_name) :
 def predict(
         model_name:str,
         weight,
+        config,
         source                   = (0, 1),
-        detection_load           = (None, None) ,
         save_name                = "dual_default", 
         mode                     = "normalB",
         visualization            = True
