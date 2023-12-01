@@ -33,10 +33,7 @@ def _caculateSyncTime(a, b) :
             res = c_res
     return res
 
-
-
-
-def createPredictionConfig(source:Tuple, detectionConfig:Tuple[DetectionConfig, DetectionConfig]) :
+def getPredictionLagframes(source:Tuple, detectionConfig:Tuple[DetectionConfig, DetectionConfig]) :
     # create four Pipes for communication between processes
     # 0: detection -> prediction
     # 1: prediction -> detection
@@ -78,11 +75,12 @@ def createPredictionConfig(source:Tuple, detectionConfig:Tuple[DetectionConfig, 
 
     data1 = prediction_to_detection1.recv()
     data2 = prediction_to_detection2.recv()   
-    
-
+    if abs(len(data1) - len(data2)) > 2 :
+        raise Exception("bounce timestamps do not match")
+    lag = _caculateSyncTime(data1, data2)
+    return lag
 
 if __name__ == "__main__" :
     a = [58, 78, 93, 149, 182, 273]
     b = [7, 58, 82, 97, 153, 186]
-
     print(_caculateSyncTime(a, b))
