@@ -2,6 +2,8 @@ import os
 import random
 
 def replaceDir(base_path, dir_name) :
+    if not os.path.isdir(base_path) :
+        os.mkdir(base_path)
     if dir_name[-1] == '/' or dir_name[-1] == '\\':
         dirname = dir_name[:-1]
     else :

@@ -1,3 +1,4 @@
+import argparse as ap
 import matplotlib.pyplot as plt
 import time
 import torch
@@ -14,11 +15,9 @@ import ball_detection.Detection as Detection
 from ball_simulate_v2.models import MODEL_MAP
 import ball_simulate_v2.models as models
 import core.common as common
-import camera_calibrate.utils as utils
 from ball_detection.ColorRange import *
 from camera_reciever.CameraReceiver import CameraReceiver
-import core.Equation3d as equ
-from camera_calibrate.utils import TableInfo
+import ball_predection.sync as sync
 
 def getHitPointInformation(_traj_unnormed:torch.Tensor) :
     END = 2.74/2
@@ -133,39 +132,76 @@ class PredictionConfig :
         self.detectionConfigs:Tuple[Detection.DetectionConfig, Detection.DetectionConfig] = (None, None)
         self.lag = 0
         self.loadName = None
+        self.weight = None
+        self.model_name = None
+        self.mode = None
+
     def load(self, configName) :
         self.loadName = configName
         if os.path.exists(os.path.join("configs", configName, "cam1")) :
-            c1 = Detection.DetectionConfig().load(os.path.exists(os.path.join("configs", configName, "cam1")))
+            c1 = Detection.DetectionConfig()
+            c1.load(os.path.join(configName, "cam1"))
         else :
             raise Exception("config not found")
+
         if os.path.exists(os.path.join("configs", configName, "cam2")) :
-            c2 = Detection.DetectionConfig().load(os.path.exists(os.path.join("configs", configName, "cam2")))
+            c2 = Detection.DetectionConfig()
+            c2.load(os.path.join(configName, "cam2"))
+        else :
+            raise Exception("config not found")
+
         self.detectionConfigs = (c1, c2)
         if os.path.exists(os.path.join("configs", configName, "lag")) :
             with open(os.path.join("configs", configName, "lag"), "r") as f :
                 self.lag = int(f.read())
 
+        with open(os.path.join("configs", configName, "weight"), "r") as f :
+            self.weight = f.read()
+
+        with open(os.path.join("configs", configName, "model_name"), "r") as f :
+            self.model_name = f.read()
+            
+        with open(os.path.join("configs", configName, "mode"), "r") as f :
+            self.mode = f.read()
+
     def save(self, configName) :
         if not os.path.exists(os.path.join("configs", configName)) :
             os.mkdir(os.path.join("configs", configName))
+        if not os.path.exists(os.path.join("configs", configName, "cam1")) :
+            os.mkdir(os.path.join("configs", configName, "cam1"))
+        if not os.path.exists(os.path.join("configs", configName, "cam2")) :
+            os.mkdir(os.path.join("configs", configName, "cam2"))
         self.detectionConfigs[0].save(os.path.join(configName, "cam1"))
         self.detectionConfigs[1].save(os.path.join(configName, "cam2"))
         with open(os.path.join("configs", configName, "lag"), "w") as f :
             f.write(str(self.lag))
+        with open(os.path.join("configs", configName, "weight"), "w") as f :
+            f.write(str(self.weight))
+        with open(os.path.join("configs", configName, "model_name"), "w") as f :
+            f.write(str(self.model_name))
+        with open(os.path.join("configs", configName, "mode"), "w") as f :
+            f.write(str(self.mode))
+
+def createPredictionConfig(source:Tuple, save_name, detectionConfig:Tuple[Detection.DetectionConfig, Detection.DetectionConfig], weight, model_name="medium", mode = "normalB") :
+    common.replaceDir("configs", save_name)
+    config = PredictionConfig()
+    config.detectionConfigs = detectionConfig
+    config.lag = sync.getPredictionLagframes(source, detectionConfig)
+    config.weight = weight
+    config.model_name = model_name
+    config.mode = mode
+    config.save(save_name)
             
 def predict(
-        model_name:str,
-        weight,
-        config,
+        config:PredictionConfig,
         source                   = (0, 1),
         save_name                = "dual_default", 
-        mode                     = "normalB",
         visualization            = True
         ) :
 
 
     SPEED_UP = False
+    mode = config.mode
     if mode != "default":
         if mode == "fit" :
             Constants.set2Fitting()
@@ -185,17 +221,18 @@ def predict(
             raise Exception("mode error")
 
     # load model
-    model:models.ISEFWINNER_BASE = MODEL_MAP[model_name](device="cuda:0")
+    model:models.ISEFWINNER_BASE = MODEL_MAP[config.model_name](device="cuda:0")
     model.cuda()
-    model.load_state_dict(torch.load(weight))
+    model.load_state_dict(torch.load(os.path.join("ball_simulate_v2/model_saves/",config.weight)))
     model.eval()
     Constants.set2Normal()
     NORMED_PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)
     Constants.normer.norm_t_tensor(NORMED_PREDICT_T)
 
     
-    common.replaceDir("ball_detection/result/", save_name)
-    pf = open("ball_detection/result/" + save_name + "/pred.csv", "w")
+    print(save_name)
+    common.replaceDir("results/", save_name)
+    pf = open("results/" + save_name + "/pred.csv", "w")
     pfw = csv.writer(pf)
     pfw.writerow(["which camera", "frame", "hp_x", "hp_y", "hp_z", "hp_t", "x", "y", "z"])
 
@@ -213,11 +250,11 @@ def predict(
             source1 = CameraReceiver(source[0])
             source2 = CameraReceiver(source[1])
     elif type(source) == str :
-        source1 = os.path.join("ball_detection/result", source + "/cam1/all.mp4")
-        source2 = os.path.join("ball_detection/result", source + "/cam2/all.mp4")
+        source1 = os.path.join("results", source + "/cam1/all.mp4")
+        source2 = os.path.join("results", source + "/cam2/all.mp4")
 
-    p1 = mp.Process(target=runDec, args=(source1, "/cam1", detection_load[0], queue, c12s, save_name))
-    p2 = mp.Process(target=runDec, args=(source2, "/cam2", detection_load[1], queue, c22s, save_name))
+    p1 = mp.Process(target=runDec, args=(source1, "/cam1", config.detectionConfigs[0], queue, c12s, save_name))
+    p2 = mp.Process(target=runDec, args=(source2, "/cam2", config.detectionConfigs[1], queue, c22s, save_name))
 
     lines1 = LineCollector_hor()
     lines2 = LineCollector_hor()
@@ -230,8 +267,8 @@ def predict(
     tra_time = 0
     tra_iter = 0
 
-    p2.start()
     p1.start()
+    p2.start()
 
     while True :
         if c12d.poll() :
@@ -310,17 +347,42 @@ def predict(
     p1.join()
     p2.join()
     if not process_time_iter == 0 :
-        process_time /= process_time_iter
+        process_time /= process_time_iter 
         print("mean process time:", process_time, "; it/s:", process_time_iter / process_time)
         print("mean tra time:", tra_time / tra_iter, "; it/s:", tra_iter / tra_time)
     pf.close()
 
     # display
     if visualization :
-        display.visualizePrediction_video(os.path.join("ball_detection/result", save_name), fps=30)
+        display.visualizePrediction_video(os.path.join("results", save_name), fps=30)
 
 if __name__ == "__main__" :
-    #ini = (cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE), cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE))
+    parser = ap.ArgumentParser()
+    parser.add_argument("-cc", "--create_config", help="use this flag to create config. otherwise use config to run prediction", action="store_true", default=False)
+    parser.add_argument("-c", "--config", help="config name (nessesary)")
+    parser.add_argument("-s", "--source", help="source (nessesary)", nargs=2)
+    parser.add_argument("-dc", "--detection_config", help="detection config name. (only needed when creating config)", nargs=2)
+    parser.add_argument("-m", "--model", help="model name. (only needed when creating configs)", default="medium")
+    parser.add_argument("-w", "--weight", help="weight path (only needed when creating configs)", default="normalB/epoch_29/weight.pt")
+    parser.add_argument("--mode", help="mode", default="normalB")
+    parser.add_argument("-nv", "--non_visualization", help="Skip visualize the result when finished", action="store_true", default=False)
+
+    args = parser.parse_args()
+    source = (
+        args.source[0] if not args.source[0].isnumeric() else int(args.source[0]),
+        args.source[1] if not args.source[1].isnumeric() else int(args.source[1])
+    )
+    if args.create_config :
+        dc = (Detection.DetectionConfig(), Detection.DetectionConfig())
+        dc[0].load(args.detection_config[0])
+        dc[1].load(args.detection_config[1])
+        createPredictionConfig(source, args.config, dc, args.weight, args.model, args.mode)
+    else :
+        config = PredictionConfig()
+        config.load(args.config)
+        predict(config, source, args.config, not args.non_visualization)
+
+    exit()
 
     #predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", frame_size=(640, 480),calibrationFiles_initial=("calibration", "calibration"), calibrationFiles=("calibration_hd", "calibration"), color_ranges="cr3", source=("exp/3.mp4", "exp/4.mp4"), visualization=True, initial_frames_gray=ini)
     predict("medium", "ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt", ("exp/a50.mp4", "exp/a15.mp4"), ("s480p30_a50_", "s480p30_a15_"), "dual_test_annoy", visualization=True, )

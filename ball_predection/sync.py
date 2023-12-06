@@ -9,8 +9,8 @@ sys.path.append(os.getcwd())
 from ball_detection.Detection import Detection, DetectionConfig
 
 def _sync_process(source, config:DetectionConfig, s) :
-    d = Detection(source, config=config, conn=s)
-    d.runDetection()
+    d = Detection(source, mode="caculate_bounce", config=config, conn=s)
+    d.runDetection(realTime=True, debugging=False)
     s.send(d.data)
 
 def _caculateSyncTime(a, b) :
@@ -20,6 +20,8 @@ def _caculateSyncTime(a, b) :
             c.append((a[i:-j if j == 1 else len(a)], b[k:-l if l == 1 else len(b)]))
     res = 20000
     for ca, cb in c:
+        if len(ca) == 0 or len(cb) == 0 :
+            continue
         if not len(ca) == len(cb) :
             continue
         a_sum = 0
@@ -40,10 +42,10 @@ def getPredictionLagframes(source:Tuple, detectionConfig:Tuple[DetectionConfig, 
     # 2: detection -> prediction
     # 3: prediction -> detection
     detection_to_prediction1, prediction_to_detection1 = mp.Pipe()
-    p1 = mp.Process(target=_sync_process, args=(source, detectionConfig, detection_to_prediction1))
+    p1 = mp.Process(target=_sync_process, args=(source[0], detectionConfig[0], detection_to_prediction1))
 
     detection_to_prediction2, prediction_to_detection2 = mp.Pipe()
-    p2 = mp.Process(target=_sync_process, args=(source, detectionConfig, detection_to_prediction2))
+    p2 = mp.Process(target=_sync_process, args=(source[1], detectionConfig[1], detection_to_prediction2))
 
     p1.start()
     p2.start()
@@ -78,6 +80,9 @@ def getPredictionLagframes(source:Tuple, detectionConfig:Tuple[DetectionConfig, 
     if abs(len(data1) - len(data2)) > 2 :
         raise Exception("bounce timestamps do not match")
     lag = _caculateSyncTime(data1, data2)
+    if lag > 200 :
+        print("lag is too big")
+        lag = 0
     return lag
 
 if __name__ == "__main__" :

@@ -18,6 +18,7 @@ import core.Constants as Constants
 import core.Equation3d as equ
 import camera_calibrate.utils as utils
 import camera_calibrate.Calibration as calib
+import argparse as ap
 from camera_reciever.CameraReceiver import CameraReceiver
 import time
 
@@ -116,7 +117,7 @@ class DetectionConfig :
             with open("configs/" + save_name + "/frame_size", "wb") as f :
                 pickle.dump(self.frame_size, f)
         if self.consider_poly is not None :
-            with open("/" + save_name + "/consider_poly", "wb") as f :
+            with open("configs/" + save_name + "/consider_poly", "wb") as f :
                 pickle.dump(self.consider_poly, f)
 
 def createConfig(source, save_name, frame_size=(640,480), frame_rate=30, color_range="cr3", camera_info=None, consider_poly=None, ini_img=None) :
@@ -131,12 +132,13 @@ def createConfig(source, save_name, frame_size=(640,480), frame_rate=30, color_r
     else :
         poly = setup_poly(source)
         config.consider_poly = poly
-    if os.path.exists(color_range) :
-        config.range = load(color_range)
+    if os.path.exists(os.path.join("configs", color_range)) :
+        config.range = load(os.path.join("configs", color_range))
     else :
         raise Exception("color range file not found")
     config.frame_rate = frame_rate
     config.frame_size = frame_size
+    config.save(save_name)
 
 
 class Detection :
@@ -151,11 +153,11 @@ class Detection :
 
     def __init__(self, 
                 source, 
+                mode,
                 frame_size             = None, 
                 frame_rate             = None, 
                 color_range            = None, 
                 save_name              = "default", 
-                mode                   = None, 
                 queue                  = None,
                 conn                   = None,
                 config:DetectionConfig = None,
@@ -163,6 +165,7 @@ class Detection :
                 consider_poly          = None,
                 ) :
 
+        self.mode = mode
         print("source: ",source)
         self.save_name = save_name
         
@@ -220,7 +223,6 @@ class Detection :
             h =  camera_info.height
             self.homography_matrix = cv2.findHomography(camera_info.corners, np.float32([[-w/2, h/2], [w/2, h/2], [w/2, -h/2], [-w/2, -h/2]]))[0]
 
-        self.mode = mode
         if self.mode == "analysis" or self.mode == "dual_analysis":
             common.replaceDir("results", save_name)
             self.video_writer_all = cv2.VideoWriter("results/" + save_name + "/all.mp4", self.fourcc, self.frame_rate, self.frame_size)
@@ -439,7 +441,7 @@ class Detection :
                 pass
                 
                 window = "Source" + str(self.source) 
-                if self.mode == "analysis" or self.mode == "dual_analysis" or self.mode == "dual_run":
+                if self.mode == "analysis" or self.mode == "dual_analysis" or self.mode == "dual_run" or self.mode == "caculate_bounce":
                     cv2.imshow(window, frame)
             else :
                 # send stop signal to main process
@@ -456,7 +458,7 @@ class Detection :
                         break
             key = cv2.waitKey(1 if not debugging else 0)
             if key == ord('q') :
-                if self.mode == "dual_analysis" or self.mode == "dual_run":
+                if self.mode == "dual_analysis" or self.mode == "dual_run" or self.mode == "caculate_bounce":
                     self.conn.send("stop")
                 break
             iteration += 1
@@ -526,75 +528,6 @@ def setup_poly(source) :
     _poly_now_pos = (0, 0)
     return ret
 
-def setup_camera(source, calibrationFile="calibration") :
-    pos = None
-    homo = None
-    cam = cv2.VideoCapture(source)
-    while True :
-        ret, frame = cam.read()
-        if ret :
-            k = cv2.waitKey(1)
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            cv2.imshow("W", gray)
-            if k == ord(' ') :
-                pos = utils.calculateCameraPosition(calib.load_calibration(calibrationFile), gray)
-                homo = find_homography_matrix_to_apriltag(gray)
-                if pos is None :
-                    print("not found")
-                    continue
-                print("camera pos")
-                print(pos.to_str())
-                cv2.imwrite("pic.jpg", frame)
-                break
-    return pos, homo
-
-def setup_camera_img(img_gray, calibrationFile) :
-    pos = utils.calculateCameraPosition(calib.load_calibration(calibrationFile), img_gray)
-    if pos is None :
-        raise Exception("pos not found")
-    homo = find_homography_matrix_to_apriltag(img_gray)
-    return pos, homo
-
-
-def setup_camera_android(source, calibrationFile="calibration") :
-    pos = None
-    homo = None
-    isCam = True
-    if type(source) == str :
-        cam = CameraReceiver(source)
-    elif type(source) == np.ndarray :
-        frame = source
-        ret = True
-        isCam = False
-    else :
-        cam = source
-    
-    if isCam :
-        cam.connect()
-    while True :
-        if isCam :
-            ret, frame = cam.read()
-        
-        if ret :
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            cv2.imshow("setup camera", gray)
-            k = cv2.waitKey(1)
-            if k == ord(' ') :
-                pos = utils.calculateCameraPosition(calib.load_calibration(calibrationFile), gray)
-                if pos is None :
-                    print("pos not find")
-                    continue
-                homo = find_homography_matrix_to_apriltag(gray)
-                print("camera pos")
-                print(pos.to_str())
-                break
-    if isCam :
-        cam.close()
-    cv2.imwrite("t{}.jpg".format(time.time()), frame)
-    
-    return pos, homo
-
-
 def detectProcess(source, save_name) :
     detector = Detection(source=source, save_name=save_name)
     detector.runDetection()
@@ -636,6 +569,35 @@ def merge_rectangles(rectangles):
     return merged_rectangles
 
 if __name__ == "__main__" :
+    Args = ap.ArgumentParser()
+    Args.add_argument("-cc", "--create_config", action="store_true", default=False, help="use this flag to create config, otherwise use config to run detection")
+    Args.add_argument("-c", "--config", type=str, default="test1", help="config name (nessesary)")
+    Args.add_argument("-s", "--source", type=str, default="all.mp4", help="camera source (nessesary)")
+    Args.add_argument("-f", "--frame_size", type=str, default="640x480", help="frame size (only needed when create config, default is 640x480)")
+    Args.add_argument("-r", "--frame_rate", type=int, default=30, help="frame rate (only needed when create config, default is 30)")
+    Args.add_argument("-cr", "--color_range", type=str, default="cr3", help="color range file name (only needed when create config, default is cr3)")
+    Args.add_argument("-i", "--inmtx", type=str, default="calibration", help="camera intrinsic matrix file name (only needed when create config in 3d setup)")
+    Args.add_argument("--non_3d_setup", action="store_true", default=False, help="use this flag to setup camera without 3d setup")
+
+    args = Args.parse_args()
+    source = args.source if not args.source.isnumeric() else int(args.source)
+    if args.create_config :
+        assert args.source is not None and args.config is not None
+        cameraInfo = None
+        if not args.non_3d_setup :
+            if not os.path.exists(os.path.join("configs", args.inmtx)) :
+                raise Exception("intrinsic matrix file not found")
+            cameraInfo = setup_table_info(source, load(os.path.join("configs", args.inmtx)))
+        createConfig(source, args.config, frame_size=tuple(map(int, args.frame_size.split("x"))), frame_rate=args.frame_rate, color_range=args.color_range, camera_info=cameraInfo)
+    else :
+        assert args.source is not None and args.config is not None
+        config = DetectionConfig()
+        config.load(args.config)
+        dect = Detection(source=source, config=config, save_name=args.config, mode="analysis")
+        dect.runDetection(debugging=False, realTime=False)
+    
+
+    exit()
     #ini = cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE)
     ini = cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE)
     #initDetection(0, "s480p30_a15", "calibration", consider_poly=load("result/s480p30_a50/consider_poly"))

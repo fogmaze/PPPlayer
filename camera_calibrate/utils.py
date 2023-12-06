@@ -168,6 +168,15 @@ def save_table_info(save_name, corners, calibration, width=2.74, height=1.525) :
     with open(save_name, 'wb') as f :
         pickle.dump(info, f)
 
+def setup_table_info(source, calibration, width=2.74, height=1.525) :
+    corners = setup_table(source, padding=50)
+    info = TableInfo()
+    info.corners = corners
+    info.inmtx = calibration
+    info.width = width
+    info.height = height
+    return info
+
 def calculateCameraPosition_table(info:TableInfo) :
     libc = CDLL("bin/libpose.so")
     libc.estimate.restype = c_double
@@ -300,14 +309,15 @@ def setup_table_img(img, padding = 0) :
     _table_mouse_now_pos = (0, 0)
     return result
 
-def setup_table(source) :
+def setup_table(source, padding = 0) :
     global _table_mouse_state, _table_scale_base_pos, _table_points, _table_scale, _table_mouse_now_pos
     cam = cv2.VideoCapture(source)
     cv2.namedWindow("setup table")
     cv2.setMouseCallback("setup table", _setup_table_mouse_event)
 
     while True :
-        ret, frame = cam.read()
+        ret, frame_orig = cam.read()
+        frame = cv2.copyMakeBorder(frame_orig, padding, padding, padding, padding, cv2.BORDER_CONSTANT, value=(0, 0, 0))
         if ret :
             try: 
                 k = cv2.waitKey(round(1/30*1000))
@@ -327,6 +337,9 @@ def setup_table(source) :
                 print(e)
     cv2.destroyAllWindows()
     result = np.array(_table_points)
+    for i in range(4) :
+        result[i][0] -= padding
+        result[i][1] -= padding
     _table_mouse_state = "up"
     _table_points = []
     _table_scale = 3
