@@ -412,6 +412,10 @@ class Detection :
                             self.data.append([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
                         if self.mode == "dual_analysis" or self.mode == "dual_run":
                             self.queue.put([self.pid, iteration, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg(), time.time()])
+                        if self.mode == "caculate_bounce" :
+                            if self.bounce_checker.update(y+h//2) :
+                                print("bounce")
+                                self.data.append(iteration)
                     else :
                         # save pos data
                         if self.mode == "analysis" or self.mode == "dual_analysis":

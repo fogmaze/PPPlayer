@@ -83,6 +83,7 @@ def getPredictionLagframes(source:Tuple, detectionConfig:Tuple[DetectionConfig, 
     if lag > 200 :
         print("lag is too big")
         lag = 0
+    print("lag is", lag)
     return lag
 
 if __name__ == "__main__" :

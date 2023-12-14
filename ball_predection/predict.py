@@ -33,9 +33,9 @@ def getHitPointInformation(_traj_unnormed:torch.Tensor) :
         else :
             r = mid
     l = l - 1
-    w = (END - traj[l][0]) / (traj[l+1][0] - traj[l][0])
+    w = ((END - traj[l][0]) / (traj[l+1][0] - traj[l][0])).item()
     hit_point = traj[l] * (1 - w) + traj[l+1] * w
-    return hit_point, (l * (1 - w) + (l+1) * w) * Constants.CURVE_SHOWING_GAP
+    return hit_point.tolist(), (l * (1 - w) + (l+1) * w) * Constants.CURVE_SHOWING_GAP
 
 class LineCollector:
     def __init__(self) :
@@ -259,7 +259,7 @@ def predict(
     lines1 = LineCollector_hor()
     lines2 = LineCollector_hor()
 
-    lagger1 = Lagger(10)
+    lagger1 = Lagger(config.lag)
     lagger2 = Lagger(0)
 
     process_time = 0
@@ -358,7 +358,7 @@ def predict(
 
 if __name__ == "__main__" :
     parser = ap.ArgumentParser()
-    parser.add_argument("-cc", "--create_config", help="use this flag to create config. otherwise use config to run prediction", action="store_true", default=False)
+    parser.add_argument("-cc", "--create_config", help="use this flag to create config. otherwise use config to run prediction", action="store_true")
     parser.add_argument("-c", "--config", help="config name (nessesary)")
     parser.add_argument("-s", "--source", help="source (nessesary)", nargs=2)
     parser.add_argument("-dc", "--detection_config", help="detection config name. (only needed when creating config)", nargs=2)

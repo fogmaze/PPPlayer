@@ -350,5 +350,5 @@ def plotOutput(ax, out, color = 'r', label=None):
 if __name__ == "__main__" :
     Constants.set2NormalB()
     #visualizeDetection_video("ball_detection/result/test")
-    visualizePrediction_video("ball_detection/result/dual_default", lagg=10)
+    visualizePrediction_video("results/1288_2", lagg=0)
     #visualizePrediction("ball_detection/result/dual_default_105")
