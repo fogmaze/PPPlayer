@@ -33,9 +33,9 @@ def getHitPointInformation(_traj_unnormed:torch.Tensor) :
         else :
             r = mid
     l = l - 1
-    w = ((END - traj[l][0]) / (traj[l+1][0] - traj[l][0])).item()
+    w = (END - traj[l][0]) / (traj[l+1][0] - traj[l][0])
     hit_point = traj[l] * (1 - w) + traj[l+1] * w
-    return hit_point.tolist(), (l * (1 - w) + (l+1) * w) * Constants.CURVE_SHOWING_GAP
+    return hit_point, (l * (1 - w) + (l+1) * w) * Constants.CURVE_SHOWING_GAP
 
 class LineCollector:
     def __init__(self) :
@@ -235,6 +235,9 @@ def predict(
     pf = open("results/" + save_name + "/pred.csv", "w")
     pfw = csv.writer(pf)
     pfw.writerow(["which camera", "frame", "hp_x", "hp_y", "hp_z", "hp_t", "x", "y", "z"])
+    pfr = open("results/" + save_name + "/raw.csv", "w")
+    pfrw = csv.writer(pfr)
+    pfrw.writerow(["which camera", "frame", "x", "y", "z", "rxy", "rxz", "time"])
 
     queue = mp.Queue()
     c12d, c12s = mp.Pipe()
@@ -287,6 +290,7 @@ def predict(
     while True :
         if not queue.empty() :
             recv_data = queue.get()
+            pfrw.writerow([1 if recv_data[0] == p1.pid else 2, recv_data[1], recv_data[2], recv_data[3], recv_data[4], recv_data[5], recv_data[6], recv_data[7]])
             tra_time += time.time() - recv_data[7]
             tra_iter += 1
 
@@ -351,6 +355,7 @@ def predict(
         print("mean process time:", process_time, "; it/s:", process_time_iter / process_time)
         print("mean tra time:", tra_time / tra_iter, "; it/s:", tra_iter / tra_time)
     pf.close()
+    pfr.close()
 
     # display
     if visualization :

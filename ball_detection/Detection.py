@@ -43,20 +43,24 @@ class _bounce_checker :
     def __init__(self):
         self.movement = None
         self.last_y = None
+        self.this_frame_is_bounce = False
     
     def update(self, y) :
         if self.movement == 1:
             if y < self.last_y:
                 self.movement = None
                 self.last_y = None
+                self.this_frame_is_bounce = True
                 return True
         elif self.movement == -1 :
             if y > self.last_y:
                 self.movement = None
                 self.last_y = None
+                self.this_frame_is_bounce = True
                 return True
         elif self.movement == None and self.last_y is not None:
             self.movement = 1 if y - self.last_y > 0 else -1
+            self.this_frame_is_bounce = False
         self.last_y = y
         return False
 
@@ -239,6 +243,7 @@ class Detection :
         if self.mode == "dual_analysis" or self.mode == "dual_run":
             if queue is None or self.camera_position is None or self.homography_matrix is None:
                 raise Exception("dual_analysis mode need pipe, cam_pos and homography_matrix but {} {} {}".format(queue, self.camera_position, self.homography_matrix))
+            self.bounce_checker = _bounce_checker()
             self.queue = queue
             self.conn = conn
         if self.mode =="caculate_bounce":
@@ -412,6 +417,8 @@ class Detection :
                             self.data.append([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
                         if self.mode == "dual_analysis" or self.mode == "dual_run":
                             self.queue.put([self.pid, iteration, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg(), time.time()])
+                            if self.bounce_checker.update(y+h//2) :
+                                self.conn.send("bounce")
                         if self.mode == "caculate_bounce" :
                             if self.bounce_checker.update(y+h//2) :
                                 print("bounce")
@@ -465,6 +472,11 @@ class Detection :
                 if self.mode == "dual_analysis" or self.mode == "dual_run" or self.mode == "caculate_bounce":
                     self.conn.send("stop")
                 break
+            # if any key Pressed
+            if key != -1 :
+                if self.mode == "dual_analysis" or self.mode == "dual_run":
+                    self.conn.send("press {}".format(key))
+            
             iteration += 1
             # print("pid : {} process time : {}".format(self.pid, time.perf_counter() - this_iter_time))
             pt += time.perf_counter() - this_iter_time

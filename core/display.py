@@ -165,8 +165,8 @@ def visualizePrediction_video(root, fps=30, lagg=10) :
     for ind1 in tqdm.tqdm(range(s1, round(pred_datas[-1][1]))) :
         ret1, frame1 = cam1.read()
         ret2, frame2 = cam2.read()
-        cv2.putText(frame1, "cam1", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
-        cv2.putText(frame2, "cam2", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        cv2.putText(frame1, "cam1: {}".format(ind1), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        cv2.putText(frame2, "cam2: {}".format(ind2), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
         if not ret1 or not ret2 :
             break
         lframe = cv2.vconcat([frame1, frame2])
@@ -351,4 +351,17 @@ if __name__ == "__main__" :
     Constants.set2NormalB()
     #visualizeDetection_video("ball_detection/result/test")
     visualizePrediction_video("results/1288_2", lagg=0)
+    exit()
+
+    video = cv2.VideoCapture("results/1288_2/cam2/all_tagged.mp4")
+    video_out = cv2.VideoWriter("results/1288_2/cam2/all_tagged_out.mp4", cv2.VideoWriter_fourcc(*'mp4v'), 30, (640, 480))
+    ind = 0
+    while True :
+        ret, frame = video.read()
+        if not ret :
+            break
+        cv2.putText(frame, "{}".format(ind), (10, 430), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        video_out.write(frame)
+        ind += 1
+    video.release()
     #visualizePrediction("ball_detection/result/dual_default_105")

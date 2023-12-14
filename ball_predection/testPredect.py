@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import robot_controll.controller as con
 
 
-def sim_prediction_move() :
+def sim_prediction_move(s=474) :
     r = con.Robot("")
 
     c.set2NormalB()
@@ -27,7 +27,7 @@ def sim_prediction_move() :
     m.cuda()
     m.load_state_dict(torch.load("ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt"))
 
-    for i in range(354) :
+    for i in range(s) :
         next(dl)
     X1, X1_len, X2, X2_len, T, Y = next(dl)
     Yl = Y.clone()
@@ -45,6 +45,8 @@ def sim_prediction_move() :
             c.normer.unorm_input_tensor(X1_u)
             c.normer.unorm_input_tensor(X2_u)
             hp, t = predict.getHitPointInformation(out)
+            hp = hp.tolist()
+            t = t.item()
             if hp is not None :
                 #print(hp[1], hp[2], t)
                 print("{:.3f} {:.3f} {:.3f}".format(hp[1], hp[2], t-ti))
@@ -61,7 +63,7 @@ def sim_prediction() :
     m.cuda()
     m.load_state_dict(torch.load("ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt"))
 
-    for i in range(354) :
+    for i in range(474) :
         next(dl)
     X1, X1_len, X2, X2_len, T, Y = next(dl)
     Yl = Y.clone()
@@ -135,11 +137,16 @@ def find_seed() :
 
         i += 1
 
-sim_prediction_move()
+sim_prediction()
+
+#sim_prediction_move(354)
+sim_prediction_move(474)
 exit()
 
 find_seed()
 exit()
 
+sim_prediction_move()
+exit()
 
         
