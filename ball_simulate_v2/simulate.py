@@ -155,7 +155,7 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
 
     p.setGravity(0, 0, -c.G)
 
-    dataset = dfo.BallDataSet_sync(outputFileName, dataLength)
+    dataset = dfo.BallDataSet_put(outputFileName, dataLength)
     for i in tqdm.tqdm(range(int(dataLength/SINGLE_SIMULATE_SAMPLE_LEN))) :
         cam1_pos = randomCameraPos()
         cam2_pos = randomCameraPos()
@@ -223,7 +223,7 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
             cam1_ign.insert(0,0)
         # save data
         for j in range(SINGLE_SIMULATE_SAMPLE_LEN) :
-            dataStruct = dataset.DataStruct()
+            dataStruct = dataset.dataStructClass()
             cam1_end = random.randint(3, len(cam1_data))
             cam2_end = min(random.randint(cam1_end-2, cam1_end+2), len(cam2_data))
             dataStruct.inputs[0].camera_x = cam1_pos.x

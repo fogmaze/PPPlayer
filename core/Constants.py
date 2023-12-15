@@ -1,5 +1,7 @@
 import math
 
+now_mode = "none"
+
 APRILTAG_SIZE = 0.164
 CHESS_BOARD_SIZE = 31.5
 
@@ -42,6 +44,7 @@ def set2NoError() :
     global SIMULATE_INPUT_LEN
     global SIMULATE_TEST_LEN
     global normer
+    global now_mode
 
     SHUTTER_RANDOM_ERROR_STD = 0
     SHUTTER_SYSTEMATIC_ERROR_STD = 0
@@ -54,6 +57,7 @@ def set2NoError() :
     SIMULATE_INPUT_LEN = 40
     SIMULATE_TEST_LEN = 250
     normer = Normer()
+    now_mode = "ne"
 
 def set2Normal() :
     global SIMULATE_INPUT_LEN
@@ -67,6 +71,7 @@ def set2Normal() :
     global INPUT_IGNORE_WIDTH_MEAN
     global INPUT_IGNORE_WIDTH_STD
     global normer
+    global now_mode
 
     SIMULATE_TEST_LEN = 50
     SIMULATE_INPUT_LEN = 40
@@ -79,6 +84,7 @@ def set2Normal() :
     INPUT_IGNORE_WIDTH_MEAN = 4
     INPUT_IGNORE_WIDTH_STD = 3
     normer = Normer()
+    now_mode = "normal"
 
 
 def set2NormalB60() :
@@ -94,6 +100,7 @@ def set2NormalB60() :
     global INPUT_IGNORE_WIDTH_STD
     global normer
     global FPS
+    global now_mode
 
     FPS = 60
     SIMULATE_TEST_LEN = 50
@@ -107,6 +114,7 @@ def set2NormalB60() :
     INPUT_IGNORE_WIDTH_MEAN = 8
     INPUT_IGNORE_WIDTH_STD = 6
     normer = Normer()
+    now_mode = "normalB60"
 
 def set2NormalB() :
     global SIMULATE_INPUT_LEN
@@ -120,6 +128,7 @@ def set2NormalB() :
     global INPUT_IGNORE_WIDTH_MEAN
     global INPUT_IGNORE_WIDTH_STD
     global normer
+    global now_mode
 
     SIMULATE_TEST_LEN = 50
     SIMULATE_INPUT_LEN = 40
@@ -132,6 +141,7 @@ def set2NormalB() :
     INPUT_IGNORE_WIDTH_MEAN = 4
     INPUT_IGNORE_WIDTH_STD = 3
     normer = Normer()
+    now_mode = "normalB"
 
 def set2NormalBR() :
     global SIMULATE_INPUT_LEN
@@ -146,6 +156,7 @@ def set2NormalBR() :
     global INPUT_IGNORE_WIDTH_STD
     global INPUT_RANDOM_ERROR_RATE
     global normer
+    global now_mode
 
     SIMULATE_TEST_LEN = 50
     SIMULATE_INPUT_LEN = 40
@@ -159,6 +170,7 @@ def set2NormalBR() :
     INPUT_IGNORE_WIDTH_STD = 3
     INPUT_RANDOM_ERROR_RATE = 0.03
     normer = Normer()
+    now_mode = "normalBR"
 
 def set2Fitting() :
     global SIMULATE_TEST_LEN
@@ -172,6 +184,7 @@ def set2Fitting() :
     global INPUT_IGNORE_WIDTH_MEAN
     global INPUT_IGNORE_WIDTH_STD
     global normer
+    global now_mode
 
     SIMULATE_TEST_LEN = 100
     SIMULATE_INPUT_LEN = 100
@@ -184,6 +197,7 @@ def set2Fitting() :
     INPUT_IGNORE_WIDTH_MEAN = 4
     INPUT_IGNORE_WIDTH_STD = 3
     normer = Normer()
+    now_mode = "fit"
 
 def set2Predict() :
     global SIMULATE_INPUT_LEN
@@ -197,6 +211,7 @@ def set2Predict() :
     global INPUT_IGNORE_WIDTH_MEAN
     global INPUT_IGNORE_WIDTH_STD
     global normer
+    global now_mode
 
     SIMULATE_TEST_LEN = 250
     SIMULATE_INPUT_LEN = 40
@@ -209,6 +224,7 @@ def set2Predict() :
     INPUT_IGNORE_WIDTH_MEAN = 4
     INPUT_IGNORE_WIDTH_STD = 3
     normer = Normer()
+    now_mode = "predict"
 
 
 class Normer :

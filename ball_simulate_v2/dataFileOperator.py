@@ -92,6 +92,100 @@ SIMULATE_TEST_LEN = {
     # Add values for other modes if needed
 }
 
+class BallDataSet_put(torch.utils.data.Dataset) :
+    def __init__(self, fileName, dataLength, device = "cuda:0", mode = "normalBR"):
+        self.mode = mode
+        self.loadLib()
+
+        # Add conditions for other modes if needed
+
+        self.fileName = fileName
+        self.device = torch.device(device)
+
+        self.lib.createEmptyFile_sync(self.fileName.encode('utf-8'), dataLength)
+        
+        if not os.path.exists(fileName) :
+            raise Exception("file not found")
+        self.length = self.lib.getFileDataLength_sync(self.fileName.encode('utf-8'))
+        pass
+    
+    def loadLib(self) :
+        mode = self.mode
+        libname = "dataFileOperatorV2-{}-{}".format(SIMULATE_INPUT_LEN[mode], SIMULATE_TEST_LEN[mode])
+        lib = CDLL("bin/lib{}.so".format(libname))
+
+        class Data_Point_(Structure):
+            _fields_ = [
+                ("x",c_double),
+                ("y",c_double),
+                ("z",c_double)
+            ]
+        Data_Point = Data_Point_
+
+        class Data_Input_(Structure):
+            _fields_ = [
+                ("camera_x", c_double),
+                ("camera_y", c_double),
+                ("camera_z", c_double),
+                ("line_rad_xy", c_double * SIMULATE_INPUT_LEN[mode]),
+                ("line_rad_xz", c_double * SIMULATE_INPUT_LEN[mode]),
+                ("timestamps", c_double * SIMULATE_INPUT_LEN[mode]),
+                ("seq_len", c_int)
+            ]
+        Data_Input = Data_Input_
+
+        class DataStruct_(Structure):
+            _fields_ = [
+                ("inputs", Data_Input * 2),
+                ("curvePoints", Data_Point * SIMULATE_TEST_LEN[mode]),
+                ("curveTimestamps", c_double * SIMULATE_TEST_LEN[mode])
+            ]
+        DataStruct = DataStruct_
+
+        lib.main.argtypes = []
+        lib.main.restype = c_int
+        lib.loadFromFile.argtypes = [c_char_p]
+        lib.loadFromFile.restype = c_void_p
+        lib.releaseData.argtypes = [c_void_p]
+        lib.releaseData.restype = None
+        lib.loadIsSuccess.argtypes = [c_void_p]
+        lib.loadIsSuccess.restype = c_bool
+        lib.getFileDataLength.argtypes = [c_void_p]
+        lib.getFileDataLength.restype = c_int
+        lib.getFileData.argtypes = [c_void_p, c_int]
+        lib.getFileData.restype = c_void_p
+        lib.createHeader.argtypes = [c_int]
+        lib.createHeader.restype = c_void_p
+        lib.putData.argtypes = [c_void_p, c_int, DataStruct]
+        lib.putData.restype = c_bool
+        lib.saveToFile.argtypes = [c_void_p, c_char_p]
+        lib.saveToFile.restype = c_bool
+        lib.getFileData_sync.argtypes = [c_char_p, c_int]
+        lib.getFileData_sync.restype = DataStruct
+        lib.getFileDataLength_sync.argtypes = [c_char_p]
+        lib.getFileDataLength_sync.restype = c_int
+        lib.createEmptyFile_sync.argtypes = [c_char_p, c_int]
+        lib.createEmptyFile_sync.restype = None
+        lib.putData_sync.argtypes = [c_char_p, c_int, DataStruct]
+        lib.putData_sync.restype = None
+        lib.merge.argtypes = [c_char_p, c_char_p, c_char_p]
+        lib.merge.restype = None
+        self.lib = lib
+        self.dataStructClass = DataStruct
+    
+    def __len__(self):
+        return self.length
+    
+    def putData(self, index:int, data):
+        return self.lib.putData_sync(self.fileName.encode('utf-8'), index, data)
+
+    def __getitem__(self, index):
+        return None
+       
+    def saveToFile(self):
+        pass
+
+
 class BallDataSet_sync(torch.utils.data.Dataset) :
     def __init__(self, fileName, dataLength = None, device = "cuda:0", mode = "normalBR"):
         self.mode = mode
