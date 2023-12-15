@@ -14,6 +14,7 @@ sys.path.append(os.getcwd())
 import core.Constants as Constants
 import core.Equation3d as equ
 import ball_predection.predict as pred
+import ball_simulate_v2.models as models
 
 
 def visualizeDetection_video(root, fps=30) :
@@ -102,6 +103,127 @@ def visualizeDetection(root, fps=30) :
             #outputVideo.write(img)
             cv2.imshow('frame', img)
     #outputVideo.release()
+def prepareModelInput(ll:list, rl:list, device="cuda:0") :
+    l = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
+    r = torch.zeros(Constants.SIMULATE_INPUT_LEN , Constants.MODEL_INPUT_SIZE).to(device)
+    if len(ll) > 0 :
+        l[:len(ll)] = torch.tensor(ll, device=device)
+    if len(rl) > 0 :
+        r[:len(rl)] = torch.tensor(rl, device=device) 
+    l = l.view(1, Constants.SIMULATE_INPUT_LEN, Constants.MODEL_INPUT_SIZE)
+    r = r.view(1, Constants.SIMULATE_INPUT_LEN, Constants.MODEL_INPUT_SIZE)
+    l_len = torch.tensor([len(ll)]).view(1,1).to(device)
+    r_len = torch.tensor([len(rl)]).view(1,1).to(device)
+    Constants.normer.norm_input_tensor(l)
+    Constants.normer.norm_input_tensor(r)
+    return l, l_len, r, r_len
+
+def visualizePrediction_realtime(root, fps=30) :
+
+    model:models.ISEFWINNER_BASE = models.MODEL_MAP["medium"](device="cuda:0")
+    model.cuda()
+    model.load_state_dict(torch.load(os.path.join("ball_simulate_v2/model_saves/", "normalB/epoch_29/weight.pt")))
+    model.eval()
+    Constants.set2Normal()
+    NORMED_PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)
+    Constants.normer.norm_t_tensor(NORMED_PREDICT_T)
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    if os.path.exists(os.path.join(root, 'visualize_video.mp4')) :
+        os.remove(os.path.join(root, 'visualize_video.mp4'))
+    outputVideo = cv2.VideoWriter(os.path.join(root, 'visualize_video.mp4'), fourcc, fps, (640*2, 480*2))
+    cam1 = cv2.VideoCapture(os.path.join(root, 'cam1/all_tagged.mp4'))
+    cam2 = cv2.VideoCapture(os.path.join(root, 'cam2/all_tagged.mp4'))
+
+    lines1 = pred.LineCollector_hor()
+    lines2 = pred.LineCollector_hor()
+
+    fig, axe = createFigRoom()
+    with open(os.path.join(root, "raw.csv")) as f:
+        reader = csv.reader(f)
+        title = next(reader)
+        raw_datas = [[float(b) if b != '' else 0 for b in a] for a in reader]
+
+    white = np.zeros((480, 640, 3), np.uint8)
+    white[:] = (255, 255, 255)
+    ruframe = white
+    rdframe = white
+    luframe = white
+    ldframe = white
+
+    for raw in tqdm.tqdm(raw_datas) :
+        isHit = None
+        if raw[0] == 1 :
+            if not raw[2] == 0 :
+                isHit = not lines1.put(raw[2], raw[3], raw[4], raw[5], raw[6])
+                if isHit :
+                    lines2.clear()
+        elif raw[0] == 2 :
+            if not raw[2] == 0 :
+                isHit = not lines2.put(raw[2], raw[3], raw[4], raw[5], raw[6])
+                if isHit :
+                    lines1.clear()
+        if isHit is None :
+            pass
+        elif isHit :
+            pass
+        elif len(lines1.lines) > 1 and len(lines2.lines) > 1 : # send to model
+                model.reset_hidden_cell(1)
+                l, l_len, r, r_len = prepareModelInput(lines1.lines, lines2.lines)
+                out:torch.Tensor = model(l, l_len, r, r_len, NORMED_PREDICT_T) 
+                Constants.normer.unnorm_ans_tensor(out)
+                
+                cleanRoom(axe, (0, 90))
+                o = plotOutput(axe, out, color='r', label=None)
+                leg = [(o, 'output')]
+                if len(lines1.lines) > 0 :
+                    l1, = displayLines(axe, lines1, color='b', label=None)
+                    leg.append((l1, 'cam1'))
+                if len(lines2.lines) > 0 :
+                    l2, = displayLines(axe, lines2, color='g', label=None)
+                    leg.append((l2, 'cam2'))
+                plt.legend(*zip(*leg))
+                fig.canvas.draw()
+                ruframe = np.fromstring(axe.figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+                ruframe = ruframe.reshape(axe.figure.canvas.get_width_height()[::-1] + (3,))
+                ruframe = cv2.cvtColor(ruframe, cv2.COLOR_RGB2BGR)
+
+                cleanRoom(axe, (90, 90))
+                o = plotOutput(axe, out, color='r', label=None)
+                leg = [(o, 'output')]
+                if len(lines1.lines) > 0 :
+                    l1, = displayLines(axe, lines1, color='b', label=None)
+                    leg.append((l1, 'cam1'))
+                if len(lines2.lines) > 0 :
+                    l2, = displayLines(axe, lines2, color='g', label=None)
+                    leg.append((l2, 'cam2'))
+                plt.legend(*zip(*leg))
+                fig.canvas.draw()
+                rdframe = np.fromstring(axe.figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+                rdframe = rdframe.reshape(axe.figure.canvas.get_width_height()[::-1] + (3,))
+                rdframe = cv2.cvtColor(rdframe, cv2.COLOR_RGB2BGR)
+
+        if raw[0] == 1 :
+            ret, frame = cam1.read()
+            if not ret :
+                break
+            cv2.putText(frame, "cam1: {}".format(raw[1]), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+            luframe = frame
+        elif raw[0] == 2 :
+            ret, frame = cam2.read()
+            if not ret :
+                break
+            cv2.putText(frame, "cam2: {}".format(raw[1]), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+            ldframe = frame
+        
+        rframe = cv2.vconcat([ruframe, rdframe])
+        lframe = cv2.vconcat([luframe, ldframe])
+        fin = cv2.hconcat([lframe, rframe])
+        cv2.imshow('frame', fin)
+        cv2.waitKey(1)
+        outputVideo.write(fin)
+    outputVideo.release()
+
 
 def visualizePrediction_video(root, fps=30, lagg=10) :
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -350,7 +472,7 @@ def plotOutput(ax, out, color = 'r', label=None):
 if __name__ == "__main__" :
     Constants.set2NormalB()
     #visualizeDetection_video("ball_detection/result/test")
-    visualizePrediction_video("results/1215", lagg=6)
+    visualizePrediction_realtime("results/1215")
     exit()
 
     video = cv2.VideoCapture("results/1215/cam1/all_tagged.mp4")
