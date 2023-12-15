@@ -199,9 +199,13 @@ def predict(
         visualization            = True
         ) :
 
-
+    # main process status : 
+    #  predicting
+    #  syncing
+    status = "predicting"
     SPEED_UP = False
     mode = config.mode
+    # set up model mode (for normalization model input and output)
     if mode != "default":
         if mode == "fit" :
             Constants.set2Fitting()
@@ -230,40 +234,44 @@ def predict(
     Constants.normer.norm_t_tensor(NORMED_PREDICT_T)
 
     
-    print(save_name)
+    # create save dir
     common.replaceDir("results/", save_name)
+    # create pred.csv which stores the prediction result
     pf = open("results/" + save_name + "/pred.csv", "w")
     pfw = csv.writer(pf)
     pfw.writerow(["which camera", "frame", "hp_x", "hp_y", "hp_z", "hp_t", "x", "y", "z"])
+    # create raw.csv which stores the raw data received from detection
     pfr = open("results/" + save_name + "/raw.csv", "w")
     pfrw = csv.writer(pfr)
     pfrw.writerow(["which camera", "frame", "x", "y", "z", "rxy", "rxz", "time"])
 
-    queue = mp.Queue()
-    c12d, c12s = mp.Pipe()
-    c22d, c22s = mp.Pipe()
+    
+    queue = mp.Queue() # Queue for receiving detection data from detection
+    c12d, c12s = mp.Pipe() # Pipe for communication between main process and detection process
+    c22d, c22s = mp.Pipe() # Pipe for communication between main process and detection process
 
-
-    if type(source) == tuple and len(source) == 2 :
+    if type(source) == tuple and len(source) == 2 : # source is a video file or a camera
         if type(source[0]) == int or type(source[0]) == str:
-            
             source1 = source[0]
             source2 = source[1]
-        else :
+        else : # source is android cam (no longer supported)
             source1 = CameraReceiver(source[0])
             source2 = CameraReceiver(source[1])
-    elif type(source) == str :
+    elif type(source) == str : # source is a prediction folder
         source1 = os.path.join("results", source + "/cam1/all.mp4")
         source2 = os.path.join("results", source + "/cam2/all.mp4")
 
+    # create detection process
     p1 = mp.Process(target=runDec, args=(source1, "/cam1", config.detectionConfigs[0], queue, c12s, save_name))
     p2 = mp.Process(target=runDec, args=(source2, "/cam2", config.detectionConfigs[1], queue, c22s, save_name))
 
+    # create line collector that store line data and check if there is a hit
     lines1 = LineCollector_hor()
     lines2 = LineCollector_hor()
 
-    lagger1 = Lagger(config.lag)
-    lagger2 = Lagger(0)
+    # create lagger that lag the data
+    lagger1 = Lagger(config.lag if config.lag > 0 else 0)
+    lagger2 = Lagger(-config.lag if config.lag > 0 else 0)
 
     process_time = 0
     process_time_iter = 0
@@ -273,6 +281,7 @@ def predict(
     p1.start()
     p2.start()
 
+    # sync with detection process
     while True :
         if c12d.poll() :
             msg = c12d.recv()
@@ -283,29 +292,34 @@ def predict(
             msg = c22d.recv()
             if msg == "ready":
                 break
-    f, ax = display.createFigRoom()
+    # start detection
     c12d.send("start")
     c22d.send("start")
 
     while True :
+        # receive line data from detection
         if not queue.empty() :
             recv_data = queue.get()
+            # write raw data to raw.csv
             pfrw.writerow([1 if recv_data[0] == p1.pid else 2, recv_data[1], recv_data[2], recv_data[3], recv_data[4], recv_data[5], recv_data[6], recv_data[7]])
+
             tra_time += time.time() - recv_data[7]
             tra_iter += 1
 
             nowT = time.time()
             isHit = None
-            if recv_data[0] == p1.pid:
+            if recv_data[0] == p1.pid : # data is from camera 1
+                # sync of frame_lag
                 new_data = lagger1.update(recv_data)
-                if new_data is None :
+                if new_data is None : # the buffer of the lagger is not full. (in the first few frames)
                     continue
-                if new_data[2] is not None :
-                    isHit = not lines1.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
+                if new_data[2] is not None : # if detected a ball
+                    isHit = not lines1.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6]) # update new data to lineCollector
+                    # if one of the camera detected the hit. clear the other lineCollector
                     if isHit :
                         lines2.clear()
                 which = 1
-            elif recv_data[0] == p2.pid:
+            elif recv_data[0] == p2.pid : # data is from camera 2
                 new_data = lagger2.update(recv_data)
                 if new_data is None :
                     continue
@@ -314,20 +328,18 @@ def predict(
                     if isHit :
                         lines1.clear()
                 which = 2
-            # send to model
-            if isHit is None :
+            if isHit is None or not status == "predicting":
                 pass
             elif isHit:
                 pass
             elif SPEED_UP :
                 pass
-            elif len(lines1.lines) > 1 and len(lines2.lines) > 1 :
+            elif len(lines1.lines) > 1 and len(lines2.lines) > 1 : # send to model
                 model.reset_hidden_cell(1)
                 l, l_len, r, r_len = prepareModelInput(lines1.lines, lines2.lines)
                 out:torch.Tensor = model(l, l_len, r, r_len, NORMED_PREDICT_T) 
                 Constants.normer.unnorm_ans_tensor(out)
                 hp, t = getHitPointInformation(out)
-                #print("hit point:", hp, "time:", t)
                 process_time += time.time() - nowT
                 process_time_iter += 1
                 if hp is not None :
@@ -335,16 +347,26 @@ def predict(
                 else :
                     pfw.writerow([which, new_data[1], -1, -1, -1, -1] + out.view(-1).tolist())
 
+        # communication between main process and detection process
         if c12d.poll() :
             recv = c12d.recv()
-            if recv == "stop" :
-                c22d.send("stop")
+            if recv == "stop" : # one of the detection process is finished
+                c22d.send("stop") # send stop signal to the other detection process
                 break
+            elif hasattr(recv, "__getitem__") : 
+                if recv[0] == "keyPress" :
+                    if recv[1] == ord("s") :
+                        status = "syncing" if status == "predicting" else "predicting"
         if c22d.poll() :
             recv = c22d.recv()
             if recv == "stop" :
                 c12d.send("stop")
                 break
+            elif hasattr(recv, "__getitem__") :
+                if recv[0] == "keyPress" :
+                    if recv[1] == ord("s") :
+                        status = "syncing" if status == "predicting" else "predicting"
+        
     c12d.send("stop")
     c22d.send("stop")
     
@@ -369,6 +391,7 @@ if __name__ == "__main__" :
     parser.add_argument("-dc", "--detection_config", help="detection config name. (only needed when creating config)", nargs=2)
     parser.add_argument("-m", "--model", help="model name. (only needed when creating configs)", default="medium")
     parser.add_argument("-w", "--weight", help="weight path (only needed when creating configs)", default="normalB/epoch_29/weight.pt")
+    parser.add_argument("-n", "--name", help="save name", default=None)
     parser.add_argument("--mode", help="mode", default="normalB")
     parser.add_argument("-nv", "--non_visualization", help="Skip visualize the result when finished", action="store_true", default=False)
 
@@ -385,7 +408,7 @@ if __name__ == "__main__" :
     else :
         config = PredictionConfig()
         config.load(args.config)
-        predict(config, source, args.config, not args.non_visualization)
+        predict(config, source, args.config if args.name==None else args.name, not args.non_visualization)
 
     exit()
 

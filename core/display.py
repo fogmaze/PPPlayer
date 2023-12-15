@@ -350,11 +350,11 @@ def plotOutput(ax, out, color = 'r', label=None):
 if __name__ == "__main__" :
     Constants.set2NormalB()
     #visualizeDetection_video("ball_detection/result/test")
-    visualizePrediction_video("results/1288_2", lagg=0)
+    visualizePrediction_video("results/1215", lagg=6)
     exit()
 
-    video = cv2.VideoCapture("results/1288_2/cam2/all_tagged.mp4")
-    video_out = cv2.VideoWriter("results/1288_2/cam2/all_tagged_out.mp4", cv2.VideoWriter_fourcc(*'mp4v'), 30, (640, 480))
+    video = cv2.VideoCapture("results/1215/cam1/all_tagged.mp4")
+    video_out = cv2.VideoWriter("results/1215/cam1/all_tagged_out.mp4", cv2.VideoWriter_fourcc(*'mp4v'), 30, (640, 480))
     ind = 0
     while True :
         ret, frame = video.read()
@@ -364,4 +364,5 @@ if __name__ == "__main__" :
         video_out.write(frame)
         ind += 1
     video.release()
+    exit()
     #visualizePrediction("ball_detection/result/dual_default_105")

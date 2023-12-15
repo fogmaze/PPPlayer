@@ -1,4 +1,5 @@
 import time
+from typing import Tuple
 import shutil
 import cv2
 import numpy as np
@@ -22,7 +23,7 @@ import argparse as ap
 from camera_reciever.CameraReceiver import CameraReceiver
 import time
 
-
+# this function is no longer used.
 def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
     tag_len   = APRILTAG_SIZE 
     detector  = Detector()
@@ -34,17 +35,14 @@ def find_homography_matrix_to_apriltag(img_gray) -> np.ndarray | None:
     homography = cv2.findHomography(coners, tar)[0]
     return homography
 
-def getBallProjectionPoint(homography_matrix, frame_size, x, y, w, h) :
-    ball_in_world = np.matmul(homography_matrix, np.array([frame_size[0] - (x+w//2), y+h//2, 1]))
-    projection = equ.Point3d(ball_in_world[0], 0, ball_in_world[1])
-    return projection
-
+# check if ball bounced. (used to sync two cameras)
 class _bounce_checker :
     def __init__(self):
         self.movement = None
         self.last_y = None
         self.this_frame_is_bounce = False
     
+    # update the bounce checker with the y position of the ball. return True if bounce detected.
     def update(self, y) :
         if self.movement == 1:
             if y < self.last_y:
@@ -64,6 +62,7 @@ class _bounce_checker :
         self.last_y = y
         return False
 
+# used to store configuration for one detection. ex: frame size, frame rate, color range, etc.
 class DetectionConfig :
     def __init__(self) :
         self.frame_rate = 30
@@ -169,7 +168,16 @@ class Detection :
                 consider_poly          = None,
                 ) :
 
+        # mode for different uses of detection. 
+        # "dual_analysis" for predict, which will send data to main process and save data into files
+        # "analysis"      for single camera detection, which will save data into files
+        # "compute"       for single camera detection, which will save data into self.data. And can be used for other operatio.
         self.mode = mode
+
+        # below is all the initalization for all the modes
+        self.last_map = []
+        self.last_result = None
+
         print("source: ",source)
         self.save_name = save_name
         
@@ -213,7 +221,7 @@ class Detection :
         elif self.frame_size == (1920,1080) :
             self.meanBallSize = self.MEAN_BALL_SIZE_DICT["1080"]
         elif self.frame_size == (1280,720) :
-            self.meanBallSize = self.MEAN_BALL_SIZE_DICT["720"] ################################
+            self.meanBallSize = self.MEAN_BALL_SIZE_DICT["720"] 
         else :
             raise Exception("frame size is not supported")
 
@@ -265,6 +273,7 @@ class Detection :
         cv2.destroyAllWindows()
     
             
+    # draw a retangle directly on the frame. not returning anything
     def drawDirection(self, frame, x, y, h, w, i) :
         xCenter = x + w // 2
         yCenter = y + h // 2
@@ -272,17 +281,21 @@ class Detection :
         cv2.circle(frame, (xCenter, yCenter), 2, (0, 0, 255), -1)
         cv2.putText(frame, ("x : {} y : {}".format(xCenter, yCenter)), (10, 40*i), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
 
+    # this function is no longer used.
     def compareFrames(self, frame, compare) :
         move = cv2.bitwise_xor(frame, compare)
         color = cv2.inRange(move, np.array([10, 10, 10]), np.array([255, 255, 255]))
         return cv2.bitwise_and(frame, cv2.cvtColor(color, cv2.COLOR_GRAY2BGR))
     
+    # return the white-black mat that if the pixel color is in ColorRange.
     def maskFrames(self, frame) :
         return cv2.inRange(cv2.cvtColor(frame, cv2.COLOR_BGR2HSV), self.lower, self.upper)
 
+    # return the contours of the white-black mat.
     def detectContours(self, frame) :
         return cv2.findContours(frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[0]
 
+    # this function is no longer used.
     def isBallFeature(self,area, h, w) :
         return True
         r = math.sqrt(h*h + w*w) / 2
@@ -298,17 +311,69 @@ class Detection :
             return False
         return True
 
+    # get the next frame from the camera
     def getNextFrame(self) :
         return self.cam.read()
-   
+    
+    # return a retangle that is considered as the ball
+    def findBallInFrame(self, frame) -> Tuple[int, int, int, int] | None:
+        m = self.maskFrames(frame)
+        detected = self.detectContours(m)
+
+        cv2.polylines(frame, [self.consider_poly], True, (0, 255, 0), 2)
+        
+        qualified = []
+        for contour in detected :
+            #area = cv2.contourArea(contour)
+            x, y, w, h = cv2.boundingRect(contour)
+            if True :# self.isBallFeature(area, h, w) :
+                qualified.append((x, y, w, h))
+        merged = merge_rectangles(qualified)
+
+        f0 = []
+        for x, y, w, h in merged :
+            if cv2.pointPolygonTest(self.consider_poly, (x+w//2, y+h//2), False) >= 0 :
+                f0.append((x, y, w, h))
+        f1 = []
+        for x, y, w, h in f0:
+            q = True
+            for l in self.last_map:
+                for x1, y1, w1, h1 in l :
+                    if abs(x - x1) < 5 and abs(y - y1) < 5 :
+                        q = False
+                        break
+            if q :
+                f1.append((x, y, w, h))
+
+        self.last_map.append(merged)
+        if len(self.last_map) > 20 :
+            self.last_map.pop(0)
+
+        f2 = []
+        for x, y, w, h in f1 :
+            if self.meanBallSize * 0.05 < w * h < self.meanBallSize * 2:
+                f2.append((x, y, w, h))
+        result = None
+        if self.last_result is not None :
+            min_dist = 10000000
+            for x, y, w, h in f2 :
+                dis = math.sqrt(abs(x - self.last_result[0])**2 + abs(y - self.last_result[1])**2)
+                if dis < min_dist:
+                    result = (x, y, w, h)
+                    min_dist = dis
+        else :
+            min_area_diff = 10000000
+            for x, y, w, h in f2 :
+                area = w * h
+                area_diff = abs(area - self.meanBallSize)
+                if area_diff < min_area_diff:
+                    result = (x, y, w, h)
+                    min_area_diff = area_diff
+        self.last_result = result
+        return result
+
+    # start detection.
     def runDetection(self, fromFrameIndex=0, realTime=True, debugging=False) :
-        BG_CONSIDERED_FRAMES = 60
-        MAX_BALL_DISTANCE = 100
-        whetherTheFirstFrame = True
-        startTime = time.perf_counter()
-        last_iter_time = startTime
-        last_map = []
-        last_result = None
         pt = 0
         iteration = 0
         for i in range(fromFrameIndex) :
@@ -327,76 +392,17 @@ class Detection :
         while(True) :
             ret, frame = self.getNextFrame()
             if ret :
+                # for caculating iteration time
                 this_iter_time = time.perf_counter()
 
+                # save video frame
                 if self.mode == "analysis" or self.mode == "dual_analysis":
                     self.video_writer_all.write(frame)
                     pass
 
-                if whetherTheFirstFrame :
-                    compare = frame
-                    whetherTheFirstFrame = False
-                
-                m = self.maskFrames(frame)
-                detected = self.detectContours(m)
+                # get detection result
+                result = self.findBallInFrame(frame)
 
-                cv2.polylines(frame, [self.consider_poly], True, (0, 255, 0), 2)
-
-                if debugging:
-                    c = self.compareFrames(frame, compare)
-                    cv2.drawContours(frame, detected, -1, (0, 255, 255), 2)
-                    cv2.drawContours(c, detected, -1, (0, 255, 255), 2)
-                    frame = cv2.hconcat([frame, c])
-                    #cv2.imshow("mask", c)
-                qualified = []
-                for contour in detected :
-                    #area = cv2.contourArea(contour)
-                    x, y, w, h = cv2.boundingRect(contour)
-                    if True :# self.isBallFeature(area, h, w) :
-                        qualified.append((x, y, w, h))
-                merged = merge_rectangles(qualified)
-
-                f0 = []
-                for x, y, w, h in merged :
-                    if cv2.pointPolygonTest(self.consider_poly, (x+w//2, y+h//2), False) >= 0 :
-                        f0.append((x, y, w, h))
-                f1 = []
-                for x, y, w, h in f0:
-                    q = True
-                    for l in last_map:
-                        for x1, y1, w1, h1 in l :
-                            if abs(x - x1) < 5 and abs(y - y1) < 5 :
-                                q = False
-                                break
-                    if q :
-                        f1.append((x, y, w, h))
-
-                last_map.append(merged)
-                if len(last_map) > 20 :
-                    last_map.pop(0)
-
-                f2 = []
-                for x, y, w, h in f1 :
-                    if self.meanBallSize * 0.05 < w * h < self.meanBallSize * 2:
-                        f2.append((x, y, w, h))
-                result = None
-                if last_result is not None :
-                    min_dist = 10000000
-                    for x, y, w, h in f2 :
-                        dis = math.sqrt(abs(x - last_result[0])**2 + abs(y - last_result[1])**2)
-                        if dis < min_dist:
-                            result = (x, y, w, h)
-                            min_dist = dis
-                else :
-                    min_area_diff = 10000000
-                    for x, y, w, h in f2 :
-                        area = w * h
-                        area_diff = abs(area - self.meanBallSize)
-                        if area_diff < min_area_diff:
-                            result = (x, y, w, h)
-                            min_area_diff = area_diff
-
-                last_result = result
                 if result is not None :
                     x, y, w, h = result
                     # 在畫面中畫出偵測到的矩形
@@ -410,21 +416,26 @@ class Detection :
                         # 將投影點和相機座標連成直線
                         line = equ.LineEquation3d(self.camera_position, projection)
 
-                        # save line data
+                        # handle line data
                         if self.mode == "analysis" or self.mode == "dual_analysis":
+                            # save result to file
                             self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
                         if self.mode == "compute":
+                            # save result to self.data
                             self.data.append([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
                         if self.mode == "dual_analysis" or self.mode == "dual_run":
+                            # send result to main process
                             self.queue.put([self.pid, iteration, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg(), time.time()])
+                            # if bounce detected, send bounce signal to main process
                             if self.bounce_checker.update(y+h//2) :
-                                self.conn.send("bounce")
+                                self.conn.send(("bounce", self.pid, iteration))
                         if self.mode == "caculate_bounce" :
+                            # save bounce data to self.data
                             if self.bounce_checker.update(y+h//2) :
                                 print("bounce")
                                 self.data.append(iteration)
                     else :
-                        # save pos data
+                        # as above, but this chunk wasn't setup in 3d
                         if self.mode == "analysis" or self.mode == "dual_analysis":
                             self.detection_csv_writer.writerow([iteration, 1, x, y, h, w, 0, 0, 0, 0, 0])
                         elif self.mode == "compute":
@@ -434,15 +445,19 @@ class Detection :
                                 print("bounce")
                                 self.data.append(iteration)
                 else :
+                    # if no ball detected
                     if self.mode == "analysis" or self.mode == "dual_analysis":
+                        # save result to file
                         self.detection_csv_writer.writerow([iteration, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                     if self.mode == "compute":
+                        # save result to self.data
                         self.data.append([iteration, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                     if self.mode == "dual_analysis" or self.mode == "dual_run":
+                        # send result to main process
                         self.queue.put([self.pid, iteration, None, None, None, None, None, time.time()])
                     
 
-                #save situation data and video
+                #save situation data and video frame
                 if self.mode == "analysis" or self.mode == "dual_analysis":
                     if result is None :
                         self.video_writer_bad.write(frame)
@@ -451,34 +466,35 @@ class Detection :
                     self.video_writer_all_tagged.write(frame)
                 pass
                 
+                # show the detection
                 window = "Source" + str(self.source) 
                 if self.mode == "analysis" or self.mode == "dual_analysis" or self.mode == "dual_run" or self.mode == "caculate_bounce":
                     cv2.imshow(window, frame)
             else :
-                # send stop signal to main process
-                if self.mode == "dual_analysis" or self.mode == "dual_run":
-                    print("send stop signal by {}".format(self.pid))
-                    self.conn.send("stop")
+                # no frame readed from source. break the loop
                 break
-            # check conn from main process
+
+            # check if there is data sent from main process
             if self.mode == "dual_analysis" or self.mode == "dual_run" or self.mode == "caculate_bounce":
                 if self.conn.poll() :
                     msg = self.conn.recv()
+                    # if main process send stop signal, break the loop
                     if msg == "stop" :
-                        print("stop signal received")
                         break
+
+            # check if any key pressed to the window shown
             key = cv2.waitKey(1 if not debugging else 0)
+            # if "q" pressed, break the loop
             if key == ord('q') :
                 if self.mode == "dual_analysis" or self.mode == "dual_run" or self.mode == "caculate_bounce":
                     self.conn.send("stop")
                 break
-            # if any key Pressed
-            if key != -1 :
+            # if other key pressed, send the key to main process
+            elif key != -1 :
                 if self.mode == "dual_analysis" or self.mode == "dual_run":
-                    self.conn.send("press {}".format(key))
+                    self.conn.send(("keyPress", self.pid, key))
             
             iteration += 1
-            # print("pid : {} process time : {}".format(self.pid, time.perf_counter() - this_iter_time))
             pt += time.perf_counter() - this_iter_time
 
 
@@ -494,6 +510,7 @@ class Detection :
             self.conn.send("stop")
         return iteration
 
+# Detection_img is a class for detecting ball in images. It is used for testing.
 class Detection_img(Detection) :
     def __init__(self, source, calibrationFile="calibration",frame_size=(640,480), frame_rate=30, color_range="color_range", save_name="default", mode="analysis", beg_ind=0) :
         super().__init__(None, calibrationFile, frame_size, frame_rate, color_range, save_name, mode=mode)
@@ -506,9 +523,9 @@ class Detection_img(Detection) :
         self.frameIndex += 1
         return True, img
 
+
 _poly = []
 _poly_now_pos = (0, 0)
-
 def _setup_poly_mouse_event(event, x, y, flags, param) :
     global _poly, _poly_now_pos
     # check if left button was clicked
@@ -523,6 +540,7 @@ def _setup_poly_mouse_event(event, x, y, flags, param) :
         _poly_now_pos = [x, y]
 
 
+# setup the consider_poly for detection in 2d. return a numpy array of the poly
 def setup_poly(source) :
     global _poly, _poly_now_pos
     cam = cv2.VideoCapture(source)
@@ -544,10 +562,12 @@ def setup_poly(source) :
     _poly_now_pos = (0, 0)
     return ret
 
+# this function is no longer used.
 def detectProcess(source, save_name) :
     detector = Detection(source=source, save_name=save_name)
     detector.runDetection()
         
+# check if two rectangles are overlapped
 def check_overlap(rect1, rect2):
     x1, y1, w1, h1 = rect1
     x2, y2, w2, h2 = rect2
@@ -556,11 +576,14 @@ def check_overlap(rect1, rect2):
         return False
     return True
 
+# pad a rectangle with value (make it bigger from all sides)
 def pad(rect, value) :
     return (rect[0]-value, rect[1]-value, rect[2] + 2 * value, rect[3] + 2 * value)
 
+# merge rectangles that are overlapped or close to each other, and return the merged rectangles in list
 def merge_rectangles(rectangles):
     merged_rectangles = []
+    # value is the padding value. It is used to make the rectangles bigger so that they can be merged more easily.
     value=3
 
     for rect in rectangles:
@@ -597,6 +620,7 @@ if __name__ == "__main__" :
 
     args = Args.parse_args()
     source = args.source if not args.source.isnumeric() else int(args.source)
+    # create config for detection
     if args.create_config :
         assert args.source is not None and args.config is not None
         cameraInfo = None
@@ -605,6 +629,7 @@ if __name__ == "__main__" :
                 raise Exception("intrinsic matrix file not found")
             cameraInfo = setup_table_info(source, load(os.path.join("configs", args.inmtx)))
         createConfig(source, args.config, frame_size=tuple(map(int, args.frame_size.split("x"))), frame_rate=args.frame_rate, color_range=args.color_range, camera_info=cameraInfo)
+    # run detection using config
     else :
         assert args.source is not None and args.config is not None
         config = DetectionConfig()
@@ -614,41 +639,3 @@ if __name__ == "__main__" :
     
 
     exit()
-    #ini = cv2.imread("exp/t1696229110.0360625.jpg", cv2.IMREAD_GRAYSCALE)
-    ini = cv2.imread("exp/t1696227891.9957368.jpg", cv2.IMREAD_GRAYSCALE)
-    #initDetection(0, "s480p30_a15", "calibration", consider_poly=load("result/s480p30_a50/consider_poly"))
-    #initDetection(0, "s480p30_a15", "calibration", consider_poly=setup_poly(0))
-
-    dect = Detection(source="results/c1_20/all.mp4", save_name="noise",  mode="analysis", config="480p30_r4_4", frame_size=(1280, 720))
-    dect.runDetection(debugging=False, realTime=False)
-    exit()
-    detector1 = Detection()
-    detector2 = Detection()
-
-    camera1 = mp.Process(target=detectProcess, args=(0, "camera1"))
-    camera2 = mp.Process(target=detectProcess, args=(1, "camera2"))
-    
-    camera1.start()
-    camera2.start()
-    
-    while True :
-        try:
-            if not camera1.is_alive() or not camera2.is_alive() :
-                break
-            time.sleep(1)
-        except KeyboardInterrupt:
-            break
-    if camera1.is_alive() :
-        camera1.terminate()
-    if camera2.is_alive() :
-        camera2.terminate()
-    camera1.join()
-    camera2.join()
-    #img = cv2.imread("ball_detection/apriltag-pad.jpg")
-    #result = ketstone_correction("ball_detection/apriltag-pad.jpg")
-    #src_point = np.float32([[result[0], result[1]], [result[2], result[3]], [result[4], result[5]], [result[6], result[7]]])
-    #dst_point = np.float32([[0, 0], [640, 0], [640, 480], [0, 480]])
-    #perspective_matrix = cv2.getPerspectiveTransform(src_point, dst_point)
-    #warped = cv2.warpPerspective(img, perspective_matrix, (640, 480))
-    #cv2.imshow("warped", warped)
-    #cv2.waitKey(0
