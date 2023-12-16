@@ -17,7 +17,6 @@ import ball_simulate_v2.models as models
 import core.common as common
 from ball_detection.ColorRange import *
 from camera_reciever.CameraReceiver import CameraReceiver
-import ball_predection.sync as sync
 
 def getHitPointInformation(_traj_unnormed:torch.Tensor) :
     END = 2.74/2
@@ -130,7 +129,6 @@ def runDec(s, sub_name, detection_load, q, c2s, save_name) :
 class PredictionConfig :
     def __init__(self) :
         self.detectionConfigs:Tuple[Detection.DetectionConfig, Detection.DetectionConfig] = (None, None)
-        self.lag = 0
         self.loadName = None
         self.weight = None
         self.model_name = None
@@ -151,9 +149,6 @@ class PredictionConfig :
             raise Exception("config not found")
 
         self.detectionConfigs = (c1, c2)
-        if os.path.exists(os.path.join("configs", configName, "lag")) :
-            with open(os.path.join("configs", configName, "lag"), "r") as f :
-                self.lag = int(f.read())
 
         with open(os.path.join("configs", configName, "weight"), "r") as f :
             self.weight = f.read()
@@ -173,8 +168,6 @@ class PredictionConfig :
             os.mkdir(os.path.join("configs", configName, "cam2"))
         self.detectionConfigs[0].save(os.path.join(configName, "cam1"))
         self.detectionConfigs[1].save(os.path.join(configName, "cam2"))
-        with open(os.path.join("configs", configName, "lag"), "w") as f :
-            f.write(str(self.lag))
         with open(os.path.join("configs", configName, "weight"), "w") as f :
             f.write(str(self.weight))
         with open(os.path.join("configs", configName, "model_name"), "w") as f :
@@ -182,11 +175,10 @@ class PredictionConfig :
         with open(os.path.join("configs", configName, "mode"), "w") as f :
             f.write(str(self.mode))
 
-def createPredictionConfig(source:Tuple, save_name, detectionConfig:Tuple[Detection.DetectionConfig, Detection.DetectionConfig], weight, model_name="medium", mode = "normalB") :
+def createPredictionConfig(save_name, detectionConfig:Tuple[Detection.DetectionConfig, Detection.DetectionConfig], weight, model_name="medium", mode = "normalB") :
     common.replaceDir("configs", save_name)
     config = PredictionConfig()
     config.detectionConfigs = detectionConfig
-    config.lag = sync.getPredictionLagframes(source, detectionConfig)
     config.weight = weight
     config.model_name = model_name
     config.mode = mode
@@ -270,8 +262,6 @@ def predict(
     lines2 = LineCollector_hor()
 
     # create lagger that lag the data
-    lagger1 = Lagger(config.lag if config.lag > 0 else 0)
-    lagger2 = Lagger(-config.lag if config.lag > 0 else 0)
 
     process_time = 0
     process_time_iter = 0
@@ -310,21 +300,15 @@ def predict(
             isHit = None
             if recv_data[0] == p1.pid : # data is from camera 1
                 # sync of frame_lag
-                new_data = lagger1.update(recv_data)
-                if new_data is None : # the buffer of the lagger is not full. (in the first few frames)
-                    continue
-                if new_data[2] is not None : # if detected a ball
-                    isHit = not lines1.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6]) # update new data to lineCollector
+                if recv_data[2] is not None : # if detected a ball
+                    isHit = not lines1.put(recv_data[2], recv_data[3], recv_data[4], recv_data[5], recv_data[6]) # update new data to lineCollector
                     # if one of the camera detected the hit. clear the other lineCollector
                     if isHit :
                         lines2.clear()
                 which = 1
             elif recv_data[0] == p2.pid : # data is from camera 2
-                new_data = lagger2.update(recv_data)
-                if new_data is None :
-                    continue
-                if new_data[2] is not None :
-                    isHit = not lines2.put(new_data[2], new_data[3], new_data[4], new_data[5], new_data[6])
+                if recv_data[2] is not None :
+                    isHit = not lines2.put(recv_data[2], recv_data[3], recv_data[4], recv_data[5], recv_data[6])
                     if isHit :
                         lines1.clear()
                 which = 2
@@ -343,9 +327,9 @@ def predict(
                 process_time += time.time() - nowT
                 process_time_iter += 1
                 if hp is not None :
-                    pfw.writerow([which, new_data[1], float(hp[0]), float(hp[1]), float(hp[2]), float(t)] + out.view(-1).tolist())
+                    pfw.writerow([which, recv_data[1], float(hp[0]), float(hp[1]), float(hp[2]), float(t)] + out.view(-1).tolist())
                 else :
-                    pfw.writerow([which, new_data[1], -1, -1, -1, -1] + out.view(-1).tolist())
+                    pfw.writerow([which, recv_data[1], -1, -1, -1, -1] + out.view(-1).tolist())
 
         # communication between main process and detection process
         if c12d.poll() :
@@ -387,7 +371,7 @@ if __name__ == "__main__" :
     parser = ap.ArgumentParser()
     parser.add_argument("-cc", "--create_config", help="use this flag to create config. otherwise use config to run prediction", action="store_true")
     parser.add_argument("-c", "--config", help="config name (nessesary)")
-    parser.add_argument("-s", "--source", help="source (nessesary)", nargs=2)
+    parser.add_argument("-s", "--source", help="source (only needed when running prediction)", nargs=2)
     parser.add_argument("-dc", "--detection_config", help="detection config name. (only needed when creating config)", nargs=2)
     parser.add_argument("-m", "--model", help="model name. (only needed when creating configs)", default="medium")
     parser.add_argument("-w", "--weight", help="weight path (only needed when creating configs)", default="normalB/epoch_29/weight.pt")
@@ -404,7 +388,7 @@ if __name__ == "__main__" :
         dc = (Detection.DetectionConfig(), Detection.DetectionConfig())
         dc[0].load(args.detection_config[0])
         dc[1].load(args.detection_config[1])
-        createPredictionConfig(source, args.config, dc, args.weight, args.model, args.mode)
+        createPredictionConfig(args.config, dc, args.weight, args.model, args.mode)
     else :
         config = PredictionConfig()
         config.load(args.config)
