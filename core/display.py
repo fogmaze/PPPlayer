@@ -1,4 +1,6 @@
 import tqdm
+import time
+import multiprocessing as mp
 import numpy as np
 from typing import Tuple
 import csv
@@ -118,8 +120,89 @@ def prepareModelInput(ll:list, rl:list, device="cuda:0") :
     Constants.normer.norm_input_tensor(r)
     return l, l_len, r, r_len
 
-def visualizePrediction_realtime(root, fps=30) :
 
+def _visualPredictionProcess(root, queue:mp.Queue) :
+    #mp4_writer = cv2.VideoWriter(os.path.join(root, 'visualize_result.mp4'), cv2.VideoWriter_fourcc(*'mp4v'), 30, (640, 480*2))
+    nowTime = time.time()
+    Collector1 = pred.LineCollector_hor()
+    Collector2 = pred.LineCollector_hor()
+    fig, axe = createFigRoom()
+    white = np.zeros((480, 640, 3), np.uint8)
+    white[:] = (255, 255, 255)
+    uframe = white
+    dframe = white
+    frame = cv2.vconcat([uframe, dframe])
+    while True :
+        if not queue.empty() :
+            recv_data = queue.get()
+            if recv_data[0] == "frameData":
+                which, new_line, model_out = recv_data[1:]
+                if not new_line[0] == None :
+                    print("get")
+                    if which == 1 and not new_line[0] == None:
+                        isHit = Collector1.put(new_line[0], new_line[1], new_line[2], new_line[3], new_line[4])
+                        if isHit :
+                            Collector2.clear()
+                    elif which == 2 and not new_line[0] == None:
+                        isHit = Collector2.put(new_line[0], new_line[1], new_line[2], new_line[3], new_line[4])
+                        if isHit :
+                            Collector1.clear()
+            
+                    cleanRoom(axe, (0, 90))
+                    leg = []
+                    if len(Collector1.lines) > 0 :
+                        l1, = displayLines(axe, Collector1, color='b', label=None)
+                        leg.append((l1, 'cam1'))
+                    if len(Collector2.lines) > 0 :
+                        l2, = displayLines(axe, Collector2, color='g', label=None)
+                        leg.append((l2, 'cam2'))
+                    if model_out is not None :
+                        out = torch.tensor(model_out).view(-1,3)
+                        o = plotOutput(axe, out, color='r', label=None)
+                        leg.append((o, 'output'))
+                    if not len(leg) == 0:
+                        plt.legend(*zip(*leg))
+                        plt.pause(0.0001)
+                        #fig.canvas.draw()
+                        #uframe = np.fromstring(axe.figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+                        #uframe = uframe.reshape(axe.figure.canvas.get_width_height()[::-1] + (3,))
+                        #uframe = cv2.cvtColor(uframe, cv2.COLOR_RGB2BGR)
+
+                    #cleanRoom(axe, (90, 90))
+                    #leg = []
+                    #if len(Collector1.lines) > 0 :
+                        #l1, = displayLines(axe, Collector1, color='b', label=None)
+                        #leg.append((l1, 'cam1'))
+                    #if len(Collector2.lines) > 0 :
+                        #l2, = displayLines(axe, Collector2, color='g', label=None)
+                        #leg.append((l2, 'cam2'))
+                    #if model_out is not None :
+                        #out = torch.tensor(model_out).view(-1,3)
+                        #o = plotOutput(axe, out, color='r', label=None)
+                        #leg.append((o, 'output'))
+                    #if not len(leg) == 0 :
+                        #plt.legend(*zip(*leg))
+                        #plt.pause(0.0001)
+                        #fig.canvas.draw()
+                        #dframe = np.fromstring(axe.figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+                        #dframe = dframe.reshape(axe.figure.canvas.get_width_height()[::-1] + (3,))
+                        #dframe = cv2.cvtColor(dframe, cv2.COLOR_RGB2BGR)   
+
+            #mp4_writer.write(frame)
+            elif recv_data[0] == "stop" :
+                print("visualPredictionProcess stop")
+                break
+        #mp4_writer.release()
+
+
+def visualizePrediction_realtime(root) -> Tuple[mp.Queue, mp.Process] :
+    queue = mp.Queue()
+    p = mp.Process(target=_visualPredictionProcess, args=(root, queue,))
+    p.start()
+    return queue, p
+
+
+def visualizePrediction_(root, fps=30) :
     model:models.ISEFWINNER_BASE = models.MODEL_MAP["medium"](device="cuda:0")
     model.cuda()
     model.load_state_dict(torch.load(os.path.join("ball_simulate_v2/model_saves/", "normalB/epoch_29/weight.pt")))
