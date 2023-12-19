@@ -238,10 +238,10 @@ def predict(
     pfrw.writerow(["which camera", "frame", "x", "y", "z", "rxy", "rxz", "time"])
 
     # start realtime visualization
-    displayQueue = None
-    pd = None
-    if visualization :
-        displayQueue, pd = display.visualizePrediction_realtime(os.path.join("results", save_name))
+    #displayQueue = None
+    #pd = None
+    #if visualization :
+        #displayQueue, pd = display.visualizePrediction_realtime(os.path.join("results", save_name))
     
     queue = mp.Queue() # Queue for receiving detection data from detection
     c12d, c12s = mp.Pipe() # Pipe for communication between main process and detection process
@@ -337,8 +337,8 @@ def predict(
                 else :
                     pfw.writerow([which, recv_data[1], -1, -1, -1, -1] + out.view(-1).tolist())
             # send data to display process
-            if visualization :
-                displayQueue.put(("frameData", which, (recv_data[2], recv_data[3], recv_data[4], recv_data[5], recv_data[6]), out.tolist() if out is not None else None))
+            #if visualization :
+                #displayQueue.put(("frameData", which, (recv_data[2], recv_data[3], recv_data[4], recv_data[5], recv_data[6]), out.tolist() if out is not None else None))
 
         # communication between main process and detection process
         if c12d.poll() :
@@ -359,13 +359,13 @@ def predict(
                 if recv[0] == "keyPress" :
                     if recv[1] == ord("s") :
                         status = "syncing" if status == "predicting" else "predicting"
-    displayQueue.put(("stop",))   
+    #displayQueue.put(("stop",))   
     c12d.send("stop")
     c22d.send("stop")
     
     p1.join()
     p2.join()
-    pd.join()
+    #pd.join()
     if not process_time_iter == 0 :
         process_time /= process_time_iter 
         print("mean process time:", process_time, "; it/s:", process_time_iter / process_time)
@@ -374,7 +374,7 @@ def predict(
     pfr.close()
 
     # display
-    if visualization and False:
+    if visualization:
         display.visualizePrediction_video(os.path.join("results", save_name), fps=30)
 
 if __name__ == "__main__" :

@@ -202,14 +202,14 @@ def visualizePrediction_realtime(root) -> Tuple[mp.Queue, mp.Process] :
     return queue, p
 
 
-def visualizePrediction_(root, fps=30) :
-    model:models.ISEFWINNER_BASE = models.MODEL_MAP["medium"](device="cuda:0")
-    model.cuda()
-    model.load_state_dict(torch.load(os.path.join("ball_simulate_v2/model_saves/", "normalB/epoch_29/weight.pt")))
-    model.eval()
-    Constants.set2Normal()
-    NORMED_PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)
-    Constants.normer.norm_t_tensor(NORMED_PREDICT_T)
+def visualizePrediction_video(root, fps=60) :
+    #model:models.ISEFWINNER_BASE = models.MODEL_MAP["medium"](device="cuda:0")
+    #model.cuda()
+    #model.load_state_dict(torch.load(os.path.join("ball_simulate_v2/model_saves/", "normalB/epoch_29/weight.pt")))
+    #model.eval()
+    #Constants.set2Normal()
+    #NORMED_PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)
+    #Constants.normer.norm_t_tensor(NORMED_PREDICT_T)
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     if os.path.exists(os.path.join(root, 'visualize_video.mp4')) :
@@ -226,6 +226,20 @@ def visualizePrediction_(root, fps=30) :
         reader = csv.reader(f)
         title = next(reader)
         raw_datas = [[float(b) if b != '' else 0 for b in a] for a in reader]
+
+    with open(os.path.join(root, 'pred.csv'), 'r') as f :
+        reader = csv.reader(f)
+        title = next(reader)
+        pred_datas = [[float(b) for b in a] for a in reader]
+        pred_datas_1 = {}
+        pred_datas_2 = {}
+        for pred_data in pred_datas :
+            if pred_data[0] == 1:
+                pred_datas_1[pred_data[1]] = pred_data[6:]
+            elif pred_data[0] == 2 :
+                pred_datas_2[pred_data[1]] = pred_data[6:]
+            else :
+                raise ValueError("pred_data[0] is not 1 or 2")
 
     white = np.zeros((480, 640, 3), np.uint8)
     white[:] = (255, 255, 255)
@@ -251,10 +265,14 @@ def visualizePrediction_(root, fps=30) :
         elif isHit :
             pass
         elif len(lines1.lines) > 1 and len(lines2.lines) > 1 : # send to model
-                model.reset_hidden_cell(1)
-                l, l_len, r, r_len = prepareModelInput(lines1.lines, lines2.lines)
-                out:torch.Tensor = model(l, l_len, r, r_len, NORMED_PREDICT_T) 
-                Constants.normer.unnorm_ans_tensor(out)
+                #model.reset_hidden_cell(1)
+                #l, l_len, r, r_len = prepareModelInput(lines1.lines, lines2.lines)
+                #out:torch.Tensor = model(l, l_len, r, r_len, NORMED_PREDICT_T) 
+                #Constants.normer.unnorm_ans_tensor(out)
+                if raw[0] == 1 :
+                    out = torch.tensor(pred_datas_1[raw[1]]).view(-1,3)
+                elif raw[0] == 2 :
+                    out = torch.tensor(pred_datas_2[raw[1]]).view(-1,3)
                 
                 cleanRoom(axe, (0, 90))
                 o = plotOutput(axe, out, color='r', label=None)
@@ -308,7 +326,7 @@ def visualizePrediction_(root, fps=30) :
     outputVideo.release()
 
 
-def visualizePrediction_video(root, fps=30, lagg=10) :
+def visualizePrediction_video_(root, fps=30, lagg=10) :
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     if os.path.exists(os.path.join(root, 'visualize_video.mp4')) :
         os.remove(os.path.join(root, 'visualize_video.mp4'))
