@@ -12,8 +12,7 @@ First, clone the project using git or just download the zip file and extract it.
 
 # Ball Simulation
 
-## Introduction
-This script is designed for simulating ball data with various configurations. It provides command-line arguments to customize simulation parameters and operations.
+This script is designed for simulating ball data with various configurations. And save as training data files to train the ball-prediction model. It provides command-line arguments to customize simulation parameters and operations.
 
 ## Usage
 
@@ -81,4 +80,3 @@ Make sure you run the code in the root of the project
 - **normalB60**: Set the model mode to normal with configuration 'B60'.
 - **normalBR**: Set the model mode to normal with configuration 'BR'.
 
-Feel free to customize the script according to your specific use case and requirements.
