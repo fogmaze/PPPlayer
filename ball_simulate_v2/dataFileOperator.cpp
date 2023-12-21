@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <string>
 
 #ifndef INPUT_LEN
 
@@ -170,13 +171,10 @@ void createEmptyFile_sync(char* file_name, int data_length) {
     fclose(fp);
 }
 
-char* getFullFilename(char* filename, int ind) {
-    char* fullFilename = 
-}
 
 extern "C"
 void putData_sync(char* file_name, int index, Data data) {
-    char* fullFilename = getFullFilename(file_name, index);
+    char* fullFilename = (char*)malloc(sizeof(char) * );
     FILE *fp = fopen(fullFilename, "r+");
     fseek(fp, index * sizeof(Data) + sizeof(FileDataHeader), SEEK_SET);
     fwrite(&data, sizeof(Data), 1, fp);
