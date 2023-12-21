@@ -176,13 +176,14 @@ class PredictionConfig :
             f.write(str(self.mode))
 
 def createPredictionConfig(save_name, detectionConfig:Tuple[Detection.DetectionConfig, Detection.DetectionConfig], weight, model_name="medium", mode = "normalB") :
-    common.replaceDir("configs", save_name)
+    #common.replaceDir("configs", save_name)
     config = PredictionConfig()
     config.detectionConfigs = detectionConfig
     config.weight = weight
     config.model_name = model_name
     config.mode = mode
-    config.save(save_name)
+    #config.save(save_name)
+    return config
             
 def predict(
         config:PredictionConfig,
@@ -238,10 +239,10 @@ def predict(
     pfrw.writerow(["which camera", "frame", "x", "y", "z", "rxy", "rxz", "time"])
 
     # start realtime visualization
-    #displayQueue = None
-    #pd = None
-    #if visualization :
-        #displayQueue, pd = display.visualizePrediction_realtime(os.path.join("results", save_name))
+    displayQueue = None
+    pd = None
+    if visualization :
+        displayQueue, pd = display.visualizePrediction_realtime(os.path.join("results", save_name))
     
     queue = mp.Queue() # Queue for receiving detection data from detection
     c12d, c12s = mp.Pipe() # Pipe for communication between main process and detection process
@@ -337,8 +338,8 @@ def predict(
                 else :
                     pfw.writerow([which, recv_data[1], -1, -1, -1, -1] + out.view(-1).tolist())
             # send data to display process
-            #if visualization :
-                #displayQueue.put(("frameData", which, (recv_data[2], recv_data[3], recv_data[4], recv_data[5], recv_data[6]), out.tolist() if out is not None else None))
+            if visualization :
+                displayQueue.put(("frameData", which, (recv_data[2], recv_data[3], recv_data[4], recv_data[5], recv_data[6]), out.tolist() if out is not None else None))
 
         # communication between main process and detection process
         if c12d.poll() :
@@ -359,7 +360,7 @@ def predict(
                 if recv[0] == "keyPress" :
                     if recv[1] == ord("s") :
                         status = "syncing" if status == "predicting" else "predicting"
-    #displayQueue.put(("stop",))   
+    displayQueue.put(("stop",))   
     c12d.send("stop")
     c22d.send("stop")
     
@@ -379,8 +380,8 @@ def predict(
 
 if __name__ == "__main__" :
     parser = ap.ArgumentParser()
-    parser.add_argument("-cc", "--create_config", help="use this flag to create config. otherwise use config to run prediction", action="store_true")
-    parser.add_argument("-c", "--config", help="config name (nessesary)")
+    #parser.add_argument("-cc", "--create_config", help="use this flag to create config. otherwise use config to run prediction", action="store_true")
+    #parser.add_argument("-c", "--config", help="config name (nessesary)")
     parser.add_argument("-s", "--source", help="source (only needed when running prediction)", nargs=2)
     parser.add_argument("-dc", "--detection_config", help="detection config name. (only needed when creating config)", nargs=2)
     parser.add_argument("-m", "--model", help="model name. (only needed when creating configs)", default="medium")
@@ -394,15 +395,17 @@ if __name__ == "__main__" :
         args.source[0] if not args.source[0].isnumeric() else int(args.source[0]),
         args.source[1] if not args.source[1].isnumeric() else int(args.source[1])
     )
-    if args.create_config :
-        dc = (Detection.DetectionConfig(), Detection.DetectionConfig())
-        dc[0].load(args.detection_config[0])
-        dc[1].load(args.detection_config[1])
-        createPredictionConfig(args.config, dc, args.weight, args.model, args.mode)
-    else :
-        config = PredictionConfig()
-        config.load(args.config)
-        predict(config, source, args.config if args.name==None else args.name, not args.non_visualization)
+    # no longer used
+    #if args.create_config and False:
+        #dc = (Detection.DetectionConfig(), Detection.DetectionConfig())
+        #dc[0].load(args.detection_config[0])
+        #dc[1].load(args.detection_config[1])
+        #createPredictionConfig(args.config, dc, args.weight, args.model, args.mode)
+    # start predicting
+    dc = (Detection.DetectionConfig(), Detection.DetectionConfig())
+    dc[0].load(args.detection_config[0])
+    dc[1].load(args.detection_config[1])
+    predict(createPredictionConfig("tmp", dc, args.weight, args.model, args.mode), source, args.config if args.name==None else args.name, not args.non_visualization)
 
     exit()
 
