@@ -360,6 +360,7 @@ def main() :
                     print("move to", deg, base_pos)
                     servo.write(str(500 + (deg*2000)/270).encode(encoding="gbk"))
                     stepper.move(base_pos)
+                    now_rad = rad
                 elif cmd[0] == "hit" :
                     hit_ball()
     except Exception as e:
