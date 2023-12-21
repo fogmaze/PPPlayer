@@ -338,13 +338,13 @@ def main() :
                     if len(cmd) == 0:
                         pass
                     elif float(cmd[1]) > 0 :
-                        deg = 240-deg
+                        deg = 225-deg
                         print("move ta",deg, round((float(cmd[1])-arm_broad)/0.0008))
                         servo.write(str(500 + (deg*2000)/270).encode(encoding="gbk"))
                         stepper.move(round((float(cmd[1])-arm_broad)/0.0008))
                     else :
-                        print("move to", 240-(180-deg), round((float(cmd[1])-arm_broad)/0.0008))
-                        servo(ser,240-(180-deg))
+                        print("move to", 225-(180-deg), round((float(cmd[1])-arm_broad)/0.0008))
+                        servo(ser,225-(180-deg))
                         stepper.move(round((float(cmd[1])+arm_broad)/0.0008))
                 elif cmd[0] == "hit" :
                     hit_ball()
