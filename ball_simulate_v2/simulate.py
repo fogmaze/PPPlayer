@@ -278,136 +278,9 @@ def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
             c.normer.norm(dataStruct)
             dataset.putData(i*SINGLE_SIMULATE_SAMPLE_LEN+j, dataStruct)
 
-def work_simulate(queue:multiprocessing.Queue, dataLength):
-    SINGLE_SIMULATE_SAMPLE_LEN = 5
-    p.connect(p.DIRECT)
 
-    p.setPhysicsEngineParameter(restitutionVelocityThreshold=0)
-
-    planeId = p.createCollisionShape(p.GEOM_PLANE)
-    plane = p.createMultiBody(0, planeId)
-
-    radius = 0.04
-    sphereId = p.createCollisionShape(p.GEOM_SPHERE, radius=radius)
-    startPos = [0, 0, 1]
-    startOrientation = p.getQuaternionFromEuler([0,0,0])
-    sphere = p.createMultiBody(27, sphereId, basePosition=startPos, baseOrientation=startOrientation)
-
-    linearVelocity = [0,0, random.uniform(0, 5)]
-    angularVelocity = [0, 0, 0]
-    p.resetBaseVelocity(sphere, linearVelocity, angularVelocity)
-
-    #linearDamping = 6 * math.pi * radius * 0.0185
-    #angularDamping = 0.1
-    #p.changeDynamics(sphere, -1, linearDamping=linearDamping, angularDamping=angularDamping)
-
-
-    restitution = 1
-    p.changeDynamics(sphere, -1, restitution=restitution)
-    p.changeDynamics(plane, -1, restitution=restitution)
-    p.setRealTimeSimulation(0)
-    p.setTimeStep(c.stepTime)
-
-    p.setGravity(0, 0, -c.G)
-
-    for i in range(int(dataLength//SINGLE_SIMULATE_SAMPLE_LEN)) :
-        cam1_pos = randomCameraPos()
-        cam2_pos = randomCameraPos()
-
-        ball_pos = randomBallPos()
-
-        #set ball pos
-        p.resetBasePositionAndOrientation(sphere, [ball_pos.x, ball_pos.y, ball_pos.z], startOrientation)
-        linearVelocity = [random.uniform(-5,5), random.uniform(-5,5), random.uniform(0, 3)]
-        angularVelocity = [0, 0, 0]
-        p.resetBaseVelocity(sphere, linearVelocity, angularVelocity)
-
-
-        works:List[Work] = []
-        cam1_data:List[CameraWork] = []
-        cam2_data:List[CameraWork] = []
-        ans_data:List[BallWork] = []
-        camera_systematic_error = random.normalvariate(0, c.SHUTTER_SYSTEMATIC_ERROR_STD)
-        for j in range(c.SIMULATE_INPUT_LEN):
-            works.append(CameraWork(abs(j/c.FPS + random.normalvariate(0,c.SHUTTER_RANDOM_ERROR_STD)), cam1_pos, (0,j)))
-            works.append(CameraWork(abs(j/c.FPS + random.normalvariate(0,c.SHUTTER_RANDOM_ERROR_STD) + camera_systematic_error), cam2_pos, (1, j)))
-        for j in range(c.SIMULATE_TEST_LEN):
-            works.append(BallWork(j*c.CURVE_SHOWING_GAP, (2, j)))
-        works = sorted(works, key = lambda x: x.timestamp)
-        nowTimeStamp = 0
-
-        nowTimeStamp = 0
-        nowWorkIndex = 0
-        while len(works) > nowWorkIndex:
-            if works[nowWorkIndex].timestamp > nowTimeStamp:
-            #if True:
-                p.stepSimulation()
-                nowTimeStamp += c.stepTime
-                continue
-
-            #get ball pos
-            ball_pos_list = p.getBasePositionAndOrientation(sphere)[0]
-            ball_pos = equ.Point3d(ball_pos_list[0], ball_pos_list[1], ball_pos_list[2])
-
-            #do work
-            works[nowWorkIndex].action(ball_pos)
-
-            if works[nowWorkIndex].index[0] == 0:
-                cam1_data.append(works[nowWorkIndex])
-            elif works[nowWorkIndex].index[0] == 1:
-                cam2_data.append(works[nowWorkIndex])
-            elif works[nowWorkIndex].index[0] == 2:
-                ans_data.append(works[nowWorkIndex])
-
-            nowWorkIndex += 1
-
-        # save data
-        num = SINGLE_SIMULATE_SAMPLE_LEN + dataLength % SINGLE_SIMULATE_SAMPLE_LEN if i == int(dataLength//SINGLE_SIMULATE_SAMPLE_LEN) - 1 else SINGLE_SIMULATE_SAMPLE_LEN
-        bat = []
-        for j in range(num) :
-            dataStruct = dfo.DataStruct()
-            cam1_end = random.randint(3, len(cam1_data))
-            cam2_end = min(random.randint(cam1_end-2, cam1_end+2), len(cam2_data))
-            dataStruct.inputs[0].camera_x = cam1_data[0].camera_pos.x
-            dataStruct.inputs[0].camera_y = cam1_data[0].camera_pos.y
-            dataStruct.inputs[0].camera_z = cam1_data[0].camera_pos.z
-            dataStruct.inputs[1].camera_x = cam2_data[0].camera_pos.x
-            dataStruct.inputs[1].camera_y = cam2_data[0].camera_pos.y
-            dataStruct.inputs[1].camera_z = cam2_data[0].camera_pos.z
-            dataStruct.inputs[0].seq_len = cam1_end
-            dataStruct.inputs[1].seq_len = cam2_end
-
-            for k in range(cam1_end):
-                dataStruct.inputs[0].line_rad_xy[k] = cam1_data[k].rad_xy
-                dataStruct.inputs[0].line_rad_xz[k] = cam1_data[k].rad_xz
-                dataStruct.inputs[0].timestamps[k] = cam1_data[k].timestamp
-            
-            for k in range(cam2_end):
-                dataStruct.inputs[1].line_rad_xy[k] = cam2_data[k].rad_xy
-                dataStruct.inputs[1].line_rad_xz[k] = cam2_data[k].rad_xz
-                dataStruct.inputs[1].timestamps[k] = cam2_data[k].timestamp
-            
-            for k in range(len(ans_data)):
-                dataStruct.curvePoints[k].x = ans_data[k].ball_pos.x
-                dataStruct.curvePoints[k].y = ans_data[k].ball_pos.y
-                dataStruct.curvePoints[k].z = ans_data[k].ball_pos.z
-                dataStruct.curveTimestamps[k] = ans_data[k].timestamp
-
-            c.normer.norm(dataStruct)
-            bat.append(dataStruct)
-        queue.put(bat)
-
-def work_putData(queue:multiprocessing.Queue, fileName, dataLength) :
-    dataSet = dfo.BallDataSet_sync(fileName=fileName, dataLength=dataLength)
-    with tqdm.tqdm(total=dataLength) as pbar:
-        ind = 0
-        while ind != dataLength :
-            datas = queue.get()
-            for data in datas:
-                dataSet.putData(ind, data)
-                ind += 1
-            pbar.update(len(datas))
-        print("save to file : ", fileName)
+def work_simulate(outputFileName, fromIdx):
+    pass
 
 def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"):
     queue = multiprocessing.Queue()
@@ -420,7 +293,7 @@ def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"
 
     workers.append(multiprocessing.Process(target=work_simulate, args=(queue, eachLen + lessLen)))
     workers[len(workers)-1].start()
-    saver = multiprocessing.Process(target=work_putData, args=(queue, outputFileName, dataLength))
+    saver = multiprocessing.Process(target=None, args=(queue, outputFileName, dataLength))
     saver.start()
 
     while saver.is_alive() :

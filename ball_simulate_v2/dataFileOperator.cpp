@@ -2,7 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
-#include <string>
+#include <string.h>
 
 #ifndef INPUT_LEN
 
@@ -10,6 +10,8 @@
 #define TEST_LEN 250
 
 #endif
+
+#define MAX_SINGLE_FILE_DATA_LEN 100000
 
 using namespace std;
 
@@ -125,6 +127,7 @@ bool saveToFile(void* header, const char* file_name) {
     return true;
 }
 
+/*
 extern "C"
 Data getFileData_sync(char* file_name, int index) {
     ifstream fh;
@@ -141,12 +144,16 @@ Data getFileData_sync(char* file_name, int index) {
     delete data;
     return d;
 }
+*/
 
 
 extern "C"
 int getFileDataLength_sync(char* file_name) {
+    char* fullFilename = (char*)malloc(sizeof(char) * (strlen(file_name) + 5));
+    strcpy(fullFilename, file_name);
+    sprintf(fullFilename + strlen(file_name), ".%d", 0);
     fstream fh;
-    fh.open(file_name, ios::in | ios::binary);
+    fh.open(fullFilename, ios::in | ios::binary);
     if (!fh.is_open()) {
         return -1;
     }
@@ -158,29 +165,59 @@ int getFileDataLength_sync(char* file_name) {
 
 extern "C"
 void createEmptyFile_sync(char* file_name, int data_length) {
-    FILE *fp = fopen(file_name, "w");
-    // write header
+    for (int i = 0;i < ceil((double)data_length / MAX_SINGLE_FILE_DATA_LEN); i++) {
+        char* fullFilename = (char*)malloc(sizeof(char) * (strlen(file_name) + 5));
+        strcpy(fullFilename, file_name);
+        sprintf(fullFilename + strlen(file_name), ".%d", i);
+        FILE *fp = fopen(fullFilename, "w");
+        FileDataHeader header;
+        header.data_length = i == ceil((double)data_length / MAX_SINGLE_FILE_DATA_LEN)-1? data_length % MAX_SINGLE_FILE_DATA_LEN: MAX_SINGLE_FILE_DATA_LEN;
+        fwrite(&header, sizeof(FileDataHeader), 1, fp);
+        Data data;
+        for (int i = 0; i < header.data_length; i++) {
+            fwrite(&data, sizeof(Data), 1, fp);
+        }
+        fclose(fp);
+        free(fullFilename);
+    }
+    char* firstFileName = (char*)malloc(sizeof(char) * (strlen(file_name) + 5));
+    strcpy(firstFileName, file_name);
+    sprintf(firstFileName + strlen(file_name), ".%d", 0);
+    FILE *ffp = fopen(firstFileName, "w");
     FileDataHeader header;
     header.data_length = data_length;
-    fwrite(&header, sizeof(FileDataHeader), 1, fp);
-    // write data
-    Data data;
-    for (int i = 0; i < data_length; i++) {
-        fwrite(&data, sizeof(Data), 1, fp);
-    }
-    fclose(fp);
+    fwrite(&header, sizeof(FileDataHeader), 1, ffp);
+    fclose(ffp);
+    free(firstFileName);
 }
 
 
 extern "C"
 void putData_sync(char* file_name, int index, Data data) {
-    char* fullFilename = (char*)malloc(sizeof(char) * );
+    char* fullFilename = (char*)malloc(sizeof(char) * (strlen(file_name) + 5));
+    strcpy(fullFilename, file_name);
+    sprintf(fullFilename + strlen(file_name), ".%d", index/MAX_SINGLE_FILE_DATA_LEN);
     FILE *fp = fopen(fullFilename, "r+");
-    fseek(fp, index * sizeof(Data) + sizeof(FileDataHeader), SEEK_SET);
+    fseek(fp, (index%MAX_SINGLE_FILE_DATA_LEN) * sizeof(Data) + sizeof(FileDataHeader), SEEK_SET);
     fwrite(&data, sizeof(Data), 1, fp);
     fclose(fp);
     free(fullFilename);
 }
+
+extern "C"
+Data getFileData_sync(char* file_name, int index) {
+    char* fullFilename = (char*)malloc(sizeof(char) * (strlen(file_name) + 5));
+    strcpy(fullFilename, file_name);
+    sprintf(fullFilename + strlen(file_name), ".%d", index/MAX_SINGLE_FILE_DATA_LEN);
+    FILE *fp = fopen(fullFilename, "r");
+    fseek(fp, (index%MAX_SINGLE_FILE_DATA_LEN) * sizeof(Data) + sizeof(FileDataHeader), SEEK_SET);
+    Data data;
+    fread(&data, sizeof(Data), 1, fp);
+    fclose(fp);
+    free(fullFilename);
+    return data;
+}
+
 
 extern "C"
 void merge(char* a, char* b, char* new_file_name) {

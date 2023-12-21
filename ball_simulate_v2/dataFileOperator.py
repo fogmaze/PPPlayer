@@ -104,8 +104,6 @@ class BallDataSet_put(torch.utils.data.Dataset) :
 
         self.lib.createEmptyFile_sync(self.fileName.encode('utf-8'), dataLength)
         
-        if not os.path.exists(fileName) :
-            raise Exception("file not found")
         self.length = self.lib.getFileDataLength_sync(self.fileName.encode('utf-8'))
         pass
     
@@ -185,7 +183,21 @@ class BallDataSet_put(torch.utils.data.Dataset) :
     def saveToFile(self):
         pass
 
+class BallDataSet_sync_subput(torch.utils.data.Dataset) :
+    def __init__(self, fileName, fromIdx, dataLength = None, device = "cuda:0", mode = "normalBR"):
+        self.mode = mode
+        self.loadLib()
 
+        # Add conditions for other modes if needed
+
+        self.fileName = fileName
+        self.device = torch.device(device)
+
+        self.lib.createEmptyFile_sync(self.fileName.encode('utf-8'), dataLength)
+        
+        self.length = self.lib.getFileDataLength_sync(self.fileName.encode('utf-8'))
+        
+        
 class BallDataSet_sync(torch.utils.data.Dataset) :
     def __init__(self, fileName, dataLength = None, device = "cuda:0", mode = "normalBR"):
         self.mode = mode
@@ -220,10 +232,7 @@ class BallDataSet_sync(torch.utils.data.Dataset) :
         if dataLength != None:
             lib.createEmptyFile_sync(self.fileName.encode('utf-8'), dataLength)
         
-        if not os.path.exists(fileName) :
-            raise Exception("file not found")
         self.length = lib.getFileDataLength_sync(self.fileName.encode('utf-8'))
-        pass
     
     def __len__(self):
         return self.length
@@ -296,10 +305,8 @@ def testLoadData():
     print(a[1].inputs[0].camera_x)
     print(a[1].curveTimestamps[0])
     print(a[1].curveTimestamps[1])
+
 if __name__ == "__main__":
-    ds = BallDataSet_sync("ball_simulate_v2/dataset/medium_fit.train.bin")
-    a = ds[0]
-    b = ds[1]
-
-
+    lib = loadLib()
+    print(lib.getFileDataLength_sync("t.bin".encode('utf-8')))
     pass
