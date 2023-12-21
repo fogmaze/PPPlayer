@@ -196,7 +196,7 @@ class BallDataSet_sync_subput(torch.utils.data.Dataset) :
         self.lib.createEmptyFile_sync(self.fileName.encode('utf-8'), dataLength)
         
         self.length = self.lib.getFileDataLength_sync(self.fileName.encode('utf-8'))
-        
+
         
 class BallDataSet_sync(torch.utils.data.Dataset) :
     def __init__(self, fileName, dataLength = None, device = "cuda:0", mode = "normalBR"):
@@ -266,9 +266,9 @@ def merge(a, b, out) :
     pass
 
 def testPutData():
-    d = BallDataSet_sync("t.bin", dataLength=2)
+    d = BallDataSet_put("t.bin", dataLength=2)
     for i in range(2) :
-        a = d.DataStruct()
+        a = d.dataStructClass()
         a.inputs[0].camera_x = i
         a.inputs[0].camera_y = 2
         a.inputs[0].camera_z = 3
@@ -307,6 +307,9 @@ def testLoadData():
     print(a[1].curveTimestamps[1])
 
 if __name__ == "__main__":
+    testPutData()
+    testLoadData()
+    exit()
     lib = loadLib()
-    print(lib.getFileDataLength_sync("t.bin".encode('utf-8')))
+    a = lib.getFileData_sync("ball_simulate_v2/dataset/splittest.bin".encode('utf-8'), 100060)
     pass

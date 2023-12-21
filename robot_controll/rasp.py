@@ -321,6 +321,8 @@ def main() :
         arm_length = 0.465
         arm_height = 0.46
         clientsocket = None
+
+        now_rad = 0.5 * math.pi
         while True :
             (clientsocket, address) = serversocket.accept()
             while True :
@@ -331,21 +333,33 @@ def main() :
                 elif cmd[0] == "q" :
                     break
                 elif cmd[0] == "m" :
-                    print(cmd)
-                    deg = math.asin((float(cmd[2])-arm_height)/arm_length) / math.pi * 180
-                    print(deg)
-                    arm_broad = abs(math.cos(deg) * arm_length)
-                    if len(cmd) == 0:
-                        pass
-                    elif float(cmd[1]) > 0 :
-                        deg = 225-deg
-                        print("move ta",deg, round((float(cmd[1])-arm_broad)/0.0008))
-                        servo.write(str(500 + (deg*2000)/270).encode(encoding="gbk"))
-                        stepper.move(round((float(cmd[1])-arm_broad)/0.0008))
+                    if abs((float(cmd[2])-arm_height)/arm_length) > 1 :
+                         print("out of range")
+                    rad1 = math.asin((float(cmd[2])-arm_height)/arm_length)
+                    rad2 = math.pi - rad1
+
+                    arm_borad1 = math.cos(rad1) * arm_length
+                    arm_borad2 = -arm_borad1
+
+                    base_pos1 = round(float(cmd[1]-arm_borad1)/0.0008)
+                    base_pos2 = round(float(cmd[1]-arm_borad2)/0.0008)
+
+
+                    if abs(rad1 - now_rad) < abs(rad2 - now_rad) and -756 < base_pos1 < 756 and -0.25*math.pi < rad1 < 1.25*math.pi:
+                        rad = rad1
+                        base_pos = base_pos1
+                    elif -756 < base_pos2 < 756 and -0.25*math.pi < rad2 < 1.25*math.pi :
+                        rad = rad2
+                        base_pos = base_pos2
                     else :
-                        print("move to", 225-(180-deg), round((float(cmd[1])-arm_broad)/0.0008))
-                        servo(ser,225-(180-deg))
-                        stepper.move(round((float(cmd[1])+arm_broad)/0.0008))
+                        print(rad1, rad2, base_pos1, base_pos2)
+                        return None
+
+                    deg = 225 - rad * 180 / math.pi
+
+                    print("move to", deg, base_pos)
+                    servo.write(str(500 + (deg*2000)/270).encode(encoding="gbk"))
+                    stepper.move(base_pos)
                 elif cmd[0] == "hit" :
                     hit_ball()
     except Exception as e:
