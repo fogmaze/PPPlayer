@@ -270,7 +270,10 @@ class Detection :
                 self.video_writer_all_tagged.release()
             if self.detection_csv is not None :
                 self.detection_csv.close()
-        cv2.destroyAllWindows()
+        try :
+            cv2.destroyAllWindows()
+        except :
+            pass
     
             
     # draw a retangle directly on the frame. not returning anything
@@ -287,14 +290,6 @@ class Detection :
         color = cv2.inRange(move, np.array([10, 10, 10]), np.array([255, 255, 255]))
         return cv2.bitwise_and(frame, cv2.cvtColor(color, cv2.COLOR_GRAY2BGR))
     
-    # return the white-black mat that if the pixel color is in ColorRange.
-    def maskFrames(self, frame) :
-        return cv2.inRange(cv2.cvtColor(frame, cv2.COLOR_BGR2HSV), self.lower, self.upper)
-
-    # return the contours of the white-black mat.
-    def detectContours(self, frame) :
-        return cv2.findContours(frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[0]
-
     # this function is no longer used.
     def isBallFeature(self,area, h, w) :
         return True
@@ -317,24 +312,25 @@ class Detection :
     
     # return a retangle that is considered as the ball
     def findBallInFrame(self, frame) -> Tuple[int, int, int, int] | None:
-        m = self.maskFrames(frame)
-        detected = self.detectContours(m)
+        masked = cv2.inRange(cv2.cvtColor(frame, cv2.COLOR_BGR2HSV), self.lower, self.upper)
+
+        detected_contours = cv2.findContours(masked, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[0]
 
         cv2.polylines(frame, [self.consider_poly], True, (0, 255, 0), 2)
         
-        qualified = []
-        for contour in detected :
-            #area = cv2.contourArea(contour)
+        detected_rects = []
+        for contour in detected_contours :
             x, y, w, h = cv2.boundingRect(contour)
-            if True :# self.isBallFeature(area, h, w) :
-                qualified.append((x, y, w, h))
-        merged = merge_rectangles(qualified)
+            detected_rects.append((x, y, w, h))
+
+        merged = merge_rectangles(detected_rects)
 
         f0 = []
         for x, y, w, h in merged :
             if cv2.pointPolygonTest(self.consider_poly, (x+w//2, y+h//2), False) >= 0 :
                 f0.append((x, y, w, h))
         f1 = []
+
         for x, y, w, h in f0:
             q = True
             for l in self.last_map:
@@ -345,9 +341,6 @@ class Detection :
             if q :
                 f1.append((x, y, w, h))
 
-        self.last_map.append(merged)
-        if len(self.last_map) > 20 :
-            self.last_map.pop(0)
 
         f2 = []
         for x, y, w, h in f1 :
@@ -369,7 +362,64 @@ class Detection :
                 if area_diff < min_area_diff:
                     result = (x, y, w, h)
                     min_area_diff = area_diff
+
+        if len(detected_rects) != 0 and len(merged) != 0 and len(f1) != 0 and len(f2)!= 0 and result is not None and self.last_result is not None and False:
+            print("hit")
+            cv2.imshow("inRange", masked)
+
+            # create a black image
+            det = np.zeros(frame.shape, np.uint8)
+            for x, y, w, h in detected_rects:
+                cv2.rectangle(det, (x, y), (x + w, y + h), (255, 0, 255), 1)
+            cv2.imshow("detected", det)
+
+            mer = np.zeros(frame.shape, np.uint8)
+            for x, y, w, h in merged:
+                cv2.rectangle(mer, (x, y), (x + w, y + h), (255, 0, 0), 1)
+            cv2.imshow("merged", mer)
+
+            con = np.zeros(frame.shape, np.uint8)
+            cv2.polylines(con, [self.consider_poly], True, (0, 255, 255), 1)
+            for x, y, w, h in merged:
+                cv2.rectangle(con, (x, y), (x + w, y + h), (255, 0, 0), 1)
+            for x, y, w, h in f0:
+                cv2.rectangle(con, (x, y), (x + w, y + h), (0, 255, 0), 1)
+            cv2.imshow("considered", con)
+
+            las = np.zeros(frame.shape, np.uint8)
+            for m in self.last_map :
+                for x, y, w, h in m :
+                    cv2.rectangle(las, (x, y), (x + w, y + h), (0, 0, 255), 1)
+            cv2.imshow("last 20 frames", las)
+
+            balls = cv2.addWeighted(con, 0.5, las, 0.5, 0)
+            for x, y, w, h in f1:
+                cv2.rectangle(balls, (x, y), (x + w, y + h), (0, 128, 255), 2)
+            cv2.imshow("balls", balls)
+
+            img = frame.copy()
+            for x, y, w, h in f2:
+                cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 1)
+            cv2.rectangle(img, (result[0], result[1]), (result[0] + result[2], result[1] + result[3]), (0, 128, 255), 2)
+            cv2.rectangle(img, (self.last_result[0], self.last_result[1]), (self.last_result[0] + self.last_result[2], self.last_result[1] + self.last_result[3]), (0, 0, 255), 2)
+            cv2.imshow("result", img)
+
+            # save images for debugging
+            cv2.imwrite("results/" + self.save_name + "/frame.jpg", frame)
+            cv2.imwrite("results/" + self.save_name + "/inRange.jpg", masked)
+            cv2.imwrite("results/" + self.save_name + "/detected.jpg", det)
+            cv2.imwrite("results/" + self.save_name + "/merged.jpg", mer)
+            cv2.imwrite("results/" + self.save_name + "/considered.jpg", con)
+            cv2.imwrite("results/" + self.save_name + "/last.jpg", las)
+            cv2.imwrite("results/" + self.save_name + "/balls.jpg", balls)
+            cv2.imwrite("results/" + self.save_name + "/result.jpg", img)
+
+            cv2.waitKey(0)
+            
         self.last_result = result
+        self.last_map.append(f0)
+        if len(self.last_map) > 20 :
+            self.last_map.pop(0)
         return result
 
     # start detection.
