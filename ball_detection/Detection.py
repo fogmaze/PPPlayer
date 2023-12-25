@@ -363,8 +363,7 @@ class Detection :
                     result = (x, y, w, h)
                     min_area_diff = area_diff
 
-        if len(detected_rects) != 0 and len(merged) != 0 and len(f1) != 0 and len(f2)!= 0 and result is not None and self.last_result is not None and False:
-            print("hit")
+        if len(detected_rects) != 0 and len(merged) != 0 and len(f1) != 0 and len(f2) > 1 and result is not None and self.last_result is not None and True:
             cv2.imshow("inRange", masked)
 
             # create a black image
