@@ -316,7 +316,7 @@ class Detection :
 
         detected_contours = cv2.findContours(masked, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[0]
 
-        cv2.polylines(frame, [self.consider_poly], True, (0, 255, 0), 2)
+        #cv2.polylines(frame, [self.consider_poly], True, (0, 255, 0), 2)
         
         detected_rects = []
         for contour in detected_contours :
@@ -369,38 +369,46 @@ class Detection :
             # create a black image
             det = np.zeros(frame.shape, np.uint8)
             for x, y, w, h in detected_rects:
-                cv2.rectangle(det, (x, y), (x + w, y + h), (255, 0, 255), 1)
+                cv2.rectangle(det, (x, y), (x + w, y + h), (255, 0, 0), 2)
             cv2.imshow("detected", det)
 
             mer = np.zeros(frame.shape, np.uint8)
             for x, y, w, h in merged:
-                cv2.rectangle(mer, (x, y), (x + w, y + h), (255, 0, 0), 1)
+                cv2.rectangle(mer, (x, y), (x + w, y + h), (255, 0, 255), 2)
             cv2.imshow("merged", mer)
 
             con = np.zeros(frame.shape, np.uint8)
-            cv2.polylines(con, [self.consider_poly], True, (0, 255, 255), 1)
+            cv2.polylines(con, [self.consider_poly], True, (0, 255, 255), 4)
             for x, y, w, h in merged:
-                cv2.rectangle(con, (x, y), (x + w, y + h), (255, 0, 0), 1)
+                cv2.rectangle(con, (x, y), (x + w, y + h), (255, 0, 0), 2)
             for x, y, w, h in f0:
-                cv2.rectangle(con, (x, y), (x + w, y + h), (0, 255, 0), 1)
+                cv2.rectangle(con, (x, y), (x + w, y + h), (0, 255, 0), 2)
             cv2.imshow("considered", con)
 
             las = np.zeros(frame.shape, np.uint8)
             for m in self.last_map :
                 for x, y, w, h in m :
-                    cv2.rectangle(las, (x, y), (x + w, y + h), (0, 0, 255), 1)
+                    cv2.rectangle(las, (x, y), (x + w, y + h), (0, 0, 255), 2)
             cv2.imshow("last 20 frames", las)
 
-            balls = cv2.addWeighted(con, 0.5, las, 0.5, 0)
+            #balls = cv2.addWeighted(con, 0.5, las, 0.5, 0)
+            balls = np.zeros(frame.shape, np.uint8)
+            cv2.polylines(balls, [self.consider_poly], True, (0, 255, 255), 4)
+            for x, y, w, h in merged:
+                cv2.rectangle(balls, (x, y), (x + w, y + h), (255, 0, 0), 2)
+            for x, y, w, h in f0:
+                cv2.rectangle(balls, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            for m in self.last_map :
+                for x, y, w, h in m :
+                    cv2.rectangle(balls, (x, y), (x + w, y + h), (0, 0, 255), 2)
             for x, y, w, h in f1:
-                cv2.rectangle(balls, (x, y), (x + w, y + h), (0, 128, 255), 2)
+                cv2.rectangle(balls, (x, y), (x + w, y + h), (0, 128, 255), 3)
             cv2.imshow("balls", balls)
 
             img = frame.copy()
-            for x, y, w, h in f2:
-                cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 1)
-            cv2.rectangle(img, (result[0], result[1]), (result[0] + result[2], result[1] + result[3]), (0, 128, 255), 2)
-            cv2.rectangle(img, (self.last_result[0], self.last_result[1]), (self.last_result[0] + self.last_result[2], self.last_result[1] + self.last_result[3]), (0, 0, 255), 2)
+            cv2.rectangle(img, (result[0], result[1]), (result[0] + result[2], result[1] + result[3]), (0, 128, 255), 3)
+            cv2.rectangle(img, (self.last_result[0], self.last_result[1]), (self.last_result[0] + self.last_result[2], self.last_result[1] + self.last_result[3]), (0, 0, 255), 3)
+            cv2.polylines(img, [self.consider_poly], True, (0, 255, 255), 4)
             cv2.imshow("result", img)
 
             # save images for debugging

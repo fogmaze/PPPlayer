@@ -18,11 +18,7 @@ import robot_controll.controller as con
 
 
 def sim_prediction_move(s=474) :
-<<<<<<< HEAD
     r = con.Robot("192.168.137.89", 5678)
-=======
-    #r = con.Robot("")
->>>>>>> d6153a4 (tra)
 
     c.set2NormalB()
     ds = dfo.BallDataSet_sync("ball_simulate_v2/dataset/normalB.train.bin")
