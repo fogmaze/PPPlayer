@@ -18,7 +18,11 @@ import robot_controll.controller as con
 
 
 def sim_prediction_move(s=474) :
+<<<<<<< HEAD
     r = con.Robot("192.168.137.89", 5678)
+=======
+    #r = con.Robot("")
+>>>>>>> d6153a4 (tra)
 
     c.set2NormalB()
     ds = dfo.BallDataSet_sync("ball_simulate_v2/dataset/normalB.train.bin")
@@ -50,7 +54,7 @@ def sim_prediction_move(s=474) :
             if hp is not None :
                 #print(hp[1], hp[2], t)
                 print("{:.3f} {:.3f} {:.3f}".format(hp[1], hp[2], t-ti))
-                r.move(hp[1], hp[2])
+                #r.move(hp[1], hp[2])
             time.sleep(1/60)
             ti += 1/60
 
@@ -126,9 +130,13 @@ def find_seed() :
     for X1, X1_len, X2, X2_len, T, Y in ite:
         train.cleenRoom(ax)
         c.normer.unnorm_ans_tensor(Y)
+        c.normer.unorm_input_tensor(X1)
+        c.normer.unorm_input_tensor(X2)
         hp, t = predict.getHitPointInformation(Y)
         print(hp, t, i)
         train.plotOutput(ax, Y, color="green")
+        train.drawLineSeq(ax, X1.cpu(), X1_len.cpu(), color="blue")
+        train.drawLineSeq(ax, X2.cpu(), X2_len.cpu(), color="orange")
         plt.pause(0.01)
         input()
         for j in range(5) :
@@ -137,14 +145,12 @@ def find_seed() :
 
         i += 1
 
-sim_prediction()
+
 
 #sim_prediction_move(354)
 sim_prediction_move(474)
 exit()
 
-find_seed()
-exit()
 
 sim_prediction_move()
 exit()
