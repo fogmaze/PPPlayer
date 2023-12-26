@@ -18,7 +18,7 @@ import robot_controll.controller as con
 
 
 def sim_prediction_move(s=474) :
-    r = con.Robot("")
+    r = con.Robot("192.168.137.89", 5678)
 
     c.set2NormalB()
     ds = dfo.BallDataSet_sync("ball_simulate_v2/dataset/normalB.train.bin")
@@ -53,7 +53,7 @@ def sim_prediction_move(s=474) :
                 r.move(hp[1], hp[2])
             time.sleep(1/60)
             ti += 1/60
- 
+
 def sim_prediction() :
     video = cv2.VideoWriter("nor.mp4", cv2.VideoWriter_fourcc(*'mp4v'), 15, (640, 480))
     c.set2NormalB()
