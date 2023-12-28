@@ -123,10 +123,10 @@ ro = [
 [0.789, 0.158]
 ]
 if __name__ == "__main__" :
-    robot = Robot("192.168.137.254", 5678)
+    robot = Robot("10.42.0.82", 6678)
     for d in ro :
-        robot.move(d[0]-0.6, d[1]+0.1)
-        time.sleep(4/30)
+        robot.move(d[0], d[1])
+        time.sleep(15/30)
     robot.stop()
     exit()
     robot = Robot("192.168.137.89")
