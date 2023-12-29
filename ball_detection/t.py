@@ -11,6 +11,7 @@ import numpy as np
 import xml.etree.ElementTree as ET
 import ball_detection.Detection as Det
 import ball_detection.ColorRange as CR
+import matplotlib.path as mpltPath
 from ball_detection.ColorRange import ColorRange, load, save
 
 
@@ -52,7 +53,7 @@ def cmpResult(xml_dir, res_data, img_dir, img_start, frame_len) :
             tp += 1
     fp = len(detection_result) - tp
     tn = len(marked_i) - tp
-    fn = frame_len - tp
+    fn = frame_len - tp - fp - tn
     print("tp: " + str(tp) + " tn: " + str(tn) + " fp: " + str(fp) + " fn: " + str(fn) + " frame_len: " + str(frame_len))
     print("tpr: " + str(tp/ frame_len) + " tnr: " + str(fn / frame_len) + " fpr: " + str(fp / frame_len) + " fnr: " + str(fn / frame_len))
     for marked in marked_xmls:
@@ -89,6 +90,7 @@ def cmpResult(xml_dir, res_data, img_dir, img_start, frame_len) :
             cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (0, 255, 0), 1)
             # draw detected
             cv2.rectangle(img, (int(detected[1]), int(detected[2])), (int(detected[3]) + int(detected[1]), int(detected[4]) + int(detected[2])), (0, 0, 255), 1)
+            cv2.line(img, (int(mid_detected[0]), int(mid_detected[1])), (int(mid_marked[0]), int(mid_marked[1])), (255, 0, 0), 1)
             cv2.namedWindow("img", cv2.WINDOW_NORMAL)
             cv2.resizeWindow("img", 1920,1080)
             cv2.imshow("img", img)
@@ -110,10 +112,10 @@ def form(xml_dir ="/home/changer/Downloads/320_60_tagged/result/"):
             os.remove(os.path.join(xml_dir, fn))
             print(fn, "is deleted")
 
-def findRange_hsv_img(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30, beg = 0):
-    detection = Det.Detection_img(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, mode="compute", beg_ind = beg)
+def findRange_hsv_img(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30, beg = 0, consider_poly = None):
+    detection = Det.Detection_img(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, mode="compute", beg_ind = beg, consider_poly=consider_poly)
     i = detection.runDetection()
-    return cmpResult(xml_dir, detection.data, None, img_start=beg, frame_len=i)
+    return cmpResult(xml_dir, detection.data, img_dir=source  , img_start=beg, frame_len=i)
 
 def findRange_hsv(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30):
     detection = Det.Detection(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, mode="compute")
@@ -153,11 +155,17 @@ def findColorRange() :
 if __name__ == "__main__" :
     #findColorRange()
 
-    with open("color_range_2", "rb") as f :
+    with open("configs/cr3", "rb") as f :
         c = pickle.load(f)
+    with open("/home/changer/Downloads/320_60_tagged/poly", "rb") as f:
+        po = pickle.load(f)
 
-    print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
+    for file in os.listdir("/home/changer/Downloads/320_60_tagged/result/"):
+        
+    exit()
+    print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30, consider_poly=po))
     print("--------------------------------------------------")
+    exit()
     #print(findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
     print(findRange_hsv_img(c, "/home/changer/Downloads/hd_60_tagged/frames", "/home/changer/Downloads/hd_60_tagged/result/", (1920, 1080), 60, beg=1000))
     #print("--------------------------------------------------")

@@ -49,6 +49,8 @@ class Robot :
         self.now_rad = 0.5 * math.pi
 
     def stop(self) :
+        if self.ip == "" :
+            return
         self.socket.sendall(b"q")
 
     def hit(self) :
@@ -57,7 +59,7 @@ class Robot :
         if time.time() - self.previousHitTime < 0.1 :
             return
         self.previousHitTime = time.time()
-        self.socket.sendall(b'hit')
+        self.socket.sendall(b'hit|')
     
     def move(self, y, z) :
         if self.ip == "" :
@@ -93,10 +95,10 @@ class Robot :
             return
                         
         deg = transRad2Deg(rad)
-        print(rad1, base_pos1, arm_borad1, rad2, base_pos2)
-        print("move to", deg, base_pos)
+        #print(rad1, base_pos1, arm_borad1, rad2, base_pos2)
+        #print("move to", deg, base_pos)
         self.now_rad = rad
-        self.socket.sendall(("m " + str(deg) + " " + str(base_pos)).encode())
+        self.socket.sendall(("m " + str(deg) + " " + str(base_pos)+"|").encode())
 
 ro = [
 [1.041, 0.135],
@@ -123,7 +125,7 @@ ro = [
 [0.789, 0.158]
 ]
 if __name__ == "__main__" :
-    robot = Robot("10.42.0.82", 6678)
+    robot = Robot("10.42.0.82", 5678)
     for d in ro :
         robot.move(d[0], d[1])
         time.sleep(15/30)

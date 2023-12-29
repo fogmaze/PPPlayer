@@ -191,7 +191,7 @@ def main(
         source                   = (0, 1),
         save_name                = "dual_default", 
         robot:rc.Robot           = None,
-        visualization            = True
+        visualization            = True,
         ) :
 
     # main process status : 
@@ -341,9 +341,10 @@ def main(
                 process_time_iter += 1
                 if hp is not None :
                     pfw.writerow([which, recv_data[1], float(hp[0]), float(hp[1]), float(hp[2]), float(t)] + out.view(-1).tolist())
-                    robot.move(hp[1], hp[2])
-                    if abs(time.time() - nowCollectorTime - t) < 0.3 :
+                    robot.move(hp[1].item(), hp[2].item())
+                    if abs(time.time() - nowCollectorTime - t) < 0.15 :
                         robot.hit()
+                        print("hit")
                 else :
                     pfw.writerow([which, recv_data[1], -1, -1, -1, -1] + out.view(-1).tolist())
             # send data to display process
@@ -399,6 +400,7 @@ if __name__ == "__main__" :
     parser.add_argument("-m", "--model", help="model name.", default="medium")
     parser.add_argument("-w", "--weight", help="weight path", default="normalB/epoch_29/weight.pt")
     parser.add_argument("-n", "--name", help="save name", default=None)
+    parser.add_argument("-p", "--port", help="port", default=5678)
     parser.add_argument("--mode", help="mode", default="normalB")
     parser.add_argument("-nv", "--non_visualization", help="Skip visualize the result when finished", action="store_true", default=False)
 
@@ -417,7 +419,7 @@ if __name__ == "__main__" :
     dc = (Detection.DetectionConfig(), Detection.DetectionConfig())
     dc[0].load(args.detection_config[0])
     dc[1].load(args.detection_config[1])
-    robot = rc.Robot(args.ip, 5678)
+    robot = rc.Robot(args.ip, int(args.port))
     main(createPredictionConfig("tmp", dc, args.weight, args.model, args.mode), source, args.config if args.name==None else args.name, robot, not args.non_visualization)
 
     exit()

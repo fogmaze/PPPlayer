@@ -11,7 +11,6 @@ import sys
 import os
 sys.path.append(os.getcwd())
 from ball_detection.ColorRange import *
-import core.display as display
 import core.common as common
 from camera_calibrate.utils import *
 from core.Constants import *
@@ -508,7 +507,8 @@ class Detection :
                         self.detection_csv_writer.writerow([iteration, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
                     if self.mode == "compute":
                         # save result to self.data
-                        self.data.append([iteration, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+                        #self.data.append([iteration, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+                        pass
                     if self.mode == "dual_analysis" or self.mode == "dual_run":
                         # send result to main process
                         self.queue.put([self.pid, iteration, None, None, None, None, None, time.time()])
@@ -569,8 +569,22 @@ class Detection :
 
 # Detection_img is a class for detecting ball in images. It is used for testing.
 class Detection_img(Detection) :
-    def __init__(self, source, calibrationFile="calibration",frame_size=(640,480), frame_rate=30, color_range="color_range", save_name="default", mode="analysis", beg_ind=0) :
-        super().__init__(None, calibrationFile, frame_size, frame_rate, color_range, save_name, mode=mode)
+    def __init__(
+                self,
+                source, 
+                mode,
+                frame_size             = None, 
+                frame_rate             = None, 
+                color_range            = None, 
+                save_name              = "default", 
+                queue                  = None,
+                conn                   = None,
+                config:DetectionConfig = None,
+                camera_info            = None,
+                consider_poly          = None,
+                beg_ind                = 0
+                ) :
+        super().__init__(source, mode, frame_size, frame_rate, color_range, save_name, queue, conn, config, camera_info, consider_poly)
         self.source = source
         self.frameIndex = beg_ind
     def getNextFrame(self):
@@ -613,6 +627,26 @@ def setup_poly(source) :
             cv2.imshow("setup poly", frame)
             if k == ord(' ') :
                 break
+    cv2.destroyAllWindows()
+    ret = np.array(_poly)
+    _poly = []
+    _poly_now_pos = (0, 0)
+    return ret
+
+def setup_poly_img(source) :
+    global _poly, _poly_now_pos
+    pic = cv2.imread(source)
+    cv2.namedWindow("setup poly")
+    cv2.setMouseCallback("setup poly", _setup_poly_mouse_event)
+    while True :
+        frame = pic.copy()
+        k = cv2.waitKey(round(1/30*1000))
+        # draw poly
+        if len(_poly) > 1 :
+            cv2.polylines(frame, np.array([_poly + [_poly_now_pos]]), True, (0, 255, 0), 2)
+        cv2.imshow("setup poly", frame)
+        if k == ord(' ') :
+            break
     cv2.destroyAllWindows()
     ret = np.array(_poly)
     _poly = []
