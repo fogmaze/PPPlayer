@@ -1,6 +1,17 @@
 # Ping Pong Player
 
-This is a project for ping-pong detection, ping-pong prediction, ...
+
+
+This repository is dedicated to the development of a table tennis robot. Our goal is to create a fully automated robot capable of playing ping pong with humans, leveraging the characteristics of deep learning LSTM architecture. We aim to achieve this on lower-tier, cost-effective devices. The challenge involves addressing the following tasks:
+
+
+1. **Camera Localization**: Implementing camera-based localization for tracking the ping pong ball.
+
+2. **Ping Pong Ball Detection**: Developing algorithms for detecting the ping pong ball in real-time.
+
+3. **Trajectory Prediction Model and Training**: Building a trajectory prediction model based on LSTM.
+
+4. **Mechanical Design and Control**: Designing the robot's mechanical components and implementing control mechanisms (using raspberrypi).
 
 # Setup & Dependencies
 
@@ -10,13 +21,17 @@ First, clone the project using git or just download the zip file and extract it.
    pip3 install -r requirements.txt
    ```
 
-# Ball Simulation
+# Ping Pong Prediction
+
+Predict the ball by deep learning model.
+
+## Ball Simulation and Training data Generation
 
 This script is designed for simulating ball data with various configurations. And save as training data files to train the ball-prediction model. It provides command-line arguments to customize simulation parameters and operations.
 
-## Usage
+### Usage
 
-### Command-line Arguments
+#### Command-line Arguments
 - **--GUI**: Enable GUI mode (default: False).
 - **-l**: Length of the simulated data (default: 1000).
 - **-n**: Name for the output files (default: "nb60test"), which will be stored at [/ball_simulate_v2/dataset](/ball_simulate_v2/dataset/). 
@@ -25,14 +40,14 @@ This script is designed for simulating ball data with various configurations. An
 - **--merge_a**: File name of the first dataset to merge (default: "train.bin").
 - **--merge_b**: File name of the second dataset to merge (default: "train.bin").
 
-### Examples
+#### Examples
 Simulate data with recommend length and name:
    ```bash
    python3 ball_simulate_v2/simulate.py -l 1000000 -n medium --mode normalBR
    ```
    In the study, we use the length of 1000000 for the medium dataset and 10000000 for the huge dataset. Meanwhile, we chose the mode `normalBR` to process the simulation as the most realistic mode.
 
-## Modes
+### Modes
 - **fit**: Set the simulation mode to fitting.
 - **ne**: Set the simulation mode to no error.
 - **predict**: Set the simulation mode to prediction.
@@ -41,9 +56,6 @@ Simulate data with recommend length and name:
 - **normalB60**: Set the simulation mode to normal with configuration 'B60'.
 - **normalBR**: Set the simulation mode to normal with configuration 'BR'.
 
-# Ping Pong Prediction
-
-Predict the ball by deep learning model.
 
 ## Model Training
 
