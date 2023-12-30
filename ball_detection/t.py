@@ -157,11 +157,24 @@ if __name__ == "__main__" :
 
     with open("configs/cr3", "rb") as f :
         c = pickle.load(f)
-    with open("/home/changer/Downloads/320_60_tagged/poly", "rb") as f:
+    with open("/home/changer/Downloads/hd_60_tagged/poly", "rb") as f:
         po = pickle.load(f)
+    print(findRange_hsv_img(c, "/home/changer/Downloads/hd_60_tagged/frames", "/home/changer/Downloads/hd_60_tagged/result_in/", (1920, 1080), 30, consider_poly=po, beg=1000))
+    exit()
 
-    for file in os.listdir("/home/changer/Downloads/320_60_tagged/result/"):
-        
+    os.mkdir("/home/changer/Downloads/hd_60_tagged/result_in/")
+    for file in os.listdir("/home/changer/Downloads/hd_60_tagged/result/"):
+        tree = ET.parse(os.path.join("/home/changer/Downloads/hd_60_tagged/result/", file))
+        root = tree.getroot()        
+        objs = root.findall('object')[0]
+        xmin = int(objs.find('bndbox').find('xmin').text)
+        ymin = int(objs.find('bndbox').find('ymin').text)
+        xmax = int(objs.find('bndbox').find('xmax').text)
+        ymax = int(objs.find('bndbox').find('ymax').text)
+        mid_marked = (xmin + xmax) / 2, (ymin + ymax) / 2
+        if mpltPath.Path(po).contains_point(mid_marked) :
+            # copy file
+            os.system("cp " + os.path.join("/home/changer/Downloads/hd_60_tagged/result/", file) + " " + os.path.join("/home/changer/Downloads/hd_60_tagged/result_in/", file))
     exit()
     print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30, consider_poly=po))
     print("--------------------------------------------------")
