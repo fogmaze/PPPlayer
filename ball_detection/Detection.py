@@ -173,6 +173,7 @@ class Detection :
         # "compute"       for single camera detection, which will save data into self.data. And can be used for other operatio.
         self.mode = mode
 
+        self.logData = []
         # below is all the initalization for all the modes
         self.last_map = []
         self.last_result = None
@@ -444,9 +445,11 @@ class Detection :
                     if msg == "start" :
                         break
         
+        self.logData.append((time.time(), "start", ))
         self.cam = cv2.VideoCapture(self.source)
         while(True) :
             ret, frame = self.getNextFrame()
+            self.logData.append((time.time(), "gotFrame", iteration))
             if ret :
                 # for caculating iteration time
                 this_iter_time = time.perf_counter()
@@ -481,6 +484,7 @@ class Detection :
                             self.data.append([iteration, 1, x, y, h, w, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg()])
                         if self.mode == "dual_analysis" or self.mode == "dual_run":
                             # send result to main process
+                            self.logData.append((time.time(), "send", iteration))
                             self.queue.put([self.pid, iteration, self.camera_position.x, self.camera_position.y, self.camera_position.z, line.line_xy.getDeg(), line.line_xz.getDeg(), time.time()])
                             # if bounce detected, send bounce signal to main process
                             if self.bounce_checker.update(y+h//2) :
@@ -565,6 +569,10 @@ class Detection :
         
         if self.mode == "dual_analysis" or self.mode == "dual_run":
             self.conn.send("stop")
+        
+        with open(os.path.join("results", self.save_name, "log"), "w") as f :
+            for l in self.logData:
+                f.write(str(l) + "\n")
         return iteration
 
 # Detection_img is a class for detecting ball in images. It is used for testing.

@@ -206,13 +206,13 @@ def visualizePrediction_realtime(root) -> Tuple[mp.Queue, mp.Process] :
 
 
 def visualizePrediction_video(root, fps=60) :
-    #model:models.ISEFWINNER_BASE = models.MODEL_MAP["medium"](device="cuda:0")
-    #model.cuda()
-    #model.load_state_dict(torch.load(os.path.join("ball_simulate_v2/model_saves/", "normalB/epoch_29/weight.pt")))
-    #model.eval()
-    #Constants.set2Normal()
-    #NORMED_PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)
-    #Constants.normer.norm_t_tensor(NORMED_PREDICT_T)
+    model:models.ISEFWINNER_BASE = models.MODEL_MAP["large"](device="cuda:0")
+    model.cuda()
+    model.load_state_dict(torch.load("/home/changer/Downloads/large.pt"))
+    model.eval()
+    Constants.set2Normal()
+    NORMED_PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)
+    Constants.normer.norm_t_tensor(NORMED_PREDICT_T)
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     if os.path.exists(os.path.join(root, 'visualize_video.mp4')) :
@@ -311,13 +311,13 @@ def visualizePrediction_video(root, fps=60) :
             ret, frame = cam1.read()
             if not ret :
                 break
-            cv2.putText(frame, "cam1: {}".format(raw[1]), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+            cv2.putText(frame, "cam1: {} frame".format(raw[1]), (10, 450), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
             luframe = frame
         elif raw[0] == 2 :
             ret, frame = cam2.read()
             if not ret :
                 break
-            cv2.putText(frame, "cam2: {}".format(raw[1]), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+            cv2.putText(frame, "cam2: {} frame".format(raw[1]), (10, 450), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
             ldframe = frame
         
         rframe = cv2.vconcat([ruframe, rdframe])
@@ -391,8 +391,8 @@ def visualizePrediction_video_(root, fps=30, lagg=10) :
     for ind1 in tqdm.tqdm(range(s1, round(pred_datas[-1][1]))) :
         ret1, frame1 = cam1.read()
         ret2, frame2 = cam2.read()
-        cv2.putText(frame1, "cam1: {}".format(ind1), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
-        cv2.putText(frame2, "cam2: {}".format(ind2), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        cv2.putText(frame1, "cam1: {} frame".format(ind1), (10, 420), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
+        cv2.putText(frame2, "cam2: {} frame".format(ind2), (10, 420), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
         if not ret1 or not ret2 :
             break
         lframe = cv2.vconcat([frame1, frame2])
@@ -576,7 +576,7 @@ def plotOutput(ax, out, color = 'r', label=None):
 if __name__ == "__main__" :
     Constants.set2NormalB()
     #visualizeDetection_video("ball_detection/result/test")
-    visualizePrediction_realtime("results/1215")
+    visualizePrediction_video("results/main4_3")
     exit()
 
     video = cv2.VideoCapture("results/1215/cam1/all_tagged.mp4")

@@ -1,4 +1,5 @@
 import argparse as ap
+import logging
 import matplotlib.pyplot as plt
 import time
 import torch
@@ -186,6 +187,7 @@ def createPredictionConfig(save_name, detectionConfig:Tuple[Detection.DetectionC
     #config.save(save_name)
     return config
             
+logData = []
 def main(
         config:PredictionConfig,
         source                   = (0, 1),
@@ -193,13 +195,14 @@ def main(
         robot:rc.Robot           = None,
         visualization            = True,
         ) :
-
     # main process status : 
     #  predicting
     #  syncing
     status = "predicting"
     SPEED_UP = False
     mode = config.mode
+    hp = None
+    t = None
     # set up model mode (for normalization model input and output)
     if mode != "default":
         if mode == "fit" :
@@ -300,6 +303,7 @@ def main(
         # receive line data from detection
         if not queue.empty() :
             recv_data = queue.get()
+            logData.append((time.time(), "recv",(1 if recv_data[0] == p1.pid else 2, recv_data[1]))) 
             # write raw data to raw.csv
             pfrw.writerow([1 if recv_data[0] == p1.pid else 2, recv_data[1], recv_data[2], recv_data[3], recv_data[4], recv_data[5], recv_data[6], recv_data[7]])
 
@@ -332,19 +336,21 @@ def main(
             elif len(lines1.lines) == 1 :
                 nowCollectorTime = time.time()
             elif len(lines1.lines) > 1 and len(lines2.lines) > 1 : # send to model
+                logData.append((time.time(), "send", (which, recv_data[1])))
                 model.reset_hidden_cell(1)
                 l, l_len, r, r_len = prepareModelInput(lines1.lines, lines2.lines)
                 out:torch.Tensor = model(l, l_len, r, r_len, NORMED_PREDICT_T) 
                 Constants.normer.unnorm_ans_tensor(out)
                 hp, t = getHitPointInformation(out)
+                logData.append((time.time(), "got hp", (hp, t)))
                 process_time += time.time() - nowT
                 process_time_iter += 1
                 if hp is not None :
                     pfw.writerow([which, recv_data[1], float(hp[0]), float(hp[1]), float(hp[2]), float(t)] + out.view(-1).tolist())
-                    robot.move(hp[1].item(), hp[2].item())
-                    if abs(time.time() - nowCollectorTime - t) < 0.15 :
-                        robot.hit()
-                        print("hit")
+                    d, p = robot.move(hp[1].item(), hp[2].item())
+                    logData.append((time.time(), "moved to", (d, p)))
+                    print("move to", hp[1].item(), hp[2].item())
+                    
                 else :
                     pfw.writerow([which, recv_data[1], -1, -1, -1, -1] + out.view(-1).tolist())
             # send data to display process
@@ -370,9 +376,16 @@ def main(
                 if recv[0] == "keyPress" :
                     if recv[1] == ord("s") :
                         status = "syncing" if status == "predicting" else "predicting"
+        if t is not None :
+            if abs(time.time() - nowCollectorTime - t) < 0.15 :
+                robot.hit()
+                logData.append((time.time(), "hit", ()))
+                print("hit")
+
     displayQueue.put(("stop",))   
     c12d.send("stop")
     c22d.send("stop")
+    robot.stop()
     
     p1.join()
     p2.join()
@@ -383,7 +396,9 @@ def main(
         print("mean tra time:", tra_time / tra_iter, "; it/s:", tra_iter / tra_time)
     pf.close()
     pfr.close()
-
+    with open(os.path.join("results", save_name, "log"), "w") as f :
+        for l in logData :
+            f.write(str(l) + "\n")
     # display
     if visualization:
         display.visualizePrediction_video(os.path.join("results", save_name), fps=30)
@@ -391,6 +406,7 @@ def main(
 
 
 if __name__ == "__main__" :
+
     parser = ap.ArgumentParser()
     #parser.add_argument("-cc", "--create_config", help="use this flag to create config. otherwise use config to run prediction", action="store_true")
     #parser.add_argument("-c", "--config", help="config name (nessesary)")

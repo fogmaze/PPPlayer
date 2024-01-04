@@ -1,4 +1,5 @@
 import socket
+import struct
 import time
 import math
 import csv
@@ -51,7 +52,7 @@ class Robot :
     def stop(self) :
         if self.ip == "" :
             return
-        self.socket.sendall(b"q")
+        self.socket.sendall(b"q    ")
 
     def hit(self) :
         if self.ip == "" :
@@ -59,14 +60,24 @@ class Robot :
         if time.time() - self.previousHitTime < 0.1 :
             return
         self.previousHitTime = time.time()
-        self.socket.sendall(b'hit|')
+        self.socket.sendall(b'h    ')
+
+    def testCommunicateTime(self) :
+        if self.ip == "" :
+            return
+        start = time.time()
+        self.socket.sendall(struct.pack("!f", start))
+        recv = self.socket.recv(1024)
+        end = time.time()
+        print("time:", end-start)
+        print("time diff:", struct.unpack("!f", recv)[0]-(start))
     
     def move(self, y, z) :
         if self.ip == "" :
-            return
+            return None, None
         if abs((z-self.arm_height)/self.arm_length) > 1 :
             print("out of range")
-            return
+            return None, None
         rad1 = math.asin((z-self.arm_height)/self.arm_length)
         rad2 = math.pi - rad1
 
@@ -90,15 +101,20 @@ class Robot :
             rad = rad2
             base_pos = base_pos2
         else :
-            print(rad1, base_pos1, arm_borad1, rad2, base_pos2)
-            print("not reachable")
-            return
+            return None, None
                         
         deg = transRad2Deg(rad)
+        value = int(500 + (deg*2000)/270)
         #print(rad1, base_pos1, arm_borad1, rad2, base_pos2)
-        #print("move to", deg, base_pos)
+        print("move to", deg, base_pos)
         self.now_rad = rad
-        self.socket.sendall(("m " + str(deg) + " " + str(base_pos)+"|").encode())
+        buf = b"m"
+        buf += value.to_bytes(2, byteorder="big")
+        base_pos += 1000
+        buf += base_pos.to_bytes(2, byteorder="big")
+        
+        self.socket.sendall(buf)
+        return deg, base_pos-1000
 
 ro = [
 [1.041, 0.135],
@@ -125,10 +141,13 @@ ro = [
 [0.789, 0.158]
 ]
 if __name__ == "__main__" :
-    robot = Robot("10.42.0.82", 5678)
+    robot = Robot("10.42.0.82", 6678)
+    robot.testCommunicateTime()
+
+    exit()
     for d in ro :
         robot.move(d[0], d[1])
-        time.sleep(15/30)
+        time.sleep(1/300)
     robot.stop()
     exit()
     robot = Robot("192.168.137.89")
