@@ -21,7 +21,15 @@ First, clone the project using git or just download the zip file and extract it.
    pip3 install -r requirements.txt
    ```
 
-# Ping Pong Prediction
+# Table Tennis Detection
+
+Detect the ball by its color, contour, and movement
+
+## Detection Process
+
+1. Original frame
+
+# Table Tennis Prediction
 
 Predict the ball by deep learning model.
 
