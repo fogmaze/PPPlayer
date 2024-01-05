@@ -27,7 +27,48 @@ Detect the ball by its color, contour, and movement
 
 ## Detection Process
 
-1. Original frame
+1. **Original frame**
+
+<p align="center">
+    <img src="result_pictures/frame.jpg" alt="img">
+</p>
+
+2. **Binarize with HSV color threshold**
+
+<p align="center">
+   <img src="result_pictures/inRange.jpg" alt="img">
+</p>
+
+3. **Bounding box and merge**
+
+<p align="center">
+   <img src="result_pictures/merged.jpg" alt="img">
+</p>
+
+4. **Considered area**
+
+<p align="center">
+   <img src="result_pictures/considered.jpg" alt="img">
+</p>
+
+5. **Last 20 frames of considered data**
+
+<p align="center">
+   <img src="result_pictures/last.jpg" alt="img">
+</p>
+
+6. **Newly appeared object (orange object)**
+
+<p align="center">
+   <img src="result_pictures/balls.jpg" alt="img">
+</p>
+
+7. **Chose the closest one to the previous result**
+
+<p align="center">
+   <img src="result_pictures/result.jpg" alt="img">
+</p>
+
 
 # Table Tennis Prediction
 
