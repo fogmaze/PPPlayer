@@ -6,23 +6,23 @@
 
 * [Table Tennis Detection](#Table-Tennis-Detection)
 
-   * [Detection Process](##Detection-Process)
+   * [Detection Process](#Detection-Process)
  
-   * [Table Tennis Ball's Color Range](##Table-Tennis-Ball's-Color-Range)
+   * [Table Tennis Ball's Color Range](#Table-Tennis-Balls-Color-Range)
 
 * [Table Tennis Prediction](#Table-Tennis-Prediction)
 
-   * [Coordinate Transformation](##Coordinate-Transformation)
+   * [Coordinate Transformation](#Coordinate-Transformation)
 
-   * [Ball Simulation and Training Data Generstion](##Ball-Simulation-and-Training-DataGeneration)
+   * [Ball Simulation and Training Data Generstion](#Ball-Simulation-and-Training-DataGeneration)
  
-   * [Model Training](##Model-Training)
+   * [Model Training](#Model-Training)
  
 * [Robotic Arm Structure and Control](#Robotic-Arm-Structure-and-Control)
 
-  * [Hardware Structure Design](##Hardware-Structure-Design)
+  * [Hardware Structure Design](#Hardware-Structure-Design)
  
-  * [Software Control](##software-Control)
+  * [Software Control](#software-Control)
  
 * [System Intergration](#System-Intergration)
 
