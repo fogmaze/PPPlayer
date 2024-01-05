@@ -2,7 +2,7 @@
 
 * [Introduction](#Introduction)
 
-* [Setup & Dependencies](#Setup%20&%20Dependencies)
+* [Setup & Dependencies](#Setup--Dependencies)
 
 * [Table Tennis Detection](#TableTennisDetection)
 
