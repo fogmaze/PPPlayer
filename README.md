@@ -14,7 +14,7 @@
 
    * [Coordinate Transformation](#Coordinate-Transformation)
 
-   * [Ball Simulation and Training Data Generstion](#Ball-Simulation-and-Training-DataGeneration)
+   * [Ball Simulation and Training Data Generstion](#Ball-Simulation-and-Training-Data-Generation)
  
    * [Model Training](#Model-Training)
  
