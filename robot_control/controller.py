@@ -10,7 +10,7 @@ _ang_data = {}
 _key_rev = []
 _key = []
 _data_rows = 0
-with open("servo_angle.csv") as f:
+with open("robot_control/servo_angle.csv") as f:
     reader = csv.reader(f)
     first = next(reader)
     for i in first :

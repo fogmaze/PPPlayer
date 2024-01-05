@@ -17,8 +17,7 @@ from ball_simulate_v2.models import MODEL_MAP
 import ball_simulate_v2.models as models
 import core.common as common
 from ball_detection.ColorRange import *
-from camera_reciever.CameraReceiver import CameraReceiver
-import robot_controll.controller as rc
+import robot_control.controller as rc
 
 def getHitPointInformation(_traj_unnormed:torch.Tensor) :
     END = 2.74/2
@@ -254,12 +253,8 @@ def main(
     c22d, c22s = mp.Pipe() # Pipe for communication between main process and detection process
 
     if type(source) == tuple and len(source) == 2 : # source is a video file or a camera
-        if type(source[0]) == int or type(source[0]) == str:
-            source1 = source[0]
-            source2 = source[1]
-        else : # source is android cam (no longer supported)
-            source1 = CameraReceiver(source[0])
-            source2 = CameraReceiver(source[1])
+        source1 = source[0]
+        source2 = source[1]
     elif type(source) == str : # source is a prediction folder
         source1 = os.path.join("results", source + "/cam1/all.mp4")
         source2 = os.path.join("results", source + "/cam2/all.mp4")

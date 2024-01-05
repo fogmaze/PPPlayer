@@ -19,7 +19,6 @@ import core.Equation3d as equ
 import camera_calibrate.utils as utils
 import camera_calibrate.Calibration as calib
 import argparse as ap
-from camera_reciever.CameraReceiver import CameraReceiver
 import time
 
 # this function is no longer used.
@@ -563,9 +562,6 @@ class Detection :
             if self.frame_rate != 0 and realTime:
                 while time.perf_counter() - this_iter_time < 1/self.frame_rate :
                     pass
-            
-        if type(self.cam) == CameraReceiver :
-            self.cam.close()
         
         if self.mode == "dual_analysis" or self.mode == "dual_run":
             self.conn.send("stop")

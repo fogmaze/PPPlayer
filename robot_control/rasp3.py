@@ -1,21 +1,21 @@
-#import RPi.#gpio as #gpio
+import RPi.gpio as GPIO
 import time
 import multiprocessing as mp
 import threading
 import socket
 import math
-#import serial
+import serial
 import csv
 
-#gpio.setmode(#gpio.BOARD)
-#gpio.setwarnings(False)
+GPIO.setmode(GPIO.BOARD)
+GPIO.setwarnings(False)
 
 
 def _stepper_process(pipe: mp.Pipe, DIR=38, ENA=36, PUL=40, acceleration=50, speed=1200) :
-    #gpio.setup(PUL, #gpio.OUT)
-    #gpio.setup(ENA, #gpio.OUT)
-    #gpio.setup(DIR, #gpio.OUT)
-    #gpio.output(ENA, #gpio.LOW)
+    GPIO.setup(PUL, GPIO.OUT)
+    GPIO.setup(ENA, GPIO.OUT)
+    GPIO.setup(DIR, GPIO.OUT)
+    GPIO.output(ENA, GPIO.LOW)
     initial_speed = 100
     sq_initial_speed = initial_speed*initial_speed
     threshold = initial_speed * 1.2
@@ -32,9 +32,9 @@ def _stepper_process(pipe: mp.Pipe, DIR=38, ENA=36, PUL=40, acceleration=50, spe
             if destination == "stop" :
                 break
                 print("stop received")
-        #gpio.output(ENA, #gpio.LOW)
+        GPIO.output(ENA, GPIO.LOW)
         if recent_position == destination :
-            #gpio.output(ENA, #gpio.HIGH)
+            GPIO.output(ENA, GPIO.HIGH)
             velocity = 0
             last_pulse_time = 0
             continue
@@ -68,16 +68,16 @@ def _stepper_process(pipe: mp.Pipe, DIR=38, ENA=36, PUL=40, acceleration=50, spe
         if velocity == 0 :
             continue
         elif velocity > 0 :
-            #gpio.output(DIR, #gpio.HIGH)
+            GPIO.output(DIR, GPIO.HIGH)
             recent_position += 1
         elif velocity < 0 :
-            #gpio.output(DIR, #gpio.LOW)
+            GPIO.output(DIR, GPIO.LOW)
             recent_position -= 1
         print(recent_position, velocity)
         pulse_time = 1/abs(velocity)
-        #gpio.output(PUL, #gpio.HIGH)
+        GPIO.output(PUL, GPIO.HIGH)
         time.sleep(pulse_time/2)
-        #gpio.output(PUL, #gpio.LOW)
+        GPIO.output(PUL, GPIO.LOW)
         time.sleep(pulse_time/2)
         last_pulse_time = pulse_time
         if isSlowing and abs(velocity) < threshold :
@@ -109,42 +109,42 @@ class Stepper() :
         if self.isRunning :
             self.stop()
             
-#gpio.setup(37, #gpio.OUT)     
-#gpio.setup(33, #gpio.OUT)    
-#gpio.setup(36, #gpio.OUT)
-#gpio.setup(35, #gpio.OUT)   
-#gpio.setup(38, #gpio.OUT)
-#gpio.setup(40, #gpio.OUT)
-#gpio.output(37, #gpio.HIGH)
+GPIO.setup(37, GPIO.OUT)     
+GPIO.setup(33, GPIO.OUT)    
+GPIO.setup(36, GPIO.OUT)
+GPIO.setup(35, GPIO.OUT)   
+GPIO.setup(38, GPIO.OUT)
+GPIO.setup(40, GPIO.OUT)
+GPIO.output(37, GPIO.HIGH)
 def hit_ball(DIR=35, ENA=37, PUL=33) :
-    #gpio.output(ENA, #gpio.LOW)
+    GPIO.output(ENA, GPIO.LOW)
     speeda = 0
     speedb = 0
     step = 100
-    #gpio.output(DIR, #gpio.LOW)
+    GPIO.output(DIR, GPIO.LOW)
     for i in range(step) : 
         if i > step/2 :
             speeda -= 8
         else :
             speeda += 8
         pulse_time = 1/speeda
-        #gpio.output(PUL, #gpio.LOW)
+        GPIO.output(PUL, GPIO.LOW)
         time.sleep(pulse_time/2)
-        #gpio.output(PUL, #gpio.HIGH)
+        GPIO.output(PUL, GPIO.HIGH)
         time.sleep(pulse_time/2)
     time.sleep(0.3)
-    #gpio.output(DIR, #gpio.HIGH)
+    GPIO.output(DIR, GPIO.HIGH)
     for i in range(step) :
         if i > step/2 :
             speedb -= 5
         else :
             speedb += 5
         pulse_time = 1/speedb
-        #gpio.output(PUL, #gpio.HIGH)
+        GPIO.output(PUL, GPIO.HIGH)
         time.sleep(pulse_time/2)
-        #gpio.output(PUL, #gpio.LOW)
+        GPIO.output(PUL, GPIO.LOW)
         time.sleep(pulse_time/2)
-    #gpio.output(ENA, #gpio.HIGH)
+    GPIO.output(ENA, GPIO.HIGH)
 
 
 def getIP() :

@@ -4,7 +4,6 @@ import pickle
 import os
 import sys
 sys.path.append(os.getcwd())
-from camera_reciever.CameraReceiver import CameraReceiver
 
 def save(path, object) :
     with open(path, "wb") as f :
@@ -57,11 +56,7 @@ class ColorRange :
         cv2.createTrackbar("Val Max", "ColorRangeSetting", self.upper[2], 255, empty)
 
 
-        if type(source) == str and source.replace(".", "").isdigit() :
-            cam = CameraReceiver(source)
-            cam.connect()
-        else :
-            cam = cv2.VideoCapture(source)
+        cam = cv2.VideoCapture(source)
         i = 0
         read = True
         while True :

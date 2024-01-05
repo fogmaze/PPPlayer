@@ -531,7 +531,7 @@ def configRoom(ax:Axes, ang=(50, 70)) -> Axes:
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlabel('z')
-    ax.invert_xaxis()
+    ax.invert_yaxis()
     ax.view_init(ang[0], ang[1])
     W = 2.74/2
     H = 1.525/2
