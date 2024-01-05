@@ -103,21 +103,21 @@ Detect the table tennis ball by its color, contour, and movement
 
 #### Command-line Arguments
 
-* **-cc** :
+* **-cc, --create_config** : Use this flag to create config, otherwise use config to run detection
 
-* **-c** :
+* **-c, --config** : config name (nessesary)
 
-* **-s** :
+* **-s, --source** : camera source (nessesary)
 
-* **-f** :
+* **-f, frame_size** : frame size (only needed when create config, default is 640x480)
 
-* **-r** :
+* **-r, --frame_rate** : frame rate (only needed when create config, default is 30)
 
-* **-cr** :
+* **-cr, --color_range** : color range file name (only needed when create config, default is cr3)
 
-* **-i** :
+* **-i, --inmtx** : camera intrinsic matrix file name (only needed when create config in 3d setup)
 
-* **--non_3d_setup** :
+* **--non_3d_setup** : use this flag to setup camera without 3d setup
 
 #### Example
 
