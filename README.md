@@ -1,6 +1,11 @@
-# Ping Pong Player
+# Content
+
+- [Introduction](#Introduction)
 
 
+
+
+# Introduction
 
 This repository is dedicated to the development of a table tennis robot. Our goal is to create a fully automated robot capable of playing ping pong with humans, leveraging the characteristics of deep learning LSTM architecture. We aim to achieve this on lower-tier, cost-effective devices. The challenge involves addressing the following tasks:
 
@@ -23,44 +28,44 @@ First, clone the project using git or just download the zip file and extract it.
 
 # Table Tennis Detection
 
-Detect the ball by its color, contour, and movement
+Detect the table tennis ball by its color, contour, and movement
 
 ## Detection Process
 
 1. **Original frame**
 
 <p align="center">
-    <img src="result_pictures/frame.jpg" alt="img">
+    <img src="result_pictures/frame.jpg" alt="img" height="320" widt="240">
 </p>
 
 2. **Binarize with HSV color threshold**
 
 <p align="center">
-   <img src="result_pictures/inRange.jpg" alt="img">
+   <img src="result_pictures/inRange.jpg" alt="img" height="320" widt="240">
 </p>
 
 3. **Bounding box and merge**
 
 <p align="center">
-   <img src="result_pictures/merged.jpg" alt="img">
+   <img src="result_pictures/merged.jpg" alt="img" height="320" widt="240">
 </p>
 
 4. **Considered area**
 
 <p align="center">
-   <img src="result_pictures/considered.jpg" alt="img">
+   <img src="result_pictures/considered.jpg" alt="img" height="320" widt="240">
 </p>
 
 5. **Last 20 frames of considered data**
 
 <p align="center">
-   <img src="result_pictures/last.jpg" alt="img">
+   <img src="result_pictures/last.jpg" alt="img" height="320" widt="240">
 </p>
 
 6. **Newly appeared object (orange object)**
 
 <p align="center">
-   <img src="result_pictures/balls.jpg" alt="img">
+   <img src="result_pictures/balls.jpg" alt="img" height="320" widt="240">
 </p>
 
 7. **Chose the closest one to the previous result**
@@ -68,6 +73,9 @@ Detect the ball by its color, contour, and movement
 <p align="center">
    <img src="result_pictures/result.jpg" alt="img">
 </p>
+
+## Table Tennis Ball's Color Range
+
 
 
 # Table Tennis Prediction
