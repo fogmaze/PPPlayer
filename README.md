@@ -57,50 +57,53 @@ Detect the table tennis ball by its color, contour, and movement
 
 ## Detection Process
 
-1. **Original frame**
+<p align="center"> 1. Original frame</p>
 
 <p align="center">
-    <img src="result_pictures/frame.jpg" alt="img" height="320" widt="240">
+    <img src="result_pictures/frame.jpg" alt="img" height="240" widt="180">
 </p>
 
-2. **Binarize with HSV color threshold**
+<p align="center">2. Binarize with HSV color threshold</p>
 
 <p align="center">
-   <img src="result_pictures/inRange.jpg" alt="img" height="320" widt="240">
+   <img src="result_pictures/inRange.jpg" alt="img" height="240" widt="180">
 </p>
 
-3. **Bounding box and merge**
+<p align="center">3. Bounding box and merge</p>
 
 <p align="center">
-   <img src="result_pictures/merged.jpg" alt="img" height="320" widt="240">
+   <img src="result_pictures/merged.jpg" alt="img" height="240" widt="180">
 </p>
 
-4. **Considered area**
+<p align="center">4. Considered area</p>
 
 <p align="center">
-   <img src="result_pictures/considered.jpg" alt="img" height="320" widt="240">
+   <img src="result_pictures/considered.jpg" alt="img" height="240" widt="180">
 </p>
 
-5. **Last 20 frames of considered data**
+<p align="center">5. Last 20 frames of considered data</p>
 
 <p align="center">
-   <img src="result_pictures/last.jpg" alt="img" height="320" widt="240">
+   <img src="result_pictures/last.jpg" alt="img" height="240" widt="180">
 </p>
 
-6. **Newly appeared object (orange object)**
+<p align="center">6. Newly appeared object (orange object)</p>
 
 <p align="center">
-   <img src="result_pictures/balls.jpg" alt="img" height="320" widt="240">
+   <img src="result_pictures/balls.jpg" alt="img" height="240" widt="180">
 </p>
 
-7. **Chose the closest one to the previous result**
+<p align="center">7. Chose the closest one to the previous result</p>
 
 <p align="center">
-   <img src="result_pictures/result.jpg" alt="img">
+   <img src="result_pictures/result.jpg" alt="img" height="240" widt="180">
 </p>
 
 ## Table Tennis Ball's Color Range
 
+<p align="center">
+  <img src="result_pictures/color_range.png" alt="img">
+</p>
 
 
 # Table Tennis Prediction
@@ -108,6 +111,43 @@ Detect the table tennis ball by its color, contour, and movement
 Predict the ball by deep learning model.
 
 ## Coordinate Transformation
+
+<p align="center">
+  <img src="result_pictures/coordinate_transformation.jpg" alt="img" height="480" width="640">
+</p>
+
+$$H = \begin{pmatrix}
+h_{11}&h_{12}&h_{13}\\
+h_{21}&h_{22}&h_{23}\\
+h_{31}&h_{32}&h_{33}\\
+\end{pmatrix} \tag{1}$$  
+
+<p align="center">Homography matrix frome pixel plane to table</p>
+
+$$\begin{pmatrix}
+u\\
+v\\
+1\\
+\end{pmatrix} H = \begin{pmatrix}
+u'\\
+v'\\
+1\\
+\end{pmatrix} \tag{2}$$
+
+<p align="center">Homogeneous transformation</p>
+
+### Process
+
+1. Get the world coordinates of the camera position
+
+2. Get the two-dimensional coordinates of table tennis ball in the frame
+
+3. Performing a homography transformation on the coordinates of the table tennis ball
+
+4. Consider the transformation coordinates as the projection point coordinates of the ball
+
+5. Calculate the equation of the line using camera coordinates and porjection point coordinates
+
 
 ## Ball Simulation and Training data Generation
 
