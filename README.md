@@ -1,6 +1,31 @@
 # Content
 
-- [Introduction](#Introduction)
+* [Introduction](#Introduction)
+
+* [Setup & Dependencies](#Setup&Dependencies)
+
+* [Table Tennis Detection](#TableTennisDetection)
+
+   * [Detection Process](##DetectionProcess)
+ 
+   * [Table Tennis Ball's Color Range](##TableTennisBall'sColorRange)
+
+* [Table Tennis Prediction](#TableTennisPrediction)
+
+   * [Coordinate Transformation](##CoordinateTransformation)
+
+   * [Ball Simulation and Training Data Generstion](##BallSimulationandTrainingDataGeneration)
+ 
+   * [Model Training](##ModelTraining)
+ 
+* [Robotic Arm Structure and Control](#RoboticArmStructureandControl)
+
+  * [Hardware Structure Design](##HardwareStructureDesign)
+ 
+  * [Software Control](##softwareControl)
+ 
+* [System Intergration](#SystemIntergration)
+
 
 
 
@@ -82,6 +107,8 @@ Detect the table tennis ball by its color, contour, and movement
 
 Predict the ball by deep learning model.
 
+## Coordinate Transformation
+
 ## Ball Simulation and Training data Generation
 
 This script is designed for simulating ball data with various configurations. And save as training data files to train the ball-prediction model. It provides command-line arguments to customize simulation parameters and operations.
@@ -149,3 +176,11 @@ Make sure you run the code in the root of the project
 - **normalB60**: Set the model mode to normal with configuration 'B60'.
 - **normalBR**: Set the model mode to normal with configuration 'BR'.
 
+
+# Robotic Arm Structure and Control
+
+## Hardware Structure Design
+
+## Software Control
+
+# System Intergration
