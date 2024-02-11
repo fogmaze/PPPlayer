@@ -11,7 +11,7 @@ import logging
 import torch
 import torch.nn as nn
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 import core.Constants as c
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
@@ -21,7 +21,7 @@ import tqdm
 import csv
 
 
-def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, momentum=0.01, dataset = "", opt="adam",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2, mode="normalBR"):
+def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, momentum=0.01, dataset = "", opt="adam",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2, mode="normalBR", train_ratio=0.8, valid_ratio=0.1, test_ratio=0.1):
     torch.multiprocessing.set_start_method('spawn')
     #model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
     model_save_dir = "./ball_simulate_v2/model_saves/" + name + "/"
@@ -52,7 +52,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, mom
 
     if (MODEL_MAP.get(model_name) == None):
         raise Exception("model name not found")
-    model = MODEL_MAP[model_name](device=device)
+    model:models.ISEFWINNER_BASE = MODEL_MAP[model_name](device=device)
 
     if weight:
         try:
@@ -61,7 +61,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, mom
         except:
             train_logger.error('cannot load model ')
 
-    criterion = nn.MSELoss().cuda()
+    criterion = models.DistanceLoss().to(device=device)
     model.to(device=device)
     #optimizer = torch.optim.Adam(model.parameters(), lr = LR)
     if opt == "adam":
@@ -74,11 +74,15 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, mom
     else :
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
-    ball_datas_train = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".train.bin"), device=device, mode=mode)
-    dataloader_train = DataLoader(dataset=ball_datas_train, batch_size=batch_size,shuffle=True, num_workers=num_workers)
+    ball_datas = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".train.bin"), device=device, mode=mode)
+    train_len = int(len(ball_datas) * train_ratio)
+    valid_len = int(len(ball_datas) * valid_ratio)
+    test_len = len(ball_datas) - train_len - valid_len
+    train_datas, valid_datas, test_datas = random_split(ball_datas, [train_len, valid_len, test_len])
+    dataloader_train = DataLoader(dataset=train_datas, batch_size=batch_size, num_workers=num_workers, shuffle=True)
+    dataloader_valid = DataLoader(dataset=valid_datas, batch_size=batch_size, num_workers=num_workers, shuffle=True)
+    dataloader_test = DataLoader(dataset=test_datas, batch_size=batch_size, num_workers=num_workers, shuffle=True)
 
-    ball_datas_valid = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".valid.bin"), device=device, mode=mode)
-    dataloader_valid = DataLoader(dataset=ball_datas_valid, batch_size=batch_size)
 
     train_loss = 0
     valid_loss = 0
@@ -94,35 +98,33 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, mom
             model.train()
             n = 0
             trainloss_sum = 0
+            trainingloss = 0
             validloss_sum = 0
-            
+            validationloss = 0
             #data_sample = splitTrainData_batch([createTrainData() for _ in range(batch_size)],normalized=True)
-            for r, r_len, l, l_len, t, ans in tqdm.tqdm(dataloader_train):
-                model.reset_hidden_cell(batch_size=r.shape[0])
-                optimizer.zero_grad()
-                out = model(r, r_len, l, l_len, t)
-                train_loss = criterion(out, ans)
-                train_loss.backward()
+            for data in tqdm.tqdm(dataloader_train):
+                train_loss = model.fit_one_iteration(data, optimizer, criterion)
                 trainloss_sum += train_loss.item()
-                optimizer.step()
+                if n % 1000 == 999:
+                    trainingloss = trainloss_sum / 1000
+                    trainloss_sum = 0
                 n += 1
 
             torch.cuda.empty_cache()
             
+            n = 0
             model.eval()
-            for r, r_len, l, l_len, t, ans in tqdm.tqdm(dataloader_valid):
-                model.reset_hidden_cell(batch_size=ans.shape[0])
-                out = model(r, r_len, l, l_len, t)
-                valid_loss = criterion(out, ans)
+            for data  in tqdm.tqdm(dataloader_valid):
+                valid_loss = model.validate_one_iteration(data, criterion)
                 validloss_sum += valid_loss.item()
+                n += 1
             
-            real_trainingloss = trainloss_sum / len(dataloader_train.dataset) * batch_size
-            real_validationloss = validloss_sum / len(dataloader_valid.dataset) * batch_size
-            train_loss_history.append(real_trainingloss)
-            valid_loss_history.append(real_validationloss)
+            validationloss = validloss_sum / n
+            train_loss_history.append(trainingloss)
+            valid_loss_history.append(validationloss)
 
             print("==========================[epoch:" + str(e) + "]==============================")
-            train_logger.info("epoch:{}\tlr:{:e}\ttraining loss:{:0.10f}\tvalidation loss:{:0.10f}".format(e,(optimizer.param_groups[0]['lr']),real_trainingloss,real_validationloss))
+            train_logger.info("epoch:{}\tlr:{:e}\ttraining loss:{:0.10f}\tvalidation loss:{:0.10f}".format(e,(optimizer.param_groups[0]['lr']), trainingloss, validationloss))
 
             print("save model")
             if not os.path.isdir(model_save_dir):
@@ -131,23 +133,23 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, mom
             os.makedirs(dirsavename)
             torch.save(model.state_dict(), dirsavename + "weight.pt")
             try:
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output1.png", seed=1)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output2.png", seed=100)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output3.png", seed=200)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output4.png", seed=300)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output5.png", seed=400)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output6.png", seed=500)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output7.png", seed=600)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output8.png", seed=700)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output9.png", seed=800)
-                saveVisualizeModelOutput(model, ball_datas_valid, dirsavename + "output10.png", seed=900)
+                saveVisualizeModelOutput(model, valid_datas, dirsavename + "output1.png", seed=1)
+                saveVisualizeModelOutput(model, valid_datas, dirsavename + "output2.png", seed=100)
+                saveVisualizeModelOutput(model, valid_datas, dirsavename + "output3.png", seed=200)
+                saveVisualizeModelOutput(model, valid_datas, dirsavename + "output4.png", seed=300)
+                saveVisualizeModelOutput(model, valid_datas, dirsavename + "output5.png", seed=400)
+                saveVisualizeModelOutput(model, valid_datas, dirsavename + "output6.png", seed=500)
+                saveVisualizeModelOutput(model, valid_datas, dirsavename + "output7.png", seed=600)
+                saveVisualizeModelOutput(model, valid_datas, dirsavename + "output8.png", seed=700)
+                saveVisualizeModelOutput(model, valid_datas, dirsavename + "output9.png", seed=800)
+                saveVisualizeModelOutput(model, valid_datas, dirsavename + "output10.png", seed=900)
             except:
                 pass
             model.reset_hidden_cell(batch_size=batch_size)
 
-            if scheduler != None:
+            if scheduler != None :
                 scheduler.step()
-        except KeyboardInterrupt:
+        except KeyboardInterrupt :
             c_exit = input("exit?[Y/n]")
             if c_exit == "Y" or c_exit == "y" or c_exit == chr(13) :
                 break

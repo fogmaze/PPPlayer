@@ -6,12 +6,21 @@ import os
 sys.path.append(os.getcwd())
 import core.Constants as Constants
 
+class DistanceLoss(nn.Module):
+    def __init__(self):
+        super(DistanceLoss, self).__init__()
+
+    def forward(self, output:torch.Tensor, target:torch.Tensor):
+        # shape: [batch_size, time, 3]
+        return torch.mean(torch.sqrt(torch.sum((output - target) ** 2, -1)))
+
+
 class ISEFWINNER_BASE(nn.Module):
     #input:  [cam_x, cam_y, cam_z, rad_xy, rad_xz] * 2 , [time]
     #output: [x, y, z]
     device = "cuda:0"
-    input_size:int = Constants.MODEL_INPUT_SIZE
-    output_size:int = Constants.MODEL_OUTPUT_SIZE
+    input_size:int = 5
+    output_size:int = 3
     mlp1_out:int
     mlp2_out:int
     lstm_out:int
@@ -23,6 +32,23 @@ class ISEFWINNER_BASE(nn.Module):
     mlp2:nn.Sequential
     llstm_last:torch.Tensor = None
     rlstm_last:torch.Tensor = None
+
+    def fit_one_iteration(self, data, optimizer, loss_fn) :
+        r, r_len, l, l_len, t, target = data
+        self.reset_hidden_cell(r.shape[0])
+        optimizer.zero_grad()
+        output = self(l, l_len, r, r_len, t)
+        loss = loss_fn(output, target)
+        loss.backward()
+        optimizer.step()
+        return loss.item()
+    
+    def validate_one_iteration(self, data, loss_fn) :
+        r, r_len, l, l_len, t, target = data
+        self.reset_hidden_cell(r.shape[0])
+        output = self(l, l_len, r, r_len, t)
+        loss = loss_fn(output, target)
+        return loss.item()
 
     @torch.jit.export
     def reset_hidden_cell(self, batch_size:int):
@@ -331,6 +357,51 @@ class ISEFWINNER_LARGE(ISEFWINNER_BASE):
             nn.Tanh(),
             nn.Linear(mlp2_l5_out, self.output_size)
         )
+
+class ISEFWINNER3_BASE(ISEFWINNER_BASE) :
+    def forward(self, X1:torch.Tensor, X1_len:torch.Tensor, X2:torch.Tensor, X2_len:torch.Tensor) :
+        x1_batch_size = len(X1)
+        x2_batch_size = len(X2)
+        # 輸入全連接層1 
+        X1 = self.mlp1(X1.view(-1,self.input_size)).view(x1_batch_size, -1, self.mlp1_out)
+        X2 = self.mlp1(X2.view(-1,self.input_size)).view(x2_batch_size, -1, self.mlp1_out)
+
+        # 輸入LSTM
+        X1 = X1.transpose(0, 1)
+        X2 = X2.transpose(0, 1)
+        X1, self.llstm_hidden_cell = self.lstm(X1, self.llstm_hidden_cell)
+        X2, self.rlstm_hidden_cell = self.lstm(X2, self.rlstm_hidden_cell)
+
+        # 擷取LSTM最後一次的輸出 
+        X1_len_ind = X1_len - 1
+        X2_len_ind = X2_len - 1
+        X1_ind = X1_len_ind.view(1, x1_batch_size, 1).expand(1, x1_batch_size, self.lstm_out)
+        X2_ind = X2_len_ind.view(1, x2_batch_size, 1).expand(1, x2_batch_size, self.lstm_out)
+        self.llstm_last = X1.gather(0, X1_ind).view(x1_batch_size, self.lstm_out)
+        self.rlstm_last = X2.gather(0, X2_ind).view(x2_batch_size, self.lstm_out)
+        
+        # 合併前段模型輸出
+        X1 = torch.cat((self.llstm_last, self.rlstm_last), 1)
+
+        # 輸入全連接層2
+        return self.mlp2(X1)
+    
+    def fit_one_iteration(self, data, optimizer, loss_fn):
+        r, r_len, l, l_len, target = data
+        self.reset_hidden_cell(r.shape[0])
+        optimizer.zero_grad()
+        output = self(l, l_len, r, r_len)
+        loss = loss_fn(output, target)
+        loss.backward()
+        optimizer.step()
+        return loss.item()
+    
+    def validate_one_iteration(self, data, loss_fn):
+        r, r_len, l, l_len, target = data
+        self.reset_hidden_cell(r.shape[0])
+        output = self(l, l_len, r, r_len)
+        loss = loss_fn(output, target)
+        return loss.item()
 
 
 MODEL_MAP:Dict[str, ISEFWINNER_BASE] = {
