@@ -305,10 +305,13 @@ def saveVisualizeModelOutput(model:models.ISEFWINNER_BASE, dataset, imgFileName,
 def drawLineSeq(axe:plt.Axes, seq:torch.Tensor, seq_len:torch.Tensor, color="r") :
     lines_t = seq.view(-1, 5)
     obj = None
-    for i in range(seq_len.view(1)[0]) :
-        line = equ.LineEquation3d(None, None)
-        line.setByPointOblique(equ.Point3d(lines_t[i][0], lines_t[i][1], lines_t[i][2]), lines_t[i][3], lines_t[i][4])
-        obj = drawLine3d(axe, line, color=color)
+    try :        
+        for i in range(seq_len.view(1)[0]) :
+            line = equ.LineEquation3d(None, None)
+            line.setByPointOblique(equ.Point3d(lines_t[i][0], lines_t[i][1], lines_t[i][2]), lines_t[i][3], lines_t[i][4])
+            obj = drawLine3d(axe, line, color=color)
+    except :
+        pass
     return obj
 
 def visualizeModelOutput(model_name, weight, seed = 3):

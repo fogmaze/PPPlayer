@@ -7,3 +7,4 @@ matplotlib
 pybullet
 pupil_apriltags
 opencv-python
+seaborn

@@ -372,10 +372,9 @@ def main(
                     if recv[1] == ord("s") :
                         status = "syncing" if status == "predicting" else "predicting"
         if t is not None :
-            if abs(time.time() - nowCollectorTime - t) < 0.15 :
+            if abs(time.time() - nowCollectorTime - t) < 0.4 :
                 robot.hit()
                 logData.append((time.time(), "hit", ()))
-                print("hit")
 
     displayQueue.put(("stop",))   
     c12d.send("stop")

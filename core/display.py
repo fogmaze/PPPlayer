@@ -206,13 +206,13 @@ def visualizePrediction_realtime(root) -> Tuple[mp.Queue, mp.Process] :
 
 
 def visualizePrediction_video(root, fps=60) :
-    model:models.ISEFWINNER_BASE = models.MODEL_MAP["large"](device="cuda:0")
-    model.cuda()
-    model.load_state_dict(torch.load("/home/changer/Downloads/large.pt"))
-    model.eval()
-    Constants.set2Normal()
-    NORMED_PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)
-    Constants.normer.norm_t_tensor(NORMED_PREDICT_T)
+    #model:models.ISEFWINNER_BASE = models.MODEL_MAP["large"](device="cuda:0")
+    #model.cuda()
+    #model.load_state_dict(torch.load("/home/changer/Downloads/large.pt"))
+    #model.eval()
+    #Constants.set2Normal()
+    #NORMED_PREDICT_T = torch.arange(0, Constants.SIMULATE_TEST_LEN * Constants.CURVE_SHOWING_GAP, Constants.CURVE_SHOWING_GAP).to("cuda:0").view(1, -1)
+    #Constants.normer.norm_t_tensor(NORMED_PREDICT_T)
 
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     if os.path.exists(os.path.join(root, 'visualize_video.mp4')) :
@@ -516,7 +516,7 @@ def visualizePrediction(root, fps=30) :
 
 def displayLines(axe, lines, color="b", label=None) :
     r = None
-    for line in lines.lines :
+    for line in lines.lines[::4] :
         l = equ.LineEquation3d(None, None)
         cp = equ.Point3d(line[0], line[1], line[2])
         l.setByPointOblique(cp, line[3], line[4])
@@ -541,15 +541,15 @@ def configRoom(ax:Axes, ang=(50, 70)) -> Axes:
         [W, H, 0],
         [-W, H, 0],
     ])
-    ax.scatter3D(Z[:, 0], Z[:, 1], Z[:, 2])
-    verts = [
-        [Z[0],Z[1],Z[2],Z[3]],
-    ]
-    ax.add_collection3d(Poly3DCollection(verts, facecolors='cyan', linewidths=1, edgecolors='r', alpha=.20))
+    #ax.scatter3D(Z[:, 0], Z[:, 1], Z[:, 2])
+    #verts = [
+        #[Z[0],Z[1],Z[2],Z[3]],
+    #]
+    #ax.add_collection3d(Poly3DCollection(verts, facecolors='cyan', linewidths=1, edgecolors='r', alpha=.20))
     return ax
 
 def drawLine3d(axe:plt.Axes,line:equ.LineEquation3d, color="r", label=None):
-    points = [line.getPoint({'x':-Constants.BALL_AREA_HALF_LENGTH*1}),line.getPoint({'x':Constants.BALL_AREA_HALF_LENGTH*1})]
+    points = [line.getPoint({'x':-Constants.BALL_AREA_HALF_LENGTH*5}),line.getPoint({'x':Constants.BALL_AREA_HALF_LENGTH*5})]
     X = [points[0][0],points[1][0]]
     Y = [points[0][1],points[1][1]]
     Z = [points[0][2],points[1][2]]
@@ -571,12 +571,15 @@ def plotOutput(ax, out, color = 'r', label=None):
         obj = ax.scatter(p[0].item(),p[1].item(),p[2].item(),c=color, label=label)
     return obj
 
+def plotPoint(ax, point:equ.Point3d, color='r', label=None):
+    obj = ax.scatter(point.x, point.y, point.z, c=color, label=label)
+    return obj
 
 
 if __name__ == "__main__" :
     Constants.set2NormalB()
     #visualizeDetection_video("ball_detection/result/test")
-    visualizePrediction_video("results/main4_3")
+    visualizePrediction_video("results/main8")
     exit()
 
     video = cv2.VideoCapture("results/1215/cam1/all_tagged.mp4")

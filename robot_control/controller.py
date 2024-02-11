@@ -45,7 +45,7 @@ class Robot :
             self.socket.connect((self.ip, h))
             pass
         self.previousHitTime = 0
-        self.arm_length = 0.465
+        self.arm_length = 0.48
         self.arm_height = 0.46
         self.now_rad = 0.5 * math.pi
 
@@ -73,8 +73,6 @@ class Robot :
         print("time diff:", struct.unpack("!f", recv)[0]-(start))
     
     def move(self, y, z) :
-        if self.ip == "" :
-            return None, None
         if abs((z-self.arm_height)/self.arm_length) > 1 :
             print("out of range")
             return None, None
@@ -101,6 +99,7 @@ class Robot :
             rad = rad2
             base_pos = base_pos2
         else :
+            print(rad1, rad2, base_pos1, base_pos2)
             return None, None
                         
         deg = transRad2Deg(rad)
@@ -113,6 +112,8 @@ class Robot :
         base_pos += 1000
         buf += base_pos.to_bytes(2, byteorder="big")
         
+        if self.ip == "" :
+            return deg, base_pos-1000
         self.socket.sendall(buf)
         return deg, base_pos-1000
 
@@ -142,7 +143,16 @@ ro = [
 ]
 if __name__ == "__main__" :
     robot = Robot("10.42.0.82", 6678)
-    robot.testCommunicateTime()
+    #robot = Robot("")
+    #robot.testCommunicateTime()
+
+    while True :
+        inp = input()
+        if inp == "h" :
+            robot.hit()
+        else :
+            a, b = inp.split()
+            print(robot.move(float(a), float(b)))
 
     exit()
     for d in ro :

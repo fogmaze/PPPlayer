@@ -12,6 +12,9 @@ import xml.etree.ElementTree as ET
 import ball_detection.Detection as Det
 import ball_detection.ColorRange as CR
 import matplotlib.path as mpltPath
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 from ball_detection.ColorRange import ColorRange, load, save
 
 
@@ -39,7 +42,7 @@ def calculateBallSize(xml_dir, max_len) :
     hs = np.array(hs)
     print(ws.mean() * hs.mean())
     
-def cmpResult(xml_dir, res_data, img_dir, img_start, frame_len) :
+def cmpResult(xml_dir, res_data, img_dir, img_start, frame_len, root_dir="./") :
     # list all xml files in xml_dir
     marked_xmls = os.listdir(xml_dir)
     marked_i = [int(t.split('.')[0]) for t in marked_xmls]
@@ -96,7 +99,19 @@ def cmpResult(xml_dir, res_data, img_dir, img_start, frame_len) :
             cv2.imshow("img", img)
             cv2.waitKey(0)
     distances = np.array(distances)
-    return tp, tn , fp , fn , distances.mean(), distances.std()
+
+    with open(os.path.join(root_dir, "result.csv"), "w") as f :
+        writer = csv.writer(f)
+        for d in distances :
+            writer.writerow([d])
+    #sns.boxplot(x=distances, color="gray")
+
+    #plt.tick_params(axis="both", labelsize=32)
+
+    #plt.xlabel("Distance between marked and detected (px)", fontsize=32)
+
+    #plt.show()
+    return tp, tn , fp , fn , np.percentile(distances, 25), np.percentile(distances, 50), np.percentile(distances, 75)
 
 
 def getMiddleOfRect(x, y, w, h) :
@@ -112,10 +127,10 @@ def form(xml_dir ="/home/changer/Downloads/320_60_tagged/result/"):
             os.remove(os.path.join(xml_dir, fn))
             print(fn, "is deleted")
 
-def findRange_hsv_img(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30, beg = 0, consider_poly = None):
+def findRange_hsv_img(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30, beg = 0, consider_poly = None, root_dir="./"):
     detection = Det.Detection_img(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, mode="compute", beg_ind = beg, consider_poly=consider_poly)
-    i = detection.runDetection()
-    return cmpResult(xml_dir, detection.data, img_dir=source  , img_start=beg, frame_len=i)
+    i = detection.runDetection(realTime=False)
+    return cmpResult(xml_dir, detection.data, img_dir=source, img_start=beg, frame_len=i, root_dir=root_dir)
 
 def findRange_hsv(color_range:np.ndarray, source, xml_dir, frame_size, frame_rate = 30):
     detection = Det.Detection(source, color_range=color_range, frame_size=frame_size, frame_rate=frame_rate, mode="compute")
@@ -152,21 +167,54 @@ def findColorRange() :
     p.terminate()
     p.join()
 
-if __name__ == "__main__" :
-    #findColorRange()
+def extractFrames(source, dest, max_len = 1000) :
+    if not os.path.isdir(dest) :
+        os.mkdir(dest)
+    cap = cv2.VideoCapture(source)
+    i = 0
+    while True :
+        ret, frame = cap.read()
+        if not ret or i >= max_len:
+            break
+        cv2.imshow("frame", frame)
+        k = cv2.waitKey(0)
+        if k == ord(" ") :
+            cv2.imwrite(os.path.join(dest, str(i).zfill(4) + ".jpg"), frame)
+        
+        i += 1
+    cap.release()
 
+if __name__ == "__main__" :
+    #os.mkdir("results/main6/cam2/position_")
+    #for f in os.listdir("results/main6/cam2/position_in") :
+        ## file name + 1
+        #num = int(f.split('.')[0]) - 1
+        ## copy file
+        #os.system("cp " + os.path.join("results/main6/cam2/position_in", f) + " " + os.path.join("results/main6/cam2/position_", str(num).zfill(4) + ".xml"))
+    #exit()
+
+    
+    dirname = "results/main6/cam2/position"
+    con = Det.DetectionConfig()
+    con.load("15_cam2")
+    po = con.consider_poly
     with open("configs/cr3", "rb") as f :
         c = pickle.load(f)
-    with open("/home/changer/Downloads/hd_60_tagged/poly", "rb") as f:
-        po = pickle.load(f)
-    print(findRange_hsv_img(c, "/home/changer/Downloads/hd_60_tagged/frames", "/home/changer/Downloads/hd_60_tagged/result_in/", (1920, 1080), 30, consider_poly=po, beg=1000))
+    print(findRange_hsv_img(c, "results/main6/cam2/frames", dirname+"_in/", (640,480), 30, consider_poly=po, root_dir="results/main6/cam2/"))
+    print("--------------------------------------------------")
     exit()
-
-    os.mkdir("/home/changer/Downloads/hd_60_tagged/result_in/")
-    for file in os.listdir("/home/changer/Downloads/hd_60_tagged/result/"):
-        tree = ET.parse(os.path.join("/home/changer/Downloads/hd_60_tagged/result/", file))
+    
+    os.mkdir(dirname+"_in") if not os.path.isdir(dirname+"_in") else None
+    if not os.path.isdir(dirname) :
+        print("no such directory")
+        exit()
+    for file in os.listdir(dirname) :
+        tree = ET.parse(os.path.join(dirname, file))
         root = tree.getroot()        
-        objs = root.findall('object')[0]
+        objs = root.findall('object')
+        if len(objs) == 0 :
+            continue
+        objs = objs[0]
         xmin = int(objs.find('bndbox').find('xmin').text)
         ymin = int(objs.find('bndbox').find('ymin').text)
         xmax = int(objs.find('bndbox').find('xmax').text)
@@ -174,10 +222,16 @@ if __name__ == "__main__" :
         mid_marked = (xmin + xmax) / 2, (ymin + ymax) / 2
         if mpltPath.Path(po).contains_point(mid_marked) :
             # copy file
-            os.system("cp " + os.path.join("/home/changer/Downloads/hd_60_tagged/result/", file) + " " + os.path.join("/home/changer/Downloads/hd_60_tagged/result_in/", file))
-    exit()
-    print(findRange_hsv_img(c, "/home/changer/Downloads/320_60_tagged/frames", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30, consider_poly=po))
-    print("--------------------------------------------------")
+            print("in")
+            os.system("cp " + os.path.join(dirname, file) + " " + os.path.join(dirname+"_in", file))
+    exit()  
+
+
+    with open("/home/changer/Downloads/320_60_tagged/poly", "rb") as f:
+        po = pickle.load(f)
+ 
+     
+
     exit()
     #print(findRange_hsv(c, "/home/changer/Downloads/320_60_tagged/all.mp4", "/home/changer/Downloads/320_60_tagged/result/", (640,480), 30))
     print(findRange_hsv_img(c, "/home/changer/Downloads/hd_60_tagged/frames", "/home/changer/Downloads/hd_60_tagged/result/", (1920, 1080), 60, beg=1000))

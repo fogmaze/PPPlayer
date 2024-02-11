@@ -1,4 +1,6 @@
 import time
+import cv2
+import numpy as np
 import shutil
 import argparse
 import pybullet as p
@@ -7,6 +9,7 @@ import os
 import sys
 sys.path.append(os.getcwd())
 import core.Equation3d as equ
+import core.display as display
 import core.Constants as c
 import math
 import random
@@ -43,6 +46,36 @@ class BallWork(Work):
 
     def action(self, ball_pos):
         self.ball_pos:equ.Point3d = ball_pos
+
+class Work_display:
+    timestamp:float
+    index:int
+    def action(self, ax, ball_pos):
+        pass
+
+class CameraWork_display(Work):
+    def __init__(self, timestamp, camera_pos, index):
+        self.timestamp = timestamp
+        self.camera_pos = camera_pos
+        self.index = index
+        
+    def action(self, ax, ball_pos_ideal):
+        lineCamBall = equ.LineEquation3d(self.camera_pos, ball_pos_ideal + randomBallPosError())
+        self.rad_xy = math.atan(lineCamBall.line_xy.a)
+        self.rad_xz = math.atan(lineCamBall.line_xz.a)
+        self.lineCamBall = lineCamBall
+        color = ['orange', "green"]
+        display.drawLine3d(ax, lineCamBall, color[self.index[0]])
+        
+
+class BallWork_display(Work):
+    def __init__(self, timestamp, index):
+        self.timestamp = timestamp
+        self.index = index
+
+    def action(self, ax, ball_pos):
+        self.ball_pos:equ.Point3d = ball_pos
+        display.plotPoint(ax, ball_pos)
 
 def randomCameraPos():
     x = 0
@@ -118,6 +151,109 @@ def plotData(ax,inp:Tuple[List[CameraWork]],ans:List[BallWork]):
     # plot ball points
     for pos in ans:
         ax.scatter(pos.ball_pos.x,pos.ball_pos.y,pos.ball_pos.z)
+
+def simulate_display(GUI = False, dataLength = 10):
+    SINGLE_SIMULATE_SAMPLE_LEN = 5
+    if GUI:
+        p.connect(p.GUI)
+    else:
+        p.connect(p.DIRECT)
+
+    p.setPhysicsEngineParameter(restitutionVelocityThreshold=0)
+
+    planeId = p.createCollisionShape(p.GEOM_PLANE)
+    plane = p.createMultiBody(0, planeId)
+
+    radius = 0.04
+    sphereId = p.createCollisionShape(p.GEOM_SPHERE, radius=radius)
+    startPos = [0, 0, 1]
+    startOrientation = p.getQuaternionFromEuler([0,0,0])
+    sphere = p.createMultiBody(27, sphereId, basePosition=startPos, baseOrientation=startOrientation)
+
+    linearVelocity = [0,0, random.uniform(0, 5)]
+    angularVelocity = [0, 0, 0]
+    p.resetBaseVelocity(sphere, linearVelocity, angularVelocity)
+
+    #linearDamping = 6 * math.pi * radius * 0.0185
+    #angularDamping = 0.1
+    #p.changeDynamics(sphere, -1, linearDamping=linearDamping, angularDamping=angularDamping)
+
+
+    restitution = 1
+    p.changeDynamics(sphere, -1, restitution=restitution)
+    p.changeDynamics(plane, -1, restitution=restitution)
+    p.setRealTimeSimulation(0)
+    p.setTimeStep(c.stepTime)
+
+    p.setGravity(0, 0, -c.G)
+    fig, ax = display.createFigRoom()
+
+    for i in tqdm.tqdm(range(int(dataLength/SINGLE_SIMULATE_SAMPLE_LEN))) :
+        video = cv2.VideoWriter("exp/{}.mp4".format(i), cv2.VideoWriter_fourcc(*'mp4v'), 15, (640, 480))
+        cam1_pos = randomCameraPos()
+        cam2_pos = randomCameraPos()
+
+        cam1_error = randomCameraPosError()
+        cam2_error = randomCameraPosError()
+
+        ball_pos = randomBallPos()
+
+        camera_systematic_error = random.gauss(0, c.SHUTTER_SYSTEMATIC_ERROR_STD)
+
+        #set ball pos
+        p.resetBasePositionAndOrientation(sphere, [ball_pos.x, ball_pos.y, ball_pos.z], startOrientation)
+        linearVelocity = [random.uniform(-5,5), random.uniform(-5,5), random.uniform(0, 3)]
+        angularVelocity = [0, 0, 0]
+        p.resetBaseVelocity(sphere, linearVelocity, angularVelocity)
+
+
+        works:List[Work_display] = []
+        cam1_data:List[CameraWork] = []
+        cam2_data:List[CameraWork] = []
+        ans_data:List[BallWork] = []
+        for j in range(c.SIMULATE_INPUT_LEN):
+            works.append(CameraWork_display(abs(j/c.FPS + random.gauss(0,c.SHUTTER_RANDOM_ERROR_STD)), cam1_pos + cam1_error, (0,j)))
+            works.append(CameraWork_display(abs(j/c.FPS + random.gauss(0,c.SHUTTER_RANDOM_ERROR_STD) + camera_systematic_error), cam2_pos + cam2_error, (1, j)))
+        for j in range(c.SIMULATE_TEST_LEN):
+            works.append(BallWork_display(j*c.CURVE_SHOWING_GAP, (2, j)))
+        works = sorted(works, key = lambda x: x.timestamp)
+        nowTimeStamp = 0
+        nowWorkIndex = 0
+        i = 0
+
+        display.cleanRoom(ax)
+        while len(works) > nowWorkIndex:
+            if works[nowWorkIndex].timestamp > nowTimeStamp:
+            #if True:
+                p.stepSimulation()
+                nowTimeStamp += c.stepTime
+                if GUI:
+                    time.sleep(c.stepTime)
+                if i % 20 == 0:
+                    fig.canvas.draw()
+                    img = np.fromstring(ax.figure.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+                    img = img.reshape(ax.figure.canvas.get_width_height()[::-1] + (3,))
+                    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                    video.write(img)
+                i += 1
+                continue
+
+            #get ball pos
+            ball_pos_list = p.getBasePositionAndOrientation(sphere)[0]
+            ball_pos = equ.Point3d(ball_pos_list[0], ball_pos_list[1], ball_pos_list[2])
+
+            #do work
+            works[nowWorkIndex].action(ax, ball_pos)
+            if works[nowWorkIndex].index[0] == 0:
+                cam1_data.append(works[nowWorkIndex])
+            elif works[nowWorkIndex].index[0] == 1:
+                cam2_data.append(works[nowWorkIndex])
+            elif works[nowWorkIndex].index[0] == 2:
+                ans_data.append(works[nowWorkIndex])
+
+            nowWorkIndex += 1
+        video.release()
+
 
 
 def simulate(GUI = False, dataLength = 10, outputFileName = "train.bin"):
@@ -309,6 +445,9 @@ def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"
     print("simulate done")
 
 if __name__ == "__main__":
+    c.set2NormalBR()
+    simulate_display(dataLength=5*10)
+    exit()
     #print(calculateMeanStd("train.bin"))
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--GUI", default=False, action="store_true")

@@ -176,6 +176,8 @@ class Detection :
         # below is all the initalization for all the modes
         self.last_map = []
         self.last_result = None
+        self.last_frame = None
+        self.initial_frame = None
 
         print("source: ",source)
         self.save_name = save_name
@@ -284,9 +286,13 @@ class Detection :
         cv2.putText(frame, ("x : {} y : {}".format(xCenter, yCenter)), (10, 40*i), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 255, 0), 2)
 
     # this function is no longer used.
-    def compareFrames(self, frame, compare) :
-        move = cv2.bitwise_xor(frame, compare)
+    def compareFrames(self, frame) :
+        if self.last_frame is None :
+            self.last_frame = frame
+            return np.zeros(frame.shape, np.uint8)
+        move = cv2.bitwise_xor(frame, self.last_frame)
         color = cv2.inRange(move, np.array([10, 10, 10]), np.array([255, 255, 255]))
+        self.last_frame = frame
         return cv2.bitwise_and(frame, cv2.cvtColor(color, cv2.COLOR_GRAY2BGR))
     
     # this function is no longer used.
@@ -311,6 +317,8 @@ class Detection :
     
     # return a retangle that is considered as the ball
     def findBallInFrame(self, frame) -> Tuple[int, int, int, int] | None:
+        frame = self.compareFrames(frame)
+
         masked = cv2.inRange(cv2.cvtColor(frame, cv2.COLOR_BGR2HSV), self.lower, self.upper)
 
         detected_contours = cv2.findContours(masked, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)[0]
@@ -337,7 +345,7 @@ class Detection :
                     if abs(x - x1) < 5 and abs(y - y1) < 5 :
                         q = False
                         break
-            if q :
+            if q or True :
                 f1.append((x, y, w, h))
 
 
@@ -424,7 +432,7 @@ class Detection :
             
         self.last_result = result
         self.last_map.append(f0)
-        if len(self.last_map) > 20 :
+        if len(self.last_map) > 40 :
             self.last_map.pop(0)
         return result
 
@@ -460,6 +468,7 @@ class Detection :
 
                 # get detection result
                 result = self.findBallInFrame(frame)
+                cv2.polylines(frame, [self.consider_poly], True, (0, 255, 255), 2)
 
                 if result is not None :
                     x, y, w, h = result
@@ -528,7 +537,7 @@ class Detection :
                 
                 # show the detection
                 window = "Source" + str(self.source) 
-                if self.mode == "analysis" or self.mode == "dual_analysis" or self.mode == "dual_run" or self.mode == "caculate_bounce":
+                if self.mode == "analysis" or self.mode == "dual_analysis" or self.mode == "dual_run" or self.mode == "caculate_bounce" or self.mode == "compute":
                     cv2.imshow(window, frame)
             else :
                 # no frame readed from source. break the loop
@@ -703,6 +712,13 @@ def merge_rectangles(rectangles):
     return merged_rectangles
 
 if __name__ == "__main__" :
+    config = DetectionConfig()
+    config.load("1215_p/cam2")
+    dect = Detection(source="results/1215/cam2/all.mp4", config=config, save_name="1215_p_cam2", mode="analysis")
+    dect.runDetection(debugging=False, realTime=False)
+    exit()
+
+
     Args = ap.ArgumentParser()
     Args.add_argument("-cc", "--create_config", action="store_true", default=False, help="use this flag to create config, otherwise use config to run detection")
     Args.add_argument("-c", "--config", type=str, default="test1", help="config name (nessesary)")

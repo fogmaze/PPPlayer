@@ -14,7 +14,7 @@ import ball_predection.predict as predict
 import core.Constants as c
 import torch
 import matplotlib.pyplot as plt
-import robot_controll.controller as con
+import robot_control.controller as con
 
 
 def sim_prediction_move(s=474) :
@@ -54,7 +54,7 @@ def sim_prediction_move(s=474) :
             time.sleep(1/60)
             ti += 1/60
 
-def sim_prediction() :
+def sim_prediction(ind) :
     video = cv2.VideoWriter("nor.mp4", cv2.VideoWriter_fourcc(*'mp4v'), 15, (640, 480))
     c.set2NormalB()
     ds = dfo.BallDataSet_sync("ball_simulate_v2/dataset/normalB.train.bin")
@@ -63,7 +63,7 @@ def sim_prediction() :
     m.cuda()
     m.load_state_dict(torch.load("ball_simulate_v2/model_saves/normalB/epoch_29/weight.pt"))
 
-    for i in range(474) :
+    for i in range(ind) :
         next(dl)
     X1, X1_len, X2, X2_len, T, Y = next(dl)
     Yl = Y.clone()
@@ -120,7 +120,7 @@ def find_seed() :
     dl = torch.utils.data.DataLoader(ds, batch_size=1, shuffle=False, num_workers=0)
     ite = iter(dl)
     i = 0
-    for i in range(354) :
+    for i in range(1170) :
         next(ite)
         i += 1
     for X1, X1_len, X2, X2_len, T, Y in ite:
@@ -143,10 +143,13 @@ def find_seed() :
 
 
 
+find_seed()
+exit()
 #sim_prediction_move(354)
-sim_prediction_move(474)
+sim_prediction(474)
 exit()
 
+# 294 1254
 
 sim_prediction_move()
 exit()
