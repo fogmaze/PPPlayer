@@ -343,7 +343,37 @@ def test_homo(img, ho) :
         print("b: %2f, %2f" %(b[0], b[1]), b[2])
     print(ho)
 
+def analysis_camera_lag(source, path, frame_size=(640, 480)) :
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    cap = cv2.VideoCapture(source)
+    if not os.path.isdir(path) :
+        os.mkdir(path)
+    writer = cv2.VideoWriter(os.path.join(path, "video.mp4"), fourcc, 30, frame_size)
+    log_file = open(os.path.join(path, "log"), "w")
+    log_writer = csv.writer(log_file)
+    i = 0
+    while True :
+        ret, frame = cap.read()
+        if ret :
+            t = time.time()
+            cv2.putText(frame, str(i), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 5)
+            cv2.imshow("frame", frame)
+            print(t)
+            log_writer.writerow([i, t])
+            writer.write(frame)
+        i += 1
+        if cv2.waitKey(1) & 0xff == ord(' ') :
+            break
+    log_file.close()
+    writer.release()
+            
+        
+
 if __name__ == "__main__" :
+    analysis_camera_lag(0, "exp/testLag_droidcam_and_line1")
+
+
+    exit()
     #img = cv2.imread("exp/718.jpg")
     #m = setup_table_img(img, APRILTAG_SIZE/2, APRILTAG_SIZE/2)
     #pickle.dump(m, open('ho_table', 'wb'))
