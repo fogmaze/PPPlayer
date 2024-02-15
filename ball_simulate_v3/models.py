@@ -21,6 +21,7 @@ class ISEFWINNER_BASE(nn.Module):
     device = "cuda:0"
     input_size:int = 5
     output_size:int = 3
+    output_len:int  = None
     mlp1_out:int
     mlp2_out:int
     lstm_out:int
@@ -34,19 +35,19 @@ class ISEFWINNER_BASE(nn.Module):
     rlstm_last:torch.Tensor = None
 
     def fit_one_iteration(self, data, optimizer, loss_fn) :
-        r, r_len, l, l_len, t, target = data
+        r, r_len, l, l_len, target = data
         self.reset_hidden_cell(r.shape[0])
         optimizer.zero_grad()
-        output = self(l, l_len, r, r_len, t)
+        output = self(l, l_len, r, r_len)
         loss = loss_fn(output, target)
         loss.backward()
         optimizer.step()
         return loss.item()
     
     def validate_one_iteration(self, data, loss_fn) :
-        r, r_len, l, l_len, t, target = data
+        r, r_len, l, l_len, target = data
         self.reset_hidden_cell(r.shape[0])
-        output = self(l, l_len, r, r_len, t)
+        output = self(l, l_len, r, r_len)
         loss = loss_fn(output, target)
         return loss.item()
 
@@ -75,21 +76,14 @@ class ISEFWINNER_BASE(nn.Module):
         X2_len_ind = X2_len - 1
         X1_ind = X1_len_ind.view(1, x1_batch_size, 1).expand(1, x1_batch_size, self.lstm_out)
         X2_ind = X2_len_ind.view(1, x2_batch_size, 1).expand(1, x2_batch_size, self.lstm_out)
-        X1 = X1.gather(0, X1_ind).view(1, x1_batch_size, self.lstm_out)
-        X2 = X2.gather(0, X2_ind).view(1, x2_batch_size, self.lstm_out)
-        self.llstm_last = X1.transpose(0, 1)
-        self.rlstm_last= X2.transpose(0, 1)
+        self.llstm_last = X1.gather(0, X1_ind).view(x1_batch_size, self.lstm_out)
+        self.rlstm_last = X2.gather(0, X2_ind).view(x2_batch_size, self.lstm_out)
         
         # 合併前段模型輸出
-        X1 = torch.cat((self.llstm_last, self.rlstm_last), 2)
-
-        # 合併的結果複製k份，k為輸入T的長度 
-        X1 = X1.repeat(1, T.shape[1], 1)
-        X1 = torch.cat((X1, T.view(x1_batch_size, T.shape[1], 1)), 2)
+        X1 = torch.cat((self.llstm_last, self.rlstm_last), 1)
 
         # 輸入全連接層2
-        res = self.mlp2(X1.view(-1, self.lstm_out * 2 + 1)).view(x1_batch_size, T.shape[1], self.output_size)
-        return res
+        return self.mlp2(X1).view(-1, self.output_len, self.output_size)
 
     def forward_left_update(self, X:torch.Tensor) :
         batch_size = len(X)
@@ -118,6 +112,8 @@ class ISEFWINNER_BASE(nn.Module):
 class ISEFWINNER_SMALL(ISEFWINNER_BASE):
     def __init__(self,device = "cuda:0"):
         self.device = device
+        assert Constants.MODEL3_OUTPUT_LEN
+        self.output_len = Constants.MODEL3_OUTPUT_LEN
 
         mlp1_l1_out = 50
         mlp1_l2_out = 40
@@ -156,60 +152,14 @@ class ISEFWINNER_SMALL(ISEFWINNER_BASE):
             nn.Tanh(),
             nn.Linear(mlp2_l2_out, mlp2_l3_out),
             nn.Tanh(),
-            nn.Linear(mlp2_l3_out, self.output_size)
+            nn.Linear(mlp2_l3_out, self.output_size * self.output_len)
         )
         
-class ISEFWINNER_MEDIUM_VARIOUS(ISEFWINNER_BASE):
-    def __init__(self,device = "cuda:0"):
-        self.device = device
-
-        mlp1_l1_out = 100
-        mlp1_l2_out = 80
-        mlp1_l3_out = 80
-        mlp1_l4_out = 50
-
-        mlp2_l1_out = 90
-        mlp2_l2_out = 60
-        mlp2_l3_out = 50
-        mlp2_l4_out = 30
-
-        self.mlp1_out = mlp1_l4_out
-        self.mlp2_out = mlp2_l4_out
-        self.lstm_out = 60
-        self.lstm_num_layers = 6
-
-        batch_size = 1
-        super().__init__()
-        self.mlp1 = nn.Sequential(
-            nn.Linear(self.input_size,mlp1_l1_out),
-            nn.ReLU(),
-            nn.Linear(mlp1_l1_out,mlp1_l2_out),
-            nn.ReLU(),
-            nn.Linear(mlp1_l2_out,mlp1_l3_out),
-            nn.ReLU(),
-            nn.Linear(mlp1_l3_out,mlp1_l4_out),
-        )
-        self.lstm = nn.LSTM(input_size = mlp1_l4_out,hidden_size= self.lstm_out,num_layers = self.lstm_num_layers)
-
-        self.llstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
-        self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
-        
-        self.mlp2 = nn.Sequential(
-            nn.Linear(self.lstm_out * 2 + 1, mlp2_l1_out),
-            nn.ReLU(),
-            nn.Linear(mlp2_l1_out, mlp2_l2_out),
-            nn.ReLU(),
-            nn.Linear(mlp2_l2_out, mlp2_l3_out),
-            nn.ReLU(),
-            nn.Linear(mlp2_l3_out, mlp2_l4_out),
-            nn.ReLU(),
-            nn.Linear(mlp2_l4_out, self.output_size)
-        )
-
-
 class ISEFWINNER_MEDIUM(ISEFWINNER_BASE):
     def __init__(self,device = "cuda:0"):
         self.device = device
+        assert Constants.MODEL3_OUTPUT_LEN
+        self.output_len = Constants.MODEL3_OUTPUT_LEN
 
         mlp1_l1_out = 100
         mlp1_l2_out = 80
@@ -219,7 +169,7 @@ class ISEFWINNER_MEDIUM(ISEFWINNER_BASE):
         mlp2_l1_out = 90
         mlp2_l2_out = 60
         mlp2_l3_out = 50
-        mlp2_l4_out = 30
+        mlp2_l4_out = 80
 
         self.mlp1_out = mlp1_l4_out
         self.mlp2_out = mlp2_l4_out
@@ -251,12 +201,14 @@ class ISEFWINNER_MEDIUM(ISEFWINNER_BASE):
             nn.Tanh(),
             nn.Linear(mlp2_l3_out, mlp2_l4_out),
             nn.Tanh(),
-            nn.Linear(mlp2_l4_out, self.output_size)
+            nn.Linear(mlp2_l4_out, self.output_size * self.output_len)
         )
 
 class ISEFWINNER_BIG(ISEFWINNER_BASE):
     def __init__(self,device = "cuda:0"):
         self.device = device
+        assert Constants.MODEL3_OUTPUT_LEN
+        self.output_len = Constants.MODEL3_OUTPUT_LEN
 
         mlp1_l1_out = 140
         mlp1_l2_out = 120
@@ -267,7 +219,7 @@ class ISEFWINNER_BIG(ISEFWINNER_BASE):
         mlp2_l2_out = 90
         mlp2_l3_out = 90
         mlp2_l4_out = 60
-        mlp2_l5_out = 60
+        mlp2_l5_out = 80
 
         self.mlp1_out = mlp1_l4_out
         self.mlp2_out = self.output_size
@@ -301,12 +253,14 @@ class ISEFWINNER_BIG(ISEFWINNER_BASE):
             nn.Tanh(),
             nn.Linear(mlp2_l4_out, mlp2_l5_out),
             nn.Tanh(),
-            nn.Linear(mlp2_l5_out, self.output_size)
+            nn.Linear(mlp2_l5_out, self.output_size * self.output_len)
         )
 
 class ISEFWINNER_LARGE(ISEFWINNER_BASE):
     def __init__(self,device = "cuda:0"):
         self.device = device
+        assert Constants.MODEL3_OUTPUT_LEN
+        self.output_len = Constants.MODEL3_OUTPUT_LEN
 
         mlp1_l1_out = 200
         mlp1_l2_out = 150
@@ -318,7 +272,7 @@ class ISEFWINNER_LARGE(ISEFWINNER_BASE):
         mlp2_l2_out = 120
         mlp2_l3_out = 100
         mlp2_l4_out = 60
-        mlp2_l5_out = 60
+        mlp2_l5_out = 100
 
 
         self.mlp1_out = mlp1_l5_out
@@ -355,14 +309,12 @@ class ISEFWINNER_LARGE(ISEFWINNER_BASE):
             nn.Tanh(),
             nn.Linear(mlp2_l4_out, mlp2_l5_out),
             nn.Tanh(),
-            nn.Linear(mlp2_l5_out, self.output_size)
+            nn.Linear(mlp2_l5_out, self.output_size * self.output_len)
         )
-
 
 MODEL_MAP:Dict[str, ISEFWINNER_BASE] = {
     "small":ISEFWINNER_SMALL,
     "medium":ISEFWINNER_MEDIUM,
-    "medium_var":ISEFWINNER_MEDIUM_VARIOUS,
     "big":ISEFWINNER_BIG,
     "large":ISEFWINNER_LARGE
 }

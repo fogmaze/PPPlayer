@@ -28,11 +28,15 @@ add_library(dataFileOperatorV2-100-100 SHARED ball_simulate_v2/dataFileOperator.
 add_library(dataFileOperatorV2-40-250 SHARED ball_simulate_v2/dataFileOperator.cpp)
 add_library(dataFileOperatorV2-80-50 SHARED ball_simulate_v2/dataFileOperator.cpp)
 add_library(dataFileOperatorV2-40-50 SHARED ball_simulate_v2/dataFileOperator.cpp)
+add_library(dataFileOperatorV3-40-50 SHARED ball_simulate_v3/dataFileOperator.cpp)
+add_library(dataFileOperatorV3-40-60 SHARED ball_simulate_v3/dataFileOperator.cpp)
 target_compile_definitions(dataFileOperatorV2-100-250 PRIVATE -DINPUT_LEN=100 -DTEST_LEN=250)
 target_compile_definitions(dataFileOperatorV2-100-100 PRIVATE -DINPUT_LEN=100 -DTEST_LEN=100)
 target_compile_definitions(dataFileOperatorV2-40-250 PRIVATE -DINPUT_LEN=40 -DTEST_LEN=250)
 target_compile_definitions(dataFileOperatorV2-80-50 PRIVATE -DINPUT_LEN=80 -DTEST_LEN=50)
 target_compile_definitions(dataFileOperatorV2-40-50 PRIVATE -DINPUT_LEN=40 -DTEST_LEN=50)
+target_compile_definitions(dataFileOperatorV3-40-50 PRIVATE -DINPUT_LEN=40 -DTEST_LEN=50)
+target_compile_definitions(dataFileOperatorV3-40-60 PRIVATE -DINPUT_LEN=40 -DTEST_LEN=60)
 
 # pose
 include_directories(apriltag)

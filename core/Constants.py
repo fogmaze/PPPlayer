@@ -228,8 +228,70 @@ def set2Predict() :
     now_mode = "predict"
 
 
+def set2NormalBR3() :
+    global SIMULATE_INPUT_LEN
+    global SIMULATE_TEST_LEN
+    global SHUTTER_RANDOM_ERROR_STD
+    global SHUTTER_SYSTEMATIC_ERROR_STD
+    global CAMERA_POSITION_ERROR_STD
+    global BALL_POSITION_ERROR_STD
+    global INPUT_IGNORE_AREA_MEAN
+    global INPUT_IGNORE_AREA_STD
+    global INPUT_IGNORE_WIDTH_MEAN
+    global INPUT_IGNORE_WIDTH_STD
+    global INPUT_RANDOM_ERROR_RATE
+    global MODEL3_OUTPUT_LEN
+    global normer
+    global now_mode
+
+    SIMULATE_TEST_LEN = MODEL3_OUTPUT_LEN = 50
+    SIMULATE_INPUT_LEN = 40
+    SHUTTER_RANDOM_ERROR_STD = 0.005    #second
+    SHUTTER_SYSTEMATIC_ERROR_STD = 0.03 #second
+    CAMERA_POSITION_ERROR_STD = 0.05    #meter
+    BALL_POSITION_ERROR_STD = 0.05      #meter
+    INPUT_IGNORE_AREA_MEAN = 3
+    INPUT_IGNORE_AREA_STD = 3
+    INPUT_IGNORE_WIDTH_MEAN = 4
+    INPUT_IGNORE_WIDTH_STD = 3
+    INPUT_RANDOM_ERROR_RATE = 0.03
+    normer = Normer(version=3)
+    now_mode = "normalBR3"
+
+
+def set2Better3() :
+    global SIMULATE_INPUT_LEN
+    global SIMULATE_TEST_LEN
+    global SHUTTER_RANDOM_ERROR_STD
+    global SHUTTER_SYSTEMATIC_ERROR_STD
+    global CAMERA_POSITION_ERROR_STD
+    global BALL_POSITION_ERROR_STD
+    global INPUT_IGNORE_AREA_MEAN
+    global INPUT_IGNORE_AREA_STD
+    global INPUT_IGNORE_WIDTH_MEAN
+    global INPUT_IGNORE_WIDTH_STD
+    global INPUT_RANDOM_ERROR_RATE
+    global MODEL3_OUTPUT_LEN
+    global normer
+    global now_mode
+
+    SIMULATE_TEST_LEN = MODEL3_OUTPUT_LEN = 60
+    SIMULATE_INPUT_LEN = 40
+    SHUTTER_RANDOM_ERROR_STD = 0.005    #second
+    SHUTTER_SYSTEMATIC_ERROR_STD = 0.03 #second
+    CAMERA_POSITION_ERROR_STD = 0.025    #meter
+    BALL_POSITION_ERROR_STD = 0.025      #meter
+    INPUT_IGNORE_AREA_MEAN = 1
+    INPUT_IGNORE_AREA_STD = 3
+    INPUT_IGNORE_WIDTH_MEAN = 4
+    INPUT_IGNORE_WIDTH_STD = 3
+    INPUT_RANDOM_ERROR_RATE = 0.03
+    normer = Normer(version=3)
+    now_mode = "better3"
+
+
 class Normer :
-    def __init__(self) :
+    def __init__(self, version = 2) :
         self.CAM_MEAN = [0.0, 0.0, CAMERA_AREA_HEIGHT/2]
         self.CAM_STD = [CAMERA_AREA_HALF_LENGTH, CAMERA_AREA_HALF_WIDTH, CAMERA_AREA_HEIGHT/2]
         self.LINE_MEAN = [0, 0]
@@ -238,6 +300,7 @@ class Normer :
         self.BALL_STD = [BALL_AREA_HALF_LENGTH*2, BALL_AREA_HALF_WIDTH*2, BALL_AREA_HEIGHT/2]
         self.TIME_MEAN = [CURVE_SHOWING_GAP*SIMULATE_TEST_LEN/2]
         self.TIME_STD = [CURVE_SHOWING_GAP*SIMULATE_TEST_LEN/2]
+        self.version = version
 
     def norm(self, data) :
         data.inputs[0].camera_x = (data.inputs[0].camera_x - self.CAM_MEAN[0]) / self.CAM_STD[0]
@@ -253,14 +316,12 @@ class Normer :
             data.inputs[1].line_rad_xy[i] = (data.inputs[1].line_rad_xy[i] - self.LINE_MEAN[0]) / self.LINE_STD[0]
             data.inputs[1].line_rad_xz[i] = (data.inputs[1].line_rad_xz[i] - self.LINE_MEAN[1]) / self.LINE_STD[1]
 
-            data.inputs[0].timestamps[i] = (data.inputs[0].timestamps[i] - self.TIME_MEAN[0]) / self.TIME_STD[0]
-            data.inputs[1].timestamps[i] = (data.inputs[1].timestamps[i] - self.TIME_MEAN[0]) / self.TIME_STD[0]
-
         for i in range(SIMULATE_TEST_LEN) :
             data.curvePoints[i].x = (data.curvePoints[i].x - self.BALL_MEAN[0]) / self.BALL_STD[0]
             data.curvePoints[i].y = (data.curvePoints[i].y - self.BALL_MEAN[1]) / self.BALL_STD[1]
             data.curvePoints[i].z = (data.curvePoints[i].z - self.BALL_MEAN[2]) / self.BALL_STD[2]
-            data.curveTimestamps[i] = (data.curveTimestamps[i] - self.TIME_MEAN[0]) / self.TIME_STD[0]
+            if self.version == 2 :
+                data.curveTimestamps[i] = (data.curveTimestamps[i] - self.TIME_MEAN[0]) / self.TIME_STD[0]
         
     def unnorm(self, data) :
         data.inputs[0].camera_x = data.inputs[0].camera_x * self.CAM_STD[0] + self.CAM_MEAN[0]
@@ -276,14 +337,12 @@ class Normer :
             data.inputs[1].line_rad_xy[i] = data.inputs[1].line_rad_xy[i] * self.LINE_STD[0] + self.LINE_MEAN[0]
             data.inputs[1].line_rad_xz[i] = data.inputs[1].line_rad_xz[i] * self.LINE_STD[1] + self.LINE_MEAN[1]
 
-            data.inputs[0].timestamps[i] = data.inputs[0].timestamps[i] * self.TIME_STD[0] + self.TIME_MEAN[0]
-            data.inputs[1].timestamps[i] = data.inputs[1].timestamps[i] * self.TIME_STD[0] + self.TIME_MEAN[0]
-
         for i in range(SIMULATE_TEST_LEN) :
             data.curvePoints[i].x = data.curvePoints[i].x * self.BALL_STD[0] + self.BALL_MEAN[0]
             data.curvePoints[i].y = data.curvePoints[i].y * self.BALL_STD[1] + self.BALL_MEAN[1]
             data.curvePoints[i].z = data.curvePoints[i].z * self.BALL_STD[2] + self.BALL_MEAN[2]
-            data.curveTimestamps[i] = data.curveTimestamps[i] * self.TIME_STD[0] + self.TIME_MEAN[0]
+            if self.version == 2 :
+                data.curveTimestamps[i] = data.curveTimestamps[i] * self.TIME_STD[0] + self.TIME_MEAN[0]
 
     def unnorm_ans_tensor(self, data) :
         d = data.view(-1, 3)
@@ -293,10 +352,6 @@ class Normer :
         d[2] = d[2] * self.BALL_STD[2] + self.BALL_MEAN[2]
         d.transpose_(0, 1)
         return d
-        #for i in range(len(data)) :
-            #data[i][0] = data[i][0] * self.BALL_STD[0] + self.BALL_MEAN[0]
-            #data[i][1] = data[i][1] * self.BALL_STD[1] + self.BALL_MEAN[1]
-            #data[i][2] = data[i][2] * self.BALL_STD[2] + self.BALL_MEAN[2]
     def norm_ans_tensor(self, data) :
         d = data.view(-1, 3)
         d.transpose_(0, 1)
@@ -305,26 +360,18 @@ class Normer :
         d[2] = (d[2] - self.BALL_MEAN[2]) / self.BALL_STD[2]
         d.transpose_(0, 1)
         return d
-        #for i in range(len(data)) :
-            #data[i][0] = (data[i][0] - self.BALL_MEAN[0]) / self.BALL_STD[0]
-            #data[i][1] = (data[i][1] - self.BALL_MEAN[1]) / self.BALL_STD[1]
-            #data[i][2] = (data[i][2] - self.BALL_MEAN[2]) / self.BALL_STD[2]
     def norm_t_tensor(self, data) :
         d = data.view(-1, 1)
         d.transpose_(0, 1)
         d[0] = (d[0] - self.TIME_MEAN[0]) / self.TIME_STD[0]
         d.transpose_(0, 1)
         return d
-        #for i in range(len(data)) :
-            #data[i][0] = (data[i][0] - self.TIME_MEAN[0]) / self.TIME_STD[0]
     def unnorm_t_tensor(self, data) :
         d = data.view(-1, 1)
         d.transpose_(0, 1)
         d[0] = d[0] * self.TIME_STD[0] + self.TIME_MEAN[0]
         d.transpose_(0, 1)
         return d
-        #for i in range(len(data)) :
-            #data[i][0] = data[i][0] * self.TIME_STD[0] + self.TIME_MEAN[0]
     def norm_input_tensor(self, data) :
         d = data.view(-1, 5)
         d.transpose_(0, 1)
@@ -335,12 +382,6 @@ class Normer :
         d[4] = (d[4] - self.LINE_MEAN[1]) / self.LINE_STD[1]
         d.transpose_(0, 1)
         return d
-        #for i in range(len(data)) :
-            #data[i][0] = (data[i][0] - self.CAM_MEAN[0]) / self.CAM_STD[0]
-            #data[i][1] = (data[i][1] - self.CAM_MEAN[1]) / self.CAM_STD[1]
-            #data[i][2] = (data[i][2] - self.CAM_MEAN[2]) / self.CAM_STD[2]
-            #data[i][3] = (data[i][3] - self.LINE_MEAN[0]) / self.LINE_STD[0]
-            #data[i][4] = (data[i][4] - self.LINE_MEAN[1]) / self.LINE_STD[1]
     def unorm_input_tensor(self, data) :
         d = data.view(-1, 5)
         d.transpose_(0, 1)
@@ -351,10 +392,4 @@ class Normer :
         d[4] = d[4] * self.LINE_STD[1] + self.LINE_MEAN[1]
         d.transpose_(0, 1)
         return d
-        #for i in range(len(data)) :
-            #data[i][0] = data[i][0] * self.CAM_STD[0] + self.CAM_MEAN[0]
-            #data[i][1] = data[i][1] * self.CAM_STD[1] + self.CAM_MEAN[1]
-            #data[i][2] = data[i][2] * self.CAM_STD[2] + self.CAM_MEAN[2]
-            #data[i][3] = data[i][3] * self.LINE_STD[0] + self.LINE_MEAN[0]
-            #data[i][4] = data[i][4] * self.LINE_STD[1] + self.LINE_MEAN[1]
 normer = None
