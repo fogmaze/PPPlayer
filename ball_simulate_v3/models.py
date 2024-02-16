@@ -58,7 +58,7 @@ class ISEFWINNER_BASE(nn.Module):
         self.llstm_last = None
         self.rlstm_last = None
 
-    def forward(self, X1:torch.Tensor, X1_len:torch.Tensor, X2:torch.Tensor, X2_len:torch.Tensor, T:torch.Tensor):
+    def forward(self, X1:torch.Tensor, X1_len:torch.Tensor, X2:torch.Tensor, X2_len:torch.Tensor):
         x1_batch_size = len(X1)
         x2_batch_size = len(X2)
         # 輸入全連接層1 
@@ -146,7 +146,7 @@ class ISEFWINNER_SMALL(ISEFWINNER_BASE):
         self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
         
         self.mlp2 = nn.Sequential(
-            nn.Linear(self.lstm_out * 2 + 1, mlp2_l1_out),
+            nn.Linear(self.lstm_out * 2, mlp2_l1_out),
             nn.ReLU(),
             nn.Linear(mlp2_l1_out, mlp2_l2_out),
             nn.Tanh(),
@@ -193,7 +193,7 @@ class ISEFWINNER_MEDIUM(ISEFWINNER_BASE):
         self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
         
         self.mlp2 = nn.Sequential(
-            nn.Linear(self.lstm_out * 2 + 1, mlp2_l1_out),
+            nn.Linear(self.lstm_out * 2, mlp2_l1_out),
             nn.ReLU(),
             nn.Linear(mlp2_l1_out, mlp2_l2_out),
             nn.Tanh(),
@@ -243,7 +243,7 @@ class ISEFWINNER_BIG(ISEFWINNER_BASE):
         self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
         
         self.mlp2 = nn.Sequential(
-            nn.Linear(self.lstm_out * 2 + 1, mlp2_l1_out),
+            nn.Linear(self.lstm_out * 2, mlp2_l1_out),
             nn.ReLU(),
             nn.Linear(mlp2_l1_out, mlp2_l2_out),
             nn.Tanh(),
@@ -299,7 +299,7 @@ class ISEFWINNER_LARGE(ISEFWINNER_BASE):
         self.rlstm_hidden_cell = (torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device),torch.zeros(self.lstm_num_layers,batch_size,self.lstm_out,device=device))
         
         self.mlp2 = nn.Sequential(
-            nn.Linear(self.lstm_out * 2 + 1, mlp2_l1_out),
+            nn.Linear(self.lstm_out * 2, mlp2_l1_out),
             nn.ReLU(),
             nn.Linear(mlp2_l1_out, mlp2_l2_out),
             nn.Tanh(),

@@ -24,11 +24,11 @@ import csv
 def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, momentum=0.01, dataset = "", opt="adam",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2, mode="normalBR", train_ratio=0.8, valid_ratio=0.1, test_ratio=0.1):
     torch.multiprocessing.set_start_method('spawn')
     #model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
-    model_save_dir = "./ball_simulate_v2/model_saves/" + name + "/"
+    model_save_dir = "./ball_simulate_v3/model_saves/" + name + "/"
     if os.path.isdir(model_save_dir):
-        old_new_name = "./ball_simulate_v2/model_saves/" + name + "_" + str(random.randint(0,1000)) + "/"
+        old_new_name = "./ball_simulate_v3/model_saves/" + name + "_" + str(random.randint(0,1000)) + "/"
         while os.path.isdir(old_new_name):
-            old_new_name = "./ball_simulate_v2/model_saves/" + name + "_" + str(random.randint(0,1000)) + "/"
+            old_new_name = "./ball_simulate_v3/model_saves/" + name + "_" + str(random.randint(0,1000)) + "/"
         os.rename(model_save_dir, old_new_name)
         print("model save dir exists, change the old one into " + old_new_name)
     os.makedirs(model_save_dir)
@@ -74,7 +74,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, mom
     else :
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
-    ball_datas = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".train.bin"), device=device, mode=mode)
+    ball_datas = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v3/dataset/", dataset + ".train.bin"), device=device, mode=mode)
     train_len = int(len(ball_datas) * train_ratio)
     valid_len = int(len(ball_datas) * valid_ratio)
     test_len = len(ball_datas) - train_len - valid_len
@@ -104,7 +104,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, mom
             #data_sample = splitTrainData_batch([createTrainData() for _ in range(batch_size)],normalized=True)
             for data in tqdm.tqdm(dataloader_train):
                 train_loss = model.fit_one_iteration(data, optimizer, criterion)
-                trainloss_sum += train_loss.item()
+                trainloss_sum += train_loss
                 if n % 1000 == 999:
                     trainingloss = trainloss_sum / 1000
                     trainloss_sum = 0
@@ -116,7 +116,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, mom
             model.eval()
             for data  in tqdm.tqdm(dataloader_valid):
                 valid_loss = model.validate_one_iteration(data, criterion)
-                validloss_sum += valid_loss.item()
+                validloss_sum += valid_loss
                 n += 1
             
             validationloss = validloss_sum / n
@@ -266,15 +266,14 @@ def saveVisualizeTrainData(dataset_name, mode, seed=3) :
 
 def saveVisualizeModelOutput(model:models.ISEFWINNER_BASE, dataset, imgFileName, seed = 3):
     model.eval()
-    criterion = nn.MSELoss()
+    criterion = models.DistanceLoss()
     model.reset_hidden_cell(batch_size=1)
 
-    r, r_len, l, l_len, t, ans = dataset[seed]
+    r, r_len, l, l_len, ans = dataset[seed]
     r = r.view(1, -1, 5)
     l = l.view(1, -1, 5)
-    t = t.view(1, -1)
     ans = ans.view(1, -1, 3)
-    out = model(r, r_len, l, l_len, t).view(-1, 3).cpu()
+    out = model(r, r_len, l, l_len).view(-1, 3).cpu()
     ans = ans.view(-1, 3).cpu()
     r = r.view(-1, 5).cpu()
     l = l.view(-1, 5).cpu()
@@ -297,7 +296,7 @@ def saveVisualizeModelOutput(model:models.ISEFWINNER_BASE, dataset, imgFileName,
 
     # add legend
     ax.legend([line_out, line_ans, seq_r, seq_l], ["output", "answer", "right", "left"])
-    plt.gcf().text(0.02, 0.02,s="MSE loss: " + str(loss), size=15)
+    plt.gcf().text(0.02, 0.02,s="Dist loss: " + str(loss), size=15)
 
     plt.savefig(imgFileName)
     plt.close()
@@ -392,15 +391,15 @@ if __name__ == "__main__" :
     argparser.add_argument('-e', default=30, type=int)
     argparser.add_argument('-m', default="medium", type=str)
     argparser.add_argument('-mom', default=0.01, type=float)
-    argparser.add_argument('-d', default="normalB60", type=str)
+    argparser.add_argument('-d', default="better_medium", type=str)
     argparser.add_argument('-s', default=0, type=int)
     argparser.add_argument('-w', default=None, type=str)
-    argparser.add_argument('-n', default="normalB60", type=str)
+    argparser.add_argument('-n', default="test", type=str)
     argparser.add_argument('-o', default="adam")
     argparser.add_argument('--num_workers', default=0, type=int)
     argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
     argparser.add_argument('--test', dest='test', action='store_true', default=False)
-    argparser.add_argument('--mode', default="normalBR", type=str)
+    argparser.add_argument('--mode', default="better3", type=str)
     argparser.add_argument('--LRRTest', dest='LRRTest', action='store_true', default=False)
 
     args = argparser.parse_args()
