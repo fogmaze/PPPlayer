@@ -21,7 +21,25 @@ import tqdm
 import csv
 
 
-def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, momentum=0.01, dataset = "", opt="adam",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2, mode="normalBR", train_ratio=0.8, valid_ratio=0.1, test_ratio=0.1):
+def train(
+        epochs = 100, 
+        batch_size =16,
+        scheduler_step_size=None, 
+        LR = 0.001, 
+        momentum=0.01, 
+        dataset = "", 
+        opt="adam",
+        model_name = "small", 
+        name="default", 
+        weight = None, 
+        device = "cuda:0", 
+        num_workers=2, 
+        mode="normalBR", 
+        train_ratio=0.8, 
+        valid_ratio=0.1, 
+        test_ratio=0.1, 
+        lossFN = "mse"
+    ):
     torch.multiprocessing.set_start_method('spawn')
     #model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
     model_save_dir = "./ball_simulate_v3/model_saves/" + name + "/"
@@ -61,7 +79,10 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, mom
         except:
             train_logger.error('cannot load model ')
 
-    criterion = models.DistanceLoss().to(device=device)
+    if lossFN == "mse":
+        criterion = nn.MSELoss().to(device=device)
+    elif lossFN == "distance":
+        criterion = models.DistanceLoss().to(device=device)
     model.to(device=device)
     #optimizer = torch.optim.Adam(model.parameters(), lr = LR)
     if opt == "adam":
@@ -390,17 +411,18 @@ if __name__ == "__main__" :
     argparser.add_argument('-b', default=64, type=int)
     argparser.add_argument('-e', default=30, type=int)
     argparser.add_argument('-m', default="medium", type=str)
-    argparser.add_argument('-mom', default=0.01, type=float)
     argparser.add_argument('-d', default="better_medium", type=str)
-    argparser.add_argument('-s', default=0, type=int)
-    argparser.add_argument('-w', default=None, type=str)
     argparser.add_argument('-n', default="test", type=str)
-    argparser.add_argument('-o', default="adam")
-    argparser.add_argument('--num_workers', default=0, type=int)
-    argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
-    argparser.add_argument('--test', dest='test', action='store_true', default=False)
     argparser.add_argument('--mode', default="better3", type=str)
+    argparser.add_argument('--num_workers', default=0, type=int)
+    argparser.add_argument('-o', default="adam")
+    argparser.add_argument('-l', default="mse", type=str)
+    argparser.add_argument('-w', default=None, type=str)
+    argparser.add_argument('-mom', default=0.01, type=float)
+    argparser.add_argument('-s', default=0, type=int)
+    argparser.add_argument('--test', dest='test', action='store_true', default=False)
     argparser.add_argument('--LRRTest', dest='LRRTest', action='store_true', default=False)
+    argparser.add_argument('--export-model', dest='export', action='store_true', default=False)
 
     args = argparser.parse_args()
     # if ball_simulate_v2/dataset not exested, then create
@@ -437,6 +459,7 @@ if __name__ == "__main__" :
         name=args.n, 
         num_workers=args.num_workers, 
         opt=args.o, 
-        mode=args.mode
+        mode=args.mode,
+        lossFN=args.l
     )
     pass

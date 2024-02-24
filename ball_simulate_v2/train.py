@@ -104,7 +104,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, mom
             #data_sample = splitTrainData_batch([createTrainData() for _ in range(batch_size)],normalized=True)
             for data in tqdm.tqdm(dataloader_train):
                 train_loss = model.fit_one_iteration(data, optimizer, criterion)
-                trainloss_sum += train_loss.item()
+                trainloss_sum += train_loss
                 if n % 1000 == 999:
                     trainingloss = trainloss_sum / 1000
                     trainloss_sum = 0
@@ -116,7 +116,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, mom
             model.eval()
             for data  in tqdm.tqdm(dataloader_valid):
                 valid_loss = model.validate_one_iteration(data, criterion)
-                validloss_sum += valid_loss.item()
+                validloss_sum += valid_loss
                 n += 1
             
             validationloss = validloss_sum / n
