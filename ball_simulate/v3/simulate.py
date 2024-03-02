@@ -18,7 +18,7 @@ import time
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import multiprocessing
-import ball_simulate_v3.dataFileOperator as dfo
+import ball_simulate.v3.dataFileOperator as dfo
 
 
 class Work:
@@ -454,7 +454,10 @@ if __name__ == "__main__":
         elif args.mode == "better3" :
             c.set2Better3()
 
-    simulate(GUI=args.GUI, dataLength=args.l, outputFileName="ball_simulate_v3/dataset/{}.train.bin".format(args.n), mode=args.mode)
-    simulate(GUI=args.GUI, dataLength=10000, outputFileName="ball_simulate_v3/dataset/{}.valid.bin".format(args.n), mode=args.mode)
+    if not os.path.isdir("ball_simulate/v3/dataset"):
+        os.mkdir("ball_simulate/v3/dataset")
+
+    simulate(GUI=args.GUI, dataLength=args.l, outputFileName="ball_simulate/v3/dataset/{}.train.bin".format(args.n), mode=args.mode)
+    simulate(GUI=args.GUI, dataLength=10000, outputFileName="ball_simulate/v3/dataset/{}.valid.bin".format(args.n), mode=args.mode)
     pass
 

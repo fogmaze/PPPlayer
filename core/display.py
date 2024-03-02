@@ -16,7 +16,7 @@ sys.path.append(os.getcwd())
 import core.Constants as Constants
 import core.Equation3d as equ
 import ball_predection.predict as pred
-import ball_simulate_v2.models as models
+import ball_simulate.v2.models as models
 
 
 def visualizeDetection_video(root, fps=30) :

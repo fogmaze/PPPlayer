@@ -3,9 +3,9 @@ import random
 import sys
 import os
 sys.path.append(os.getcwd())
-import ball_simulate_v3.dataFileOperator as dfo
-import ball_simulate_v3.models as models
-from ball_simulate_v3.models import MODEL_MAP
+import ball_simulate.v3.dataFileOperator as dfo
+import ball_simulate.v3.models as models
+from ball_simulate.v3.models import MODEL_MAP
 from argparse import ArgumentParser
 import logging
 import torch
@@ -439,8 +439,8 @@ if __name__ == "__main__" :
         else :
             raise Exception("mode not found")
 
-    if not os.path.exists("ball_simulate_v2/dataset"):
-        os.mkdir("ball_simulate_v2/dataset")
+    if not os.path.exists("ball_simulate/v3/dataset"):
+        os.mkdir("ball_simulate/v3/dataset")
     if args.export:
         exit(0)
     if args.test:

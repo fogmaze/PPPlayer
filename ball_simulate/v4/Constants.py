@@ -33,202 +33,8 @@ INPUT_IGNORE_WIDTH_MEAN      = None
 INPUT_IGNORE_WIDTH_STD       = None
 INPUT_RANDOM_ERROR_RATE      = None
 
-def set2NoError() :
-    global SHUTTER_RANDOM_ERROR_STD
-    global SHUTTER_SYSTEMATIC_ERROR_STD
-    global CAMERA_POSITION_ERROR_STD
-    global BALL_POSITION_ERROR_STD
-    global INPUT_IGNORE_AREA_MEAN
-    global INPUT_IGNORE_AREA_STD
-    global INPUT_IGNORE_WIDTH_MEAN
-    global INPUT_IGNORE_WIDTH_STD
-    global SIMULATE_INPUT_LEN
-    global SIMULATE_TEST_LEN
-    global normer
-    global now_mode
 
-    SHUTTER_RANDOM_ERROR_STD = 0
-    SHUTTER_SYSTEMATIC_ERROR_STD = 0
-    CAMERA_POSITION_ERROR_STD = 0
-    BALL_POSITION_ERROR_STD = 0
-    INPUT_IGNORE_AREA_MEAN = 0
-    INPUT_IGNORE_AREA_STD = 0
-    INPUT_IGNORE_WIDTH_MEAN = 0
-    INPUT_IGNORE_WIDTH_STD = 0
-    SIMULATE_INPUT_LEN = 40
-    SIMULATE_TEST_LEN = 250
-    normer = Normer()
-    now_mode = "ne"
-
-def set2Normal() :
-    global SIMULATE_INPUT_LEN
-    global SIMULATE_TEST_LEN
-    global SHUTTER_RANDOM_ERROR_STD
-    global SHUTTER_SYSTEMATIC_ERROR_STD
-    global CAMERA_POSITION_ERROR_STD
-    global BALL_POSITION_ERROR_STD
-    global INPUT_IGNORE_AREA_MEAN
-    global INPUT_IGNORE_AREA_STD
-    global INPUT_IGNORE_WIDTH_MEAN
-    global INPUT_IGNORE_WIDTH_STD
-    global normer
-    global now_mode
-
-    SIMULATE_TEST_LEN = 50
-    SIMULATE_INPUT_LEN = 40
-    SHUTTER_RANDOM_ERROR_STD = 0.005
-    SHUTTER_SYSTEMATIC_ERROR_STD = 0.01
-    CAMERA_POSITION_ERROR_STD = 0.05
-    BALL_POSITION_ERROR_STD = 0.05
-    INPUT_IGNORE_AREA_MEAN = 3
-    INPUT_IGNORE_AREA_STD = 2
-    INPUT_IGNORE_WIDTH_MEAN = 4
-    INPUT_IGNORE_WIDTH_STD = 3
-    normer = Normer()
-    now_mode = "normal"
-
-
-def set2NormalB60() :
-    global SIMULATE_INPUT_LEN
-    global SIMULATE_TEST_LEN
-    global SHUTTER_RANDOM_ERROR_STD
-    global SHUTTER_SYSTEMATIC_ERROR_STD
-    global CAMERA_POSITION_ERROR_STD
-    global BALL_POSITION_ERROR_STD
-    global INPUT_IGNORE_AREA_MEAN
-    global INPUT_IGNORE_AREA_STD
-    global INPUT_IGNORE_WIDTH_MEAN
-    global INPUT_IGNORE_WIDTH_STD
-    global normer
-    global FPS
-    global now_mode
-
-    FPS = 60
-    SIMULATE_TEST_LEN = 50
-    SIMULATE_INPUT_LEN = 80
-    SHUTTER_RANDOM_ERROR_STD = 0.005
-    SHUTTER_SYSTEMATIC_ERROR_STD = 0.03
-    CAMERA_POSITION_ERROR_STD = 0.05
-    BALL_POSITION_ERROR_STD = 0.05
-    INPUT_IGNORE_AREA_MEAN = 3
-    INPUT_IGNORE_AREA_STD = 3
-    INPUT_IGNORE_WIDTH_MEAN = 8
-    INPUT_IGNORE_WIDTH_STD = 6
-    normer = Normer()
-    now_mode = "normalB60"
-
-def set2NormalB() :
-    global SIMULATE_INPUT_LEN
-    global SIMULATE_TEST_LEN
-    global SHUTTER_RANDOM_ERROR_STD
-    global SHUTTER_SYSTEMATIC_ERROR_STD
-    global CAMERA_POSITION_ERROR_STD
-    global BALL_POSITION_ERROR_STD
-    global INPUT_IGNORE_AREA_MEAN
-    global INPUT_IGNORE_AREA_STD
-    global INPUT_IGNORE_WIDTH_MEAN
-    global INPUT_IGNORE_WIDTH_STD
-    global normer
-    global now_mode
-
-    SIMULATE_TEST_LEN = 50
-    SIMULATE_INPUT_LEN = 40
-    SHUTTER_RANDOM_ERROR_STD = 0.005
-    SHUTTER_SYSTEMATIC_ERROR_STD = 0.03
-    CAMERA_POSITION_ERROR_STD = 0.05
-    BALL_POSITION_ERROR_STD = 0.05
-    INPUT_IGNORE_AREA_MEAN = 3
-    INPUT_IGNORE_AREA_STD = 3
-    INPUT_IGNORE_WIDTH_MEAN = 4
-    INPUT_IGNORE_WIDTH_STD = 3
-    normer = Normer()
-    now_mode = "normalB"
-
-def set2NormalBR() :
-    global SIMULATE_INPUT_LEN
-    global SIMULATE_TEST_LEN
-    global SHUTTER_RANDOM_ERROR_STD
-    global SHUTTER_SYSTEMATIC_ERROR_STD
-    global CAMERA_POSITION_ERROR_STD
-    global BALL_POSITION_ERROR_STD
-    global INPUT_IGNORE_AREA_MEAN
-    global INPUT_IGNORE_AREA_STD
-    global INPUT_IGNORE_WIDTH_MEAN
-    global INPUT_IGNORE_WIDTH_STD
-    global INPUT_RANDOM_ERROR_RATE
-    global normer
-    global now_mode
-
-    SIMULATE_TEST_LEN = 50
-    SIMULATE_INPUT_LEN = 40
-    SHUTTER_RANDOM_ERROR_STD = 0.005    #second
-    SHUTTER_SYSTEMATIC_ERROR_STD = 0.03 #second
-    CAMERA_POSITION_ERROR_STD = 0.05    #meter
-    BALL_POSITION_ERROR_STD = 0.05      #meter
-    INPUT_IGNORE_AREA_MEAN = 3
-    INPUT_IGNORE_AREA_STD = 3
-    INPUT_IGNORE_WIDTH_MEAN = 4
-    INPUT_IGNORE_WIDTH_STD = 3
-    INPUT_RANDOM_ERROR_RATE = 0.03
-    normer = Normer()
-    now_mode = "normalBR"
-
-def set2Fitting() :
-    global SIMULATE_TEST_LEN
-    global SIMULATE_INPUT_LEN
-    global SHUTTER_RANDOM_ERROR_STD
-    global SHUTTER_SYSTEMATIC_ERROR_STD
-    global CAMERA_POSITION_ERROR_STD
-    global BALL_POSITION_ERROR_STD
-    global INPUT_IGNORE_AREA_MEAN
-    global INPUT_IGNORE_AREA_STD
-    global INPUT_IGNORE_WIDTH_MEAN
-    global INPUT_IGNORE_WIDTH_STD
-    global normer
-    global now_mode
-
-    SIMULATE_TEST_LEN = 100
-    SIMULATE_INPUT_LEN = 100
-    SHUTTER_RANDOM_ERROR_STD = 0.005
-    SHUTTER_SYSTEMATIC_ERROR_STD = 0.01
-    CAMERA_POSITION_ERROR_STD = 0.05
-    BALL_POSITION_ERROR_STD = 0.05
-    INPUT_IGNORE_AREA_MEAN = 3
-    INPUT_IGNORE_AREA_STD = 2
-    INPUT_IGNORE_WIDTH_MEAN = 4
-    INPUT_IGNORE_WIDTH_STD = 3
-    normer = Normer()
-    now_mode = "fit"
-
-def set2Predict() :
-    global SIMULATE_INPUT_LEN
-    global SIMULATE_TEST_LEN
-    global SHUTTER_RANDOM_ERROR_STD
-    global SHUTTER_SYSTEMATIC_ERROR_STD
-    global CAMERA_POSITION_ERROR_STD
-    global BALL_POSITION_ERROR_STD
-    global INPUT_IGNORE_AREA_MEAN
-    global INPUT_IGNORE_AREA_STD
-    global INPUT_IGNORE_WIDTH_MEAN
-    global INPUT_IGNORE_WIDTH_STD
-    global normer
-    global now_mode
-
-    SIMULATE_TEST_LEN = 250
-    SIMULATE_INPUT_LEN = 40
-    SHUTTER_RANDOM_ERROR_STD = 0.005
-    SHUTTER_SYSTEMATIC_ERROR_STD = 0.01
-    CAMERA_POSITION_ERROR_STD = 0.05
-    BALL_POSITION_ERROR_STD = 0.05
-    INPUT_IGNORE_AREA_MEAN = 3
-    INPUT_IGNORE_AREA_STD = 2
-    INPUT_IGNORE_WIDTH_MEAN = 4
-    INPUT_IGNORE_WIDTH_STD = 3
-    normer = Normer()
-    now_mode = "predict"
-
-
-def set2NormalBR3() :
+def set2NormalBR4() :
     global SIMULATE_INPUT_LEN
     global SIMULATE_TEST_LEN
     global SHUTTER_RANDOM_ERROR_STD
@@ -255,11 +61,11 @@ def set2NormalBR3() :
     INPUT_IGNORE_WIDTH_MEAN = 4
     INPUT_IGNORE_WIDTH_STD = 3
     INPUT_RANDOM_ERROR_RATE = 0.03
-    normer = Normer(version=3)
+    normer = Normer()
     now_mode = "normalBR3"
 
 
-def set2Better3() :
+def set2Better4() :
     global SIMULATE_INPUT_LEN
     global SIMULATE_TEST_LEN
     global SHUTTER_RANDOM_ERROR_STD
@@ -286,7 +92,7 @@ def set2Better3() :
     INPUT_IGNORE_WIDTH_MEAN = 4
     INPUT_IGNORE_WIDTH_STD = 3
     INPUT_RANDOM_ERROR_RATE = 0.03
-    normer = Normer(version=3)
+    normer = Normer()
     now_mode = "better3"
 
 def set2Short4() :
@@ -316,12 +122,26 @@ def set2Short4() :
     INPUT_IGNORE_WIDTH_MEAN = 4
     INPUT_IGNORE_WIDTH_STD = 3
     INPUT_RANDOM_ERROR_RATE = 0.03
-    normer = Normer(version=4)
+    normer = Normer()
     now_mode = "short4"
+
+SIMULATE_INPUT_LEN_DICT = {
+    "normalBR4": 40,
+    "better4": 40,
+    "short4": 40
+    # Add values for other modes if needed
+}
+
+SIMULATE_TEST_LEN_DICT = {
+    "normalBR4": 50,
+    "better4": 60,
+    "short4": 30,
+    # Add values for other modes if needed
+}
 
 
 class Normer :
-    def __init__(self, version = 2) :
+    def __init__(self) :
         self.CAM_MEAN = [0.0, 0.0, CAMERA_AREA_HEIGHT/2]
         self.CAM_STD = [CAMERA_AREA_HALF_LENGTH, CAMERA_AREA_HALF_WIDTH, CAMERA_AREA_HEIGHT/2]
         self.LINE_MEAN = [0, 0]
@@ -330,7 +150,6 @@ class Normer :
         self.BALL_STD = [BALL_AREA_HALF_LENGTH*2, BALL_AREA_HALF_WIDTH*2, BALL_AREA_HEIGHT/2]
         self.TIME_MEAN = [CURVE_SHOWING_GAP*SIMULATE_TEST_LEN/2]
         self.TIME_STD = [CURVE_SHOWING_GAP*SIMULATE_TEST_LEN/2]
-        self.version = version
 
     def norm(self, data) :
         data.inputs[0].camera_x = (data.inputs[0].camera_x - self.CAM_MEAN[0]) / self.CAM_STD[0]
@@ -350,8 +169,6 @@ class Normer :
             data.curvePoints[i].x = (data.curvePoints[i].x - self.BALL_MEAN[0]) / self.BALL_STD[0]
             data.curvePoints[i].y = (data.curvePoints[i].y - self.BALL_MEAN[1]) / self.BALL_STD[1]
             data.curvePoints[i].z = (data.curvePoints[i].z - self.BALL_MEAN[2]) / self.BALL_STD[2]
-            if self.version == 2 :
-                data.curveTimestamps[i] = (data.curveTimestamps[i] - self.TIME_MEAN[0]) / self.TIME_STD[0]
         
     def unnorm(self, data) :
         data.inputs[0].camera_x = data.inputs[0].camera_x * self.CAM_STD[0] + self.CAM_MEAN[0]
@@ -371,8 +188,6 @@ class Normer :
             data.curvePoints[i].x = data.curvePoints[i].x * self.BALL_STD[0] + self.BALL_MEAN[0]
             data.curvePoints[i].y = data.curvePoints[i].y * self.BALL_STD[1] + self.BALL_MEAN[1]
             data.curvePoints[i].z = data.curvePoints[i].z * self.BALL_STD[2] + self.BALL_MEAN[2]
-            if self.version == 2 :
-                data.curveTimestamps[i] = data.curveTimestamps[i] * self.TIME_STD[0] + self.TIME_MEAN[0]
 
     def unnorm_ans_tensor(self, data) :
         d = data.view(-1, 3)

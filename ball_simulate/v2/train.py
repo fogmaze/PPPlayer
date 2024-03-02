@@ -3,9 +3,9 @@ import random
 import sys
 import os
 sys.path.append(os.getcwd())
-import ball_simulate_v2.dataFileOperator as dfo
-import ball_simulate_v2.models as models
-from ball_simulate_v2.models import MODEL_MAP
+import ball_simulate.v2.dataFileOperator as dfo
+import ball_simulate.v2.models as models
+from ball_simulate.v2.models import MODEL_MAP
 from argparse import ArgumentParser
 import logging
 import torch
@@ -23,12 +23,12 @@ import csv
 
 def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, momentum=0.01, dataset = "", opt="adam",model_name = "small", name="default", weight = None, device = "cuda:0", num_workers=2, mode="normalBR", train_ratio=0.8, valid_ratio=0.1, test_ratio=0.1):
     torch.multiprocessing.set_start_method('spawn')
-    #model_save_dir = time.strftime("./ball_simulate_v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
-    model_save_dir = "./ball_simulate_v2/model_saves/" + name + "/"
+    #model_save_dir = time.strftime("./ball_siumlate/v2/model_saves/" + name + "%Y-%m-%d_%H-%M-%S-"+ model_name +"/",time.localtime())
+    model_save_dir = "./ball_siumlate/v2/model_saves/" + name + "/"
     if os.path.isdir(model_save_dir):
-        old_new_name = "./ball_simulate_v2/model_saves/" + name + "_" + str(random.randint(0,1000)) + "/"
+        old_new_name = "./ball_siumlate/v2/model_saves/" + name + "_" + str(random.randint(0,1000)) + "/"
         while os.path.isdir(old_new_name):
-            old_new_name = "./ball_simulate_v2/model_saves/" + name + "_" + str(random.randint(0,1000)) + "/"
+            old_new_name = "./ball_siumlate/v2/model_saves/" + name + "_" + str(random.randint(0,1000)) + "/"
         os.rename(model_save_dir, old_new_name)
         print("model save dir exists, change the old one into " + old_new_name)
     os.makedirs(model_save_dir)
@@ -74,7 +74,7 @@ def train(epochs = 100, batch_size =16,scheduler_step_size=None, LR = 0.001, mom
     else :
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer,scheduler_step_size,0.1)
 
-    ball_datas = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".train.bin"), device=device, mode=mode)
+    ball_datas = dfo.BallDataSet_sync(os.path.join("./ball_simulate/v2/dataset/", dataset + ".train.bin"), device=device, mode=mode)
     train_len = int(len(ball_datas) * train_ratio)
     valid_len = int(len(ball_datas) * valid_ratio)
     test_len = len(ball_datas) - train_len - valid_len
@@ -189,7 +189,7 @@ def validModel(model_name, weight, dataset, batch_size=64) :
     model.load_state_dict(torch.load(weight))
     model.eval()
     criterion = nn.MSELoss()
-    ball_datas = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset + ".valid.bin"), device='cpu')
+    ball_datas = dfo.BallDataSet_sync(os.path.join("./ball_siumlate/v2/dataset/", dataset + ".valid.bin"), device='cpu')
     loader = DataLoader(ball_datas, batch_size=batch_size)
     loss_sum = 0
     i = 0
@@ -235,7 +235,7 @@ def plotOutput(ax, out, color = 'r', label=None):
     return obj
 
 def saveVisualizeTrainData(dataset_name, imgFileName, seed=3) :
-    dataset = dfo.BallDataSet_sync(os.path.join("./ball_simulate_v2/dataset/", dataset_name + ".valid.bin"))
+    dataset = dfo.BallDataSet_sync(os.path.join("./ball_siumlate/v2/dataset/", dataset_name + ".valid.bin"))
     r, r_len, l, l_len, t, ans = dataset[seed]
     r = r.view(1, -1, 5)
     l = l.view(1, -1, 5)
@@ -323,7 +323,7 @@ def visualizeModelOutput(model_name, weight, seed = 3):
     model.eval()
 
     criterion = nn.MSELoss()
-    ball_datas = dfo.BallDataSet("ball_simulate_v2/dataset/medium_pred.valid.bin", device='cpu')
+    ball_datas = dfo.BallDataSet("ball_siumlate/v2/dataset/medium_pred.valid.bin", device='cpu')
 
     r, r_len, l, l_len, t, ans = ball_datas[seed]
     r = r.view(1, -1, 5)
@@ -357,7 +357,7 @@ def visualizeModelOutput(model_name, weight, seed = 3):
     
 def redrawTrainResult(dirname, model_name, dataset):
     model = MODEL_MAP[model_name](device='cpu')
-    ball_datas = dfo.BallDataSet("ball_simulate_v2/dataset/" + dataset + ".valid.bin", device='cpu')
+    ball_datas = dfo.BallDataSet("ball_siumlate/v2/dataset/" + dataset + ".valid.bin", device='cpu')
     for i in tqdm.tqdm(range(0, 30)) :
         model.load_state_dict(torch.load(dirname + "epoch_" + str(i) + "/weight.pt"))
         saveVisualizeModelOutput(model, ball_datas, dirname + "epoch_" + str(i) + "/output1.png", seed=1)
@@ -368,7 +368,7 @@ def redrawTrainResult(dirname, model_name, dataset):
 
 
 def cross():
-    with open("ball_simulate_v2/cross.csv", "w") as f:
+    with open("ball_siumlate/v2/cross.csv", "w") as f:
         writer = csv.writer(f)
         for d in ('fit', 'ne', 'predict') :
             if d == 'fit':
@@ -379,7 +379,7 @@ def cross():
                 c.set2Predict()
             res = []
             for w in ('fit', 'ne', 'predict') :
-                res.append(validModel("medium", "ball_simulate_v2/model_saves/" + w  + "/epoch_29/weight.pt", d + "_medium"))
+                res.append(validModel("medium", "ball_siumlate/v2/model_saves/" + w  + "/epoch_29/weight.pt", d + "_medium"))
             writer.writerow(res)
 
 def LRRTest(name, bs = 64, lr_range = (0.001, 0.5), opt = "adam") :
@@ -406,7 +406,7 @@ if __name__ == "__main__" :
     argparser.add_argument('--LRRTest', dest='LRRTest', action='store_true', default=False)
 
     args = argparser.parse_args()
-    # if ball_simulate_v2/dataset not exested, then create
+    # if ball_siumlate/v2/dataset not exested, then create
 
     if args.LRRTest :
         LRRTest(bs=args.b, name=args.n, opt=args.o)
@@ -431,8 +431,8 @@ if __name__ == "__main__" :
         else :
             raise Exception("mode error")
 
-    if not os.path.exists("ball_simulate_v2/dataset"):
-        os.mkdir("ball_simulate_v2/dataset")
+    if not os.path.exists("ball_simulate/v2/dataset"):
+        os.mkdir("ball_simulate/v2/dataset")
     if args.export:
         exit(0)
     if args.test:

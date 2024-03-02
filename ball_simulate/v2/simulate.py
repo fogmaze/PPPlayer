@@ -18,7 +18,7 @@ import time
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 import multiprocessing
-import ball_simulate_v2.dataFileOperator as dfo
+import ball_simulate.v2.dataFileOperator as dfo
 
 
 class Work:
@@ -445,9 +445,6 @@ def simulate_fast(dataLength = 10, num_workers = 1, outputFileName = "train.bin"
     print("simulate done")
 
 if __name__ == "__main__":
-    c.set2NormalBR()
-    simulate_display(dataLength=5*10)
-    exit()
     #print(calculateMeanStd("train.bin"))
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--GUI", default=False, action="store_true")
@@ -494,7 +491,7 @@ if __name__ == "__main__":
                         "ball_simulate_v2/dataset/{}.valid.bin".format(args.n))
         exit()
 
-    simulate(GUI=args.GUI, dataLength=args.l, outputFileName="ball_simulate_v2/dataset/{}.train.bin".format(args.n))
-    simulate(GUI=args.GUI, dataLength=10000, outputFileName="ball_simulate_v2/dataset/{}.valid.bin".format(args.n))
+    simulate(GUI=args.GUI, dataLength=args.l, outputFileName="ball_simulate/v2/dataset/{}.train.bin".format(args.n))
+    simulate(GUI=args.GUI, dataLength=10000, outputFileName="ball_simulate/v2/dataset/{}.valid.bin".format(args.n))
     pass
 

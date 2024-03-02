@@ -12,8 +12,8 @@ sys.path.append(os.getcwd())
 import core.display as display
 import core.Constants as Constants
 import ball_detection.Detection as Detection
-from ball_simulate_v2.models import MODEL_MAP
-import ball_simulate_v2.models as models
+from ball_simulate.v2.models import MODEL_MAP
+import ball_simulate.v2.models as models
 import core.common as common
 from ball_detection.ColorRange import *
 
