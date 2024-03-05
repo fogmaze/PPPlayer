@@ -164,7 +164,8 @@ def train(
                 saveVisualizeModelOutput(model, valid_datas, dirsavename + "output8.png", seed=700)
                 saveVisualizeModelOutput(model, valid_datas, dirsavename + "output9.png", seed=800)
                 saveVisualizeModelOutput(model, valid_datas, dirsavename + "output10.png", seed=900)
-            except:
+            except Exception as e:
+                print(e)
                 pass
             model.reset_hidden_cell(batch_size=batch_size)
 
@@ -294,7 +295,7 @@ def saveVisualizeModelOutput(model:models.ISEFWINNER_BASE, dataset, imgFileName,
     r = r.view(1, -1, 5)
     l = l.view(1, -1, 5)
     ans = ans.view(1, -1, 3)
-    out = model(r, r_len, l, l_len).view(-1, 3).cpu()
+    out = model(r, r_len, l, l_len, model.training_t.view(1, -1)).view(-1, 3).cpu()
     ans = ans.view(-1, 3).cpu()
     r = r.view(-1, 5).cpu()
     l = l.view(-1, 5).cpu()
